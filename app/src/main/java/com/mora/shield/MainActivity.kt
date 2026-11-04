@@ -113,6 +113,7 @@ class MainActivity : Activity() {
                 status.text = when {
                     !rootOk -> "Akses root belum diberikan. Buka KernelSU Manager > Superuser dan izinkan Mora Shield."
                     !inst -> "Modul Mora Privacy Shield tidak ditemukan. Pasang modulnya dulu (v3.0 atau lebih baru)."
+                    Ps.major(ver) < 3 -> "Modul terpasang versi $ver terlalu lama. Pasang v3.0.0 atau lebih baru lalu REBOOT."
                     else -> "Modul terdeteksi: $ver"
                 }
             }
@@ -325,8 +326,8 @@ class MainActivity : Activity() {
         sw.setOnCheckedChangeListener { v, on ->
             if (!v.isPressed) return@setOnCheckedChangeListener
             bg {
-                val ok = Ps.set(key, if (on) "1" else "0")
-                ui.post { toast(if (ok) "Disimpan" else "Gagal menyimpan") }
+                val r = Ps.set(key, if (on) "1" else "0")
+                ui.post { toast(if (r.ok) "Disimpan" else "Gagal: " + r.out.take(140)) }
             }
         }
         parent.addView(sw)
@@ -410,16 +411,41 @@ class MainActivity : Activity() {
 
     private fun showInfo() {
         val sv = ScrollView(this)
+        val col = LinearLayout(this)
+        col.orientation = LinearLayout.VERTICAL
+        col.setPadding(dp(8), dp(8), dp(8), dp(16))
+        sv.addView(col)
         val tv = TextView(this)
-        tv.setPadding(dp(8), dp(8), dp(8), dp(8))
         tv.text = "Mora Shield adalah pendamping modul Mora Privacy Shield.\n\n" +
             "• Semua kerja berat dilakukan modul lewat akses root. Aplikasi ini hanya menampilkan kejadian dan mengirim perintah.\n" +
             "• Aplikasi tidak memakai internet dan tidak mengirim data apa pun keluar.\n" +
             "• Kejadian berasal dari pemeriksaan berkala (AppOps dan penghitung iptables). Akses yang sangat singkat bisa terlewat, dan isi data tidak bisa dilihat.\n" +
             "• Notifikasi memiliki tombol Blokir internet, Izinkan, dan Abaikan.\n" +
             "• Tile Lockdown bisa ditambahkan ke panel pengaturan cepat.\n\n" +
-            "Bila notifikasi tidak muncul: izinkan notifikasi untuk aplikasi ini dan matikan optimasi baterai untuknya."
-        sv.addView(tv)
+            "Bila notifikasi tidak muncul: izinkan notifikasi untuk aplikasi ini dan matikan optimasi baterai untuknya.\n" +
+            "Bila saklar di tab Kendali gagal: pastikan modul v3.0.0 atau lebih baru dan HP sudah di-reboot setelah memasangnya."
+        col.addView(tv)
+        btn(col, "Diagnostik (kirim hasilnya bila ada masalah)") {
+            bg {
+                val rootId = Root.sh("id")
+                val inst = Root.sh("ls -la ${Ps.MOD} 2>&1 | head -n 15")
+                val ver = Ps.version()
+                val st = Ps.run("status").out.lines().take(25).joinToString("\n")
+                val test = Ps.run("set am_sec 20")
+                val txt = "root: " + rootId.out + "\nversi modul: " + ver + "\n\n" + inst.out +
+                    "\n\nuji set: kode=" + test.code + " " + test.out + "\n\nstatus (25 baris):\n" + st
+                ui.post {
+                    val t = TextView(this)
+                    t.text = txt
+                    t.textSize = 11f
+                    t.setTextIsSelectable(true)
+                    t.setPadding(dp(12), dp(8), dp(12), dp(8))
+                    val s2 = ScrollView(this)
+                    s2.addView(t)
+                    AlertDialog.Builder(this).setTitle("Diagnostik").setView(s2).setPositiveButton("Tutup", null).show()
+                }
+            }
+        }
         content.addView(sv)
     }
 }

@@ -28,10 +28,19 @@ object Ps {
         return m
     }
 
-    fun set(key: String, value: String): Boolean {
-        if (!safe(key) || !Regex("^[A-Za-z0-9._,:/-]*$").matches(value)) return false
+    fun set(key: String, value: String): Root.Result {
+        if (!safe(key) || !Regex("^[A-Za-z0-9._,:/-]*$").matches(value)) return Root.Result(2, "nilai tidak valid")
         val v = if (value.isEmpty()) "\"\"" else value
-        return Root.sh("sh $MOD/bin/ps.sh set $key $v && sh $MOD/bin/ps.sh apply").ok
+        val r = Root.sh("sh $MOD/bin/ps.sh set $key $v")
+        if (!r.ok) return r
+        Root.sh("sh $MOD/bin/ps.sh apply")
+        return r
+    }
+
+    /** Versi modul sebagai angka mayor, mis. "v3.0.0" -> 3. Mengembalikan 0 bila tidak terbaca. */
+    fun major(ver: String): Int {
+        val m = Regex("(\\d+)").find(ver) ?: return 0
+        return m.value.toIntOrNull() ?: 0
     }
 
     data class Ev(val ts: Long, val type: String, val pkg: String, val detail: String)
