@@ -31,7 +31,7 @@ object KernelManager {
                 else -> listOf("schedutil","ondemand","interactive")
             }
             val gov=preferred.firstOrNull { it in avail }
-            if (gov==null) "Tidak ada governor cocok pada ${p.substringAfterLast('/')}"
+            if (gov==null) "Tidak ada governor cocok pada ${p.split("/").last()}"
             else setGovernor(p,gov)
         }
         return results.joinToString("\n")
@@ -46,7 +46,7 @@ object KernelManager {
         val lines=policies().mapNotNull { (p, _) ->
             val g=read("$p/scaling_governor")
             if(g.isBlank() || !g.matches(Regex("[A-Za-z0-9_-]+"))) null
-            else "${p.substringAfterLast('/')}=$g"
+            else "${p.split("/").last()}=$g"
         }
         if(lines.isEmpty()) return "Tidak ada governor yang bisa disimpan"
         val data=android.util.Base64.encodeToString(lines.joinToString("\n", postfix="\n").toByteArray(), android.util.Base64.NO_WRAP)

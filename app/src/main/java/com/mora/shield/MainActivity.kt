@@ -1,7 +1,23 @@
 package com.mora.shield
 
 import android.Manifest
-import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
@@ -32,7 +48,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : Activity() {
+@OptIn(ExperimentalMaterial3Api::class)
+class MainActivity : ComponentActivity() {
     private val ui = Handler(Looper.getMainLooper())
     private lateinit var status: TextView
     private lateinit var content: FrameLayout
@@ -54,46 +71,116 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = LinearLayout(this)
-        root.orientation = LinearLayout.VERTICAL
-        root.setPadding(dp(12), dp(24), dp(12), dp(8))
-
-        val title = TextView(this)
-        title.text = "Mora Shield"
-        title.textSize = 22f
-        title.typeface = Typeface.DEFAULT_BOLD
-        root.addView(title)
-
-        status = TextView(this)
-        status.textSize = 13f
-        status.text = "Memeriksa modul…"
-        status.setPadding(0, dp(4), 0, dp(8))
-        root.addView(status)
-
-        val tabs = LinearLayout(this)
-        tabs.orientation = LinearLayout.HORIZONTAL
-        val names = arrayOf("Aktivitas", "Aplikasi", "Kendali", "Kernel", "Scripts", "Info")
-        for ((i, n) in names.withIndex()) {
-            val b = Button(this)
-            b.text = n
-            b.textSize = 12f
-            b.isAllCaps = false
-            b.setOnClickListener { show(i) }
-            tabs.addView(b, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        }
-        root.addView(tabs)
-
-        content = FrameLayout(this)
-        root.addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        setContentView(root)
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
         val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
         if (prefs.getBoolean("service", true)) startMonitor()
-        checkModule()
-        show(0)
+
+        setContent {
+            val darkColors = if (Build.VERSION.SDK_INT >= 31) {
+                dynamicDarkColorScheme(this@MainActivity)
+            } else {
+                darkColorScheme(
+                    primary = Color(0xFFB7C5FF),
+                    secondary = Color(0xFFB9C7E8),
+                    tertiary = Color(0xFF9ED9D2),
+                    background = Color(0xFF101318),
+                    surface = Color(0xFF171B22)
+                )
+            }
+            MaterialTheme(colorScheme = darkColors) {
+                var selectedTab by remember { mutableIntStateOf(0) }
+                val labels = listOf("Aktivitas", "Aplikasi", "Kendali", "Kernel", "Scripts", "Info")
+                val icons = listOf(
+                    Icons.Filled.Home,
+                    Icons.Filled.Apps,
+                    Icons.Filled.Tune,
+                    Icons.Filled.Memory,
+                    Icons.Filled.Code,
+                    Icons.Filled.Info
+                )
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = {
+                                Column {
+                                    Text("Mora Shield", style = MaterialTheme.typography.titleLarge)
+                                    Text(
+                                        "Privacy & Kernel Control",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    },
+                    bottomBar = {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 3.dp
+                        ) {
+                            labels.forEachIndexed { index, label ->
+                                NavigationBarItem(
+                                    selected = selectedTab == index,
+                                    onClick = {
+                                        selectedTab = index
+                                        if (::content.isInitialized) show(index)
+                                    },
+                                    icon = { Icon(icons[index], contentDescription = label) },
+                                    label = { Text(label, maxLines = 1) }
+                                )
+                            }
+                        }
+                    }
+                ) { innerPadding ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) {
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { context ->
+                                val host = LinearLayout(context).apply {
+                                    orientation = LinearLayout.VERTICAL
+                                    setPadding(
+                                        (16 * resources.displayMetrics.density).toInt(),
+                                        (8 * resources.displayMetrics.density).toInt(),
+                                        (16 * resources.displayMetrics.density).toInt(),
+                                        0
+                                    )
+                                }
+                                status = TextView(context).apply {
+                                    text = "Memeriksa modul…"
+                                    textSize = 12f
+                                    setTextColor(0xFFB7C5FF.toInt())
+                                    setPadding(0, 0, 0, (8 * resources.displayMetrics.density).toInt())
+                                }
+                                content = FrameLayout(context)
+                                host.addView(status, LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                ))
+                                host.addView(content, LinearLayout.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    0,
+                                    1f
+                                ))
+                                checkModule()
+                                show(selectedTab)
+                                host
+                            },
+                            update = { }
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun startMonitor() {

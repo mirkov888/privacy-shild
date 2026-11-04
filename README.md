@@ -32,3 +32,13 @@ Bila build gagal, salin log langkah "Build release APK" dan kirim untuk diperbai
 - Kernel apply-on-boot writes only CPU governor values to `/data/adb/privacyshield/kernel_governors.conf`; the module validates each against `scaling_available_governors`.
 - This version does not change CPU min/max frequency, core online state, GPU frequency, thermal limits or charging current. Those controls require device-specific validation.
 - UI is the existing native Android Views UI with added sections; this build does not claim a full Jetpack Compose Material 3 redesign.
+
+
+## Mora Shield v1.4.0 — Material 3 UI migration
+
+- App shell migrated to Jetpack Compose + Material 3.
+- Dark color scheme; Android 12+ uses dynamic dark colors.
+- Material 3 top app bar and bottom navigation for Aktivitas, Aplikasi, Kendali, Kernel, Scripts, and Info.
+- Existing feature screens remain hosted through AndroidView in this first migration pass. Their internal controls are still legacy Android Views and are not yet fully restyled as Material 3 components.
+- Core root/module logic is retained from v1.3.0.
+- Build requires network access to resolve Compose dependencies.
