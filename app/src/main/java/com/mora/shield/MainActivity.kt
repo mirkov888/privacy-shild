@@ -369,9 +369,24 @@ class MainActivity : Activity() {
                     t.text = "Tidak bisa membaca modul. Cek status di atas."
                     holder.addView(t)
                 } else {
-                    moduleSwitch(holder, "am_on", "Pantau akses mikrofon/kamera/lokasi", st)
-                    moduleSwitch(holder, "nb_on", "Pantau data keluar saat layar mati", st)
-                    moduleSwitch(holder, "na_on", "Blokir internet untuk aplikasi baru", st)
+                    val defs = listOf(
+                        "ads" to "Blokir iklan & tracker", "adult_block" to "Blokir situs dewasa", "gambling_block" to "Blokir situs judi",
+                        "telemetry" to "Anti-telemetri", "mic_block" to "Blokir mikrofon", "cam_block" to "Blokir kamera", "loc_off" to "Batasi lokasi",
+                        "ipv6_off" to "Matikan IPv6", "killswitch" to "VPN/Tor kill switch", "mac_rand" to "Randomisasi MAC", "lock_priv" to "Layar kunci privat",
+                        "adb_off" to "Matikan ADB", "nfc_off" to "Matikan NFC", "bt_off" to "Matikan Bluetooth", "clean_boot" to "Bersihkan jejak saat boot",
+                        "watcher" to "Pengawas perubahan", "autoreboot" to "Reboot otomatis saat terkunci", "wifi_open" to "Kelola Wi-Fi terbuka",
+                        "wifi_strict" to "Cegah Wi-Fi terbuka", "fw_screenoff" to "Firewall saat layar mati", "selflock" to "Kunci pengaman perubahan",
+                        "net2g" to "Batasi jaringan 2G (eksperimental)", "usb_lock" to "Batasi USB saat terkunci", "id_rot" to "Rotasi Advertising ID",
+                        "tor_on" to "Aplikasi lewat Tor", "fp_on" to "Aksi setelah PIN salah", "kt_on" to "Pemicu tombol fisik",
+                        "dm_on" to "Dead-man switch", "wbt_on" to "Timer Wi-Fi/Bluetooth", "na_on" to "Blokir aplikasi baru",
+                        "bio_on" to "Biometrik setelah idle", "am_on" to "Pantau akses aplikasi", "nb_on" to "Pantau data keluar saat layar mati"
+                    )
+                    section(holder, "Semua pengaturan boolean engine v3.0")
+                    for ((key, label) in defs) moduleSwitch(holder, key, label, st)
+                    section(holder, "Profil")
+                    for (profile in listOf("basic", "journalist", "paranoid", "off")) btn(holder, "Profil: $profile") {
+                        bg { val r = Ps.run("profile $profile"); ui.post { toast(if (r.ok) "Profil diterapkan" else r.out); show(2) } }
+                    }
                 }
             }
         }
@@ -383,6 +398,10 @@ class MainActivity : Activity() {
                 ui.post { toast(if (r.out.contains("started")) "Pemindaian dimulai. Hasil di tab Aplikasi dalam beberapa menit." else r.out) }
             }
         }
+
+        section(col, "Tools & diagnostik")
+        val tools = listOf("audit" to "Audit keamanan", "netcheck" to "Tes kebocoran jaringan", "report" to "Laporan audit", "compat" to "Kompatibilitas", "trkstart" to "Pindai SDK tracker", "monscan" to "Uji pemantauan", "baseline" to "Simpan baseline", "rebuild" to "Bangun ulang blocklist", "tortest" to "Tes Tor", "idnow" to "Rotasi identitas", "wifi" to "Daftar Wi-Fi", "nalist" to "Aplikasi baru diblokir", "trkres" to "Hasil pemindaian tracker", "log" to "Log engine", "revert" to "Kembalikan konfigurasi", "evclear" to "Hapus riwayat event")
+        for ((cmd, label) in tools) btn(col, label) { bg { val r = Ps.run(cmd); ui.post { toast(if (r.out.isBlank()) "Perintah selesai: $cmd" else r.out.take(220)) } } }
 
         section(col, "Darurat")
         btn(col, "Lockdown sekarang (hanya PIN)") {
