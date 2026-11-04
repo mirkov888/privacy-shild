@@ -43,7 +43,7 @@ object KernelManager {
             val r=Root.sh("rm -f '$path'")
             return if(r.ok) "Apply on Boot dimatikan" else "Gagal menghapus konfigurasi: ${r.out}"
         }
-        val lines=policies().mapNotNull { p ->
+        val lines=policies().mapNotNull { (p, _) ->
             val g=read("$p/scaling_governor")
             if(g.isBlank() || !g.matches(Regex("[A-Za-z0-9_-]+"))) null
             else "${p.substringAfterLast('/')}=$g"
