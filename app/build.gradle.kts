@@ -12,8 +12,12 @@ android {
         applicationId = "com.mora.shield"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 6
+        versionName = "3.0.0"
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     buildTypes {
@@ -22,10 +26,6 @@ android {
             // Ditandatangani dengan debug key supaya APK langsung bisa diinstal.
             signingConfig = signingConfigs.getByName("debug")
         }
-    }
-
-    buildFeatures {
-        compose = true
     }
 
     compileOptions {
@@ -39,10 +39,13 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    implementation("androidx.activity:activity-compose:1.9.3")
+    val bom = platform("androidx.compose:compose-bom:2024.10.01")
+    implementation(bom)
     implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.core:core-ktx:1.13.1")
 }

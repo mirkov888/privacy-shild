@@ -1,44 +1,21 @@
-# Mora Shield (aplikasi pendamping)
+# Mora Shield 3.0 (Material 3)
 
-Aplikasi pendamping untuk modul **Mora Privacy Shield v3.0+** (KernelSU/Magisk).
-Menampilkan kejadian akses sensor, aplikasi baru, dan data keluar besar sebagai notifikasi
-dengan tombol Blokir/Izinkan/Abaikan, daftar aplikasi dengan skor pelacak, serta tombol darurat.
+Aplikasi pendamping modul **Mora Privacy Shield v3.2.0**. Semua pengaturan modul bisa diubah dari aplikasi tanpa WebUI, lengkap dengan statistik.
 
-## Cara membangun APK dengan GitHub
-1. Buat repository baru di GitHub (boleh privat).
-2. Unggah semua isi folder ini lewat **Add file > Upload files** (tidak ada berkas tersembunyi di dalamnya).
-3. Buat berkas workflow langsung di GitHub, karena nama folder `.github` tersembunyi dan tidak bisa diunggah:
-   - Klik **Add file > Create new file**.
-   - Di kolom nama, ketik persis: `.github/workflows/build.yml` (garis miring otomatis membuat folder).
-   - Salin seluruh isi `ISI-build.yml.txt` ke kolom isi, lalu **Commit changes**.
-4. Buka tab **Actions** (aktifkan bila diminta). Workflow **Build APK** berjalan otomatis setelah commit, atau jalankan lewat **Run workflow**.
-5. Setelah selesai, buka hasil build dan unduh artifact **MoraShield-apk**, lalu pasang `app-release.apk`.
-6. Di KernelSU Manager > Superuser izinkan Mora Shield, dan izinkan notifikasi.
+## Isi
+- **Beranda**: skor perlindungan, kejadian 7 hari, jam rawan, jenis kejadian, aplikasi teraktif, tingkat pelacak, aksi cepat.
+- **Aktivitas**: riwayat kejadian dengan filter.
+- **Aplikasi**: cari, blokir internet per aplikasi, lihat SDK pelacak, izinkan aplikasi baru.
+- **Pengaturan**: profil, pemantauan, DNS, konten, sensor, jaringan, Tor, reboot otomatis, pemicu darurat (semua dengan mode uji).
+- **Alat**: PANIC/lockdown, pindai pelacak, laporan audit, kompatibilitas, MVT, UltimatePrivacy, Kernel Manager (governor CPU), Script root, diagnostik.
 
-Bila build gagal, salin log langkah "Build release APK" dan kirim untuk diperbaiki.
+## Sinkron dengan modul
+Aplikasi memeriksa `ps.sh rev` tiap 6 detik saat dibuka. Bila WebUI mengubah pengaturan, aplikasi memuat ulang otomatis (butuh modul v3.2+). Perubahan dari aplikasi langsung dipakai modul dan terlihat di WebUI.
 
-## Catatan
-- Kode ini belum pernah dikompilasi oleh pembuatnya (lingkungan tanpa Android SDK), jadi build pertama bisa menemukan kesalahan kecil.
-- Aplikasi ditandatangani dengan kunci debug supaya langsung bisa dipasang.
-- Butuh Android 8 (API 26) atau lebih baru.
+## Cara build (GitHub Actions)
+1. Unggah semua file di folder ini ke repositori (timpa yang lama). File berawalan titik tidak perlu diunggah ulang bila workflow sudah ada.
+2. Pastikan `.github/workflows/build.yml` ada (isi di `ISI-build.yml.txt`).
+3. Tab Actions > Build Mora Shield APK > Run workflow. APK ada di Artifacts.
+4. Bila gagal, kirim log baris error pertama.
 
-
-## v1.3.0 integration update
-- Single app controls Mora Privacy Shield and the embedded UltimatePrivacy helper.
-- Kernel tab includes CPU governor presets (only governors advertised by each policy) and opt-in apply-on-boot restoration.
-- Kernel monitoring discovers CPU policy, GPU/devfreq, RAM/ZRAM, I/O scheduler, thermal zones and battery sysfs where available.
-- Script Manager stores user scripts in `/data/adb/privacyshield/scripts`; scripts execute as root only after confirmation.
-- Module extension commands are routed to `bin/ultimateprivacy.sh`; no second module ID is installed.
-- Kernel apply-on-boot writes only CPU governor values to `/data/adb/privacyshield/kernel_governors.conf`; the module validates each against `scaling_available_governors`.
-- This version does not change CPU min/max frequency, core online state, GPU frequency, thermal limits or charging current. Those controls require device-specific validation.
-- UI is the existing native Android Views UI with added sections; this build does not claim a full Jetpack Compose Material 3 redesign.
-
-
-## Mora Shield v1.4.0 — Material 3 UI migration
-
-- App shell migrated to Jetpack Compose + Material 3.
-- Dark color scheme; Android 12+ uses dynamic dark colors.
-- Material 3 top app bar and bottom navigation for Aktivitas, Aplikasi, Kendali, Kernel, Scripts, and Info.
-- Existing feature screens remain hosted through AndroidView in this first migration pass. Their internal controls are still legacy Android Views and are not yet fully restyled as Material 3 components.
-- Core root/module logic is retained from v1.3.0.
-- Build requires network access to resolve Compose dependencies.
+Aplikasi tidak memakai izin internet. Butuh root (KernelSU/Magisk) dan modul terpasang.

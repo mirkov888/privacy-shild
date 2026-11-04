@@ -28,10 +28,11 @@ object Ps {
         return m
     }
 
-    fun set(key: String, value: String): Root.Result {
+    fun set(key: String, value: String, pin: String = ""): Root.Result {
         if (!safe(key) || !Regex("^[A-Za-z0-9._,:/-]*$").matches(value)) return Root.Result(2, "nilai tidak valid")
         val v = if (value.isEmpty()) "\"\"" else value
-        val r = Root.sh("sh $MOD/bin/ps.sh set $key $v")
+        if (pin.isNotEmpty() && !Regex("^[0-9]{1,16}$").matches(pin)) return Root.Result(2, "PIN tidak valid")
+        val r = Root.sh("sh $MOD/bin/ps.sh set $key $v" + (if (pin.isEmpty()) "" else " $pin"))
         if (!r.ok) return r
         Root.sh("sh $MOD/bin/ps.sh apply")
         return r
@@ -75,6 +76,8 @@ object Ps {
 
     fun block(pkg: String): Boolean = safe(pkg) && run("fwblock $pkg").out.contains("ok")
     fun unblock(pkg: String): Boolean = safe(pkg) && run("fwunblock $pkg").out.contains("ok")
+    fun allowNew(pkg: String): Boolean = safe(pkg) && run("naallow $pkg").out.contains("ok")
+
     fun ultimate(args: String): Root.Result {
         if (!Regex("^(status|log|sensor (enable|disable)|lockdown (on|off))$").matches(args)) {
             return Root.Result(2, "perintah UltimatePrivacy tidak valid")
@@ -82,5 +85,20 @@ object Ps {
         return Root.sh("sh $MOD/bin/ultimateprivacy.sh $args")
     }
 
-    fun allowNew(pkg: String): Boolean = safe(pkg) && run("naallow $pkg").out.contains("ok")
+    /** Sidik jari konfigurasi + jumlah kejadian (modul v3.2+). Kosong bila modul lama. */
+    fun rev(): String {
+        val r = run("rev")
+        return if (r.ok && Regex("^[0-9]+-[0-9]+$").matches(r.out)) r.out else ""
+    }
+
+    /** Status lengkap: modul v3.2+ memakai `sync`, modul lama jatuh ke `status`. */
+    fun sync(): Map<String, String> {
+        val r = run("sync")
+        val m = HashMap<String, String>()
+        if (r.ok) for (line in r.out.lines()) {
+            val i = line.indexOf('=')
+            if (i > 0) m[line.substring(0, i)] = line.substring(i + 1)
+        }
+        return if (m.containsKey("rev")) m else status()
+    }
 }

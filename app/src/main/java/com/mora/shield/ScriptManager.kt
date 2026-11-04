@@ -19,7 +19,7 @@ object ScriptManager {
     fun run(name:String):String {
         if(!nameRule.matches(name) || name !in list()) return "Script tidak ditemukan"
         val r=Root.sh("sh '$DIR/$name'")
-        return "exit=${r.code}\\n${r.out}"
+        return "exit=${r.code}\n${r.out}"
     }
     fun delete(name:String):String {
         if(!nameRule.matches(name)) return "Nama script tidak valid"
