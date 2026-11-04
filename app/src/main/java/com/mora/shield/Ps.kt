@@ -75,5 +75,12 @@ object Ps {
 
     fun block(pkg: String): Boolean = safe(pkg) && run("fwblock $pkg").out.contains("ok")
     fun unblock(pkg: String): Boolean = safe(pkg) && run("fwunblock $pkg").out.contains("ok")
+    fun ultimate(args: String): Root.Result {
+        if (!Regex("^(status|log|sensor (enable|disable)|lockdown (on|off))$").matches(args)) {
+            return Root.Result(2, "perintah UltimatePrivacy tidak valid")
+        }
+        return Root.sh("sh $MOD/bin/ultimateprivacy.sh $args")
+    }
+
     fun allowNew(pkg: String): Boolean = safe(pkg) && run("naallow $pkg").out.contains("ok")
 }

@@ -21,3 +21,14 @@ Bila build gagal, salin log langkah "Build release APK" dan kirim untuk diperbai
 - Kode ini belum pernah dikompilasi oleh pembuatnya (lingkungan tanpa Android SDK), jadi build pertama bisa menemukan kesalahan kecil.
 - Aplikasi ditandatangani dengan kunci debug supaya langsung bisa dipasang.
 - Butuh Android 8 (API 26) atau lebih baru.
+
+
+## v1.3.0 integration update
+- Single app controls Mora Privacy Shield and the embedded UltimatePrivacy helper.
+- Kernel tab includes CPU governor presets (only governors advertised by each policy) and opt-in apply-on-boot restoration.
+- Kernel monitoring discovers CPU policy, GPU/devfreq, RAM/ZRAM, I/O scheduler, thermal zones and battery sysfs where available.
+- Script Manager stores user scripts in `/data/adb/privacyshield/scripts`; scripts execute as root only after confirmation.
+- Module extension commands are routed to `bin/ultimateprivacy.sh`; no second module ID is installed.
+- Kernel apply-on-boot writes only CPU governor values to `/data/adb/privacyshield/kernel_governors.conf`; the module validates each against `scaling_available_governors`.
+- This version does not change CPU min/max frequency, core online state, GPU frequency, thermal limits or charging current. Those controls require device-specific validation.
+- UI is the existing native Android Views UI with added sections; this build does not claim a full Jetpack Compose Material 3 redesign.

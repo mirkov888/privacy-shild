@@ -72,7 +72,7 @@ class MainActivity : Activity() {
 
         val tabs = LinearLayout(this)
         tabs.orientation = LinearLayout.HORIZONTAL
-        val names = arrayOf("Aktivitas", "Aplikasi", "Kendali", "Info")
+        val names = arrayOf("Aktivitas", "Aplikasi", "Kendali", "Kernel", "Scripts", "Info")
         for ((i, n) in names.withIndex()) {
             val b = Button(this)
             b.text = n
@@ -127,6 +127,8 @@ class MainActivity : Activity() {
             0 -> showEvents()
             1 -> showApps()
             2 -> showControl()
+            3 -> showKernel()
+            4 -> showScripts()
             else -> showInfo()
         }
     }
@@ -369,24 +371,9 @@ class MainActivity : Activity() {
                     t.text = "Tidak bisa membaca modul. Cek status di atas."
                     holder.addView(t)
                 } else {
-                    val defs = listOf(
-                        "ads" to "Blokir iklan & tracker", "adult_block" to "Blokir situs dewasa", "gambling_block" to "Blokir situs judi",
-                        "telemetry" to "Anti-telemetri", "mic_block" to "Blokir mikrofon", "cam_block" to "Blokir kamera", "loc_off" to "Batasi lokasi",
-                        "ipv6_off" to "Matikan IPv6", "killswitch" to "VPN/Tor kill switch", "mac_rand" to "Randomisasi MAC", "lock_priv" to "Layar kunci privat",
-                        "adb_off" to "Matikan ADB", "nfc_off" to "Matikan NFC", "bt_off" to "Matikan Bluetooth", "clean_boot" to "Bersihkan jejak saat boot",
-                        "watcher" to "Pengawas perubahan", "autoreboot" to "Reboot otomatis saat terkunci", "wifi_open" to "Kelola Wi-Fi terbuka",
-                        "wifi_strict" to "Cegah Wi-Fi terbuka", "fw_screenoff" to "Firewall saat layar mati", "selflock" to "Kunci pengaman perubahan",
-                        "net2g" to "Batasi jaringan 2G (eksperimental)", "usb_lock" to "Batasi USB saat terkunci", "id_rot" to "Rotasi Advertising ID",
-                        "tor_on" to "Aplikasi lewat Tor", "fp_on" to "Aksi setelah PIN salah", "kt_on" to "Pemicu tombol fisik",
-                        "dm_on" to "Dead-man switch", "wbt_on" to "Timer Wi-Fi/Bluetooth", "na_on" to "Blokir aplikasi baru",
-                        "bio_on" to "Biometrik setelah idle", "am_on" to "Pantau akses aplikasi", "nb_on" to "Pantau data keluar saat layar mati"
-                    )
-                    section(holder, "Semua pengaturan boolean engine v3.0")
-                    for ((key, label) in defs) moduleSwitch(holder, key, label, st)
-                    section(holder, "Profil")
-                    for (profile in listOf("basic", "journalist", "paranoid", "off")) btn(holder, "Profil: $profile") {
-                        bg { val r = Ps.run("profile $profile"); ui.post { toast(if (r.ok) "Profil diterapkan" else r.out); show(2) } }
-                    }
+                    moduleSwitch(holder, "am_on", "Pantau akses mikrofon/kamera/lokasi", st)
+                    moduleSwitch(holder, "nb_on", "Pantau data keluar saat layar mati", st)
+                    moduleSwitch(holder, "na_on", "Blokir internet untuk aplikasi baru", st)
                 }
             }
         }
@@ -399,9 +386,25 @@ class MainActivity : Activity() {
             }
         }
 
-        section(col, "Tools & diagnostik")
-        val tools = listOf("audit" to "Audit keamanan", "netcheck" to "Tes kebocoran jaringan", "report" to "Laporan audit", "compat" to "Kompatibilitas", "trkstart" to "Pindai SDK tracker", "monscan" to "Uji pemantauan", "baseline" to "Simpan baseline", "rebuild" to "Bangun ulang blocklist", "tortest" to "Tes Tor", "idnow" to "Rotasi identitas", "wifi" to "Daftar Wi-Fi", "nalist" to "Aplikasi baru diblokir", "trkres" to "Hasil pemindaian tracker", "log" to "Log engine", "revert" to "Kembalikan konfigurasi", "evclear" to "Hapus riwayat event")
-        for ((cmd, label) in tools) btn(col, label) { bg { val r = Ps.run(cmd); ui.post { toast(if (r.out.isBlank()) "Perintah selesai: $cmd" else r.out.take(220)) } } }
+        section(col, "UltimatePrivacy (ekstensi terintegrasi)")
+        btn(col, "Status UltimatePrivacy") {
+            bg { val r=Ps.ultimate("status"); ui.post { AlertDialog.Builder(this).setTitle("UltimatePrivacy").setMessage(r.out).setPositiveButton("Tutup",null).show() } }
+        }
+        btn(col, "Sensor privacy: aktifkan semua sensor") {
+            confirm("Aktifkan sensor privacy?", "Perintah global sensor privacy bergantung pada dukungan ROM. Verifikasi kembali melalui Pengaturan > Privasi.", "Aktifkan") {
+                bg { val r=Ps.ultimate("sensor enable"); ui.post { toast(r.out.take(180)) } }
+            }
+        }
+        btn(col, "Sensor privacy: nonaktifkan semua sensor") {
+            confirm("Nonaktifkan sensor privacy?", "Akses kamera dan mikrofon akan dipulihkan sesuai dukungan ROM.", "Nonaktifkan") {
+                bg { val r=Ps.ultimate("sensor disable"); ui.post { toast(r.out.take(180)) } }
+            }
+        }
+        btn(col, "UltimatePrivacy lockdown marker ON/OFF") {
+            confirm("Ubah marker lockdown?", "Marker ini hanya penanda; bukan pemblokiran sistem menyeluruh.", "ON") {
+                bg { val r=Ps.ultimate("lockdown on"); ui.post { toast(r.out.take(180)) } }
+            }
+        }
 
         section(col, "Darurat")
         btn(col, "Lockdown sekarang (hanya PIN)") {
@@ -427,6 +430,107 @@ class MainActivity : Activity() {
     }
 
     // ------------------------------------------------------------ Info
+
+    // Kernel Manager: discovery-first, safe CPU governor controls.
+    private fun showKernel() {
+        val scroll = ScrollView(this)
+        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), dp(8), dp(10), dp(8)) }
+        scroll.addView(body); content.addView(scroll)
+        val stats = TextView(this).apply { textSize = 14f }
+        val cpu = TextView(this).apply { textSize = 13f }
+        val gpu = TextView(this).apply { textSize = 13f }
+        val mem = TextView(this).apply { textSize = 13f }
+        val thermal = TextView(this).apply { textSize = 13f }
+        val controls = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        btn(body, "Refresh statistik") { loadKernel(stats,cpu,gpu,mem,thermal,controls) }
+        section(body,"Preset performa")
+        val presets=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+        listOf("performance" to "Performance","balanced" to "Balanced","battery" to "Battery Saver").forEach { (id,label) ->
+            btn(presets,label) { confirm("Terapkan preset", "Preset $label hanya memilih CPU governor yang tersedia; tidak mengubah voltase atau batas thermal.", "Terapkan") {
+                bg { val out=KernelManager.setProfile(id); ui.post { toast(out.take(220)); loadKernel(stats,cpu,gpu,mem,thermal,controls) } }
+            } }
+        }
+        body.addView(presets)
+        section(body,"Apply on Boot")
+        val boot=Switch(this).apply {
+            text="Pulihkan CPU governor setelah boot"
+            isChecked=KernelManager.applyOnBootEnabled()
+            setOnCheckedChangeListener { v,on ->
+                if(!v.isPressed) return@setOnCheckedChangeListener
+                bg { val out=KernelManager.saveGovernorsForBoot(on); ui.post { toast(out) ; isChecked=KernelManager.applyOnBootEnabled() } }
+            }
+        }
+        body.addView(boot)
+        section(body,"Ringkasan sistem"); body.addView(stats)
+        section(body,"CPU policy & governor"); body.addView(cpu); body.addView(controls)
+        section(body,"GPU / devfreq"); body.addView(gpu)
+        section(body,"RAM / ZRAM / I/O"); body.addView(mem)
+        section(body,"Thermal / baterai"); body.addView(thermal)
+        section(body,"Catatan keamanan")
+        body.addView(TextView(this).apply { textSize=12f; text="Kontrol hanya muncul jika node sysfs tersedia. Versi ini hanya mengubah CPU governor yang didukung kernel. Tidak mengubah thermal limit, tegangan, charging current, atau frekuensi GPU." })
+        loadKernel(stats,cpu,gpu,mem,thermal,controls)
+    }
+
+    private fun loadKernel(stats: TextView,cpu: TextView,gpu: TextView,mem: TextView,thermal: TextView,controls: LinearLayout) {
+        bg {
+            val summary=KernelManager.summary(); val policies=KernelManager.policies()
+            val gpuText=KernelManager.gpu(); val memText=KernelManager.memory(); val thermalText=KernelManager.thermal()
+            ui.post {
+                stats.text=summary
+                cpu.text=policies.joinToString("\n\n") { it.second }.ifBlank { "CPU cpufreq tidak ditemukan." }
+                gpu.text=gpuText.ifBlank { "Interface GPU/devfreq tidak ditemukan." }
+                mem.text=memText; thermal.text=thermalText
+                controls.removeAllViews()
+                for ((path,_) in policies) {
+                    val governors=KernelManager.read("$path/scaling_available_governors").split(Regex("\\s+")).filter { it.matches(Regex("[A-Za-z0-9_-]+")) }
+                    if(governors.isNotEmpty()) {
+                        section(controls,"Pilih governor · ${path.substringAfterLast('/')}")
+                        val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
+                        governors.forEach { g -> btn(row,g) { confirm("CPU governor","Terapkan $g pada ${path.substringAfterLast('/')}?") { bg { val msg=KernelManager.setGovernor(path,g); ui.post { toast(msg); loadKernel(stats,cpu,gpu,mem,thermal,controls) } } } } }
+                        controls.addView(row)
+                    }
+                }
+            }
+        }
+    }
+
+
+    // ------------------------------------------------------------ Script Manager
+    private fun showScripts() {
+        val col=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(8),dp(8),dp(8),dp(8)) }
+        val sc=ScrollView(this); sc.addView(col); content.addView(sc)
+        val info=TextView(this).apply { text="Script dijalankan sebagai root. Hanya jalankan script yang kamu pahami."; textSize=13f }
+        col.addView(info)
+        btn(col,"Buat script baru") {
+            val name=android.widget.EditText(this).apply { hint="nama-script.sh" }
+            val body=android.widget.EditText(this).apply { hint="#!/system/bin/sh\\necho Hello"; minLines=8; gravity=Gravity.TOP }
+            val layout=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(8),dp(16),0); addView(name); addView(body) }
+            AlertDialog.Builder(this).setTitle("Script root baru").setView(layout)
+                .setPositiveButton("Simpan") { _,_-> bg { val r=ScriptManager.save(name.text.toString(),body.text.toString()); ui.post { toast(r) ; show(4) } } }
+                .setNegativeButton("Batal",null).show()
+        }
+        btn(col,"Refresh daftar script") { show(4) }
+        bg {
+            val files=ScriptManager.list()
+            ui.post {
+                if(files.isEmpty()) col.addView(TextView(this).apply { text="Belum ada script. Buat script pertama." })
+                files.forEach { file ->
+                    val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
+                    val label=TextView(this).apply { text=file; textSize=14f }
+                    row.addView(label,LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f))
+                    val run=Button(this).apply { text="Jalankan"; isAllCaps=false; setOnClickListener {
+                        confirm("Jalankan script root?", "Script $file akan berjalan dengan hak root. Pastikan kamu mempercayai isinya.", "Jalankan") {
+                            bg { val out=ScriptManager.run(file); ui.post { AlertDialog.Builder(this).setTitle(file).setMessage(out).setPositiveButton("Tutup",null).show() } }
+                        }
+                    } }
+                    val del=Button(this).apply { text="Hapus"; isAllCaps=false; setOnClickListener {
+                        confirm("Hapus script?",file,"Hapus"){bg{val out=ScriptManager.delete(file);ui.post{toast(out);show(4)}}}
+                    } }
+                    row.addView(run); row.addView(del); col.addView(row)
+                }
+            }
+        }
+    }
 
     private fun showInfo() {
         val sv = ScrollView(this)
