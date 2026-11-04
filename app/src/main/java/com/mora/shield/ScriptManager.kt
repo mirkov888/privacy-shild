@@ -6,7 +6,7 @@ object ScriptManager {
     private const val DIR="/data/adb/privacyshield/scripts"
     private val nameRule=Regex("^[A-Za-z0-9_-]{1,40}\\.sh$")
     fun list():List<String> {
-        val r=Root.sh("mkdir -p '$DIR'; for f in '$DIR'/*.sh; do [ -f \"$f\" ] && basename \"$f\"; done")
+        val r=Root.sh("mkdir -p '$DIR'; for f in '$DIR'/*.sh; do [ -f \"\$f\" ] && basename \"\$f\"; done")
         return if(r.ok) r.out.lines().filter { nameRule.matches(it) } else emptyList()
     }
     fun save(name:String, body:String):String {

@@ -486,7 +486,7 @@ class MainActivity : Activity() {
                     if(governors.isNotEmpty()) {
                         section(controls,"Pilih governor · ${path.substringAfterLast('/')}")
                         val row=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL }
-                        governors.forEach { g -> btn(row,g) { confirm("CPU governor","Terapkan $g pada ${path.substringAfterLast('/')}?") { bg { val msg=KernelManager.setGovernor(path,g); ui.post { toast(msg); loadKernel(stats,cpu,gpu,mem,thermal,controls) } } } } }
+                        governors.forEach { g -> btn(row,g) { confirm("CPU governor","Terapkan $g pada ${path.substringAfterLast('/')}?", "Terapkan") { bg { val msg=KernelManager.setGovernor(path,g); ui.post { toast(msg); loadKernel(stats,cpu,gpu,mem,thermal,controls) } } } } }
                         controls.addView(row)
                     }
                 }
@@ -520,7 +520,7 @@ class MainActivity : Activity() {
                     row.addView(label,LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1f))
                     val run=Button(this).apply { text="Jalankan"; isAllCaps=false; setOnClickListener {
                         confirm("Jalankan script root?", "Script $file akan berjalan dengan hak root. Pastikan kamu mempercayai isinya.", "Jalankan") {
-                            bg { val out=ScriptManager.run(file); ui.post { AlertDialog.Builder(this).setTitle(file).setMessage(out).setPositiveButton("Tutup",null).show() } }
+                            bg { val out=ScriptManager.run(file); ui.post { AlertDialog.Builder(this@MainActivity).setTitle(file).setMessage(out).setPositiveButton("Tutup",null).show() } }
                         }
                     } }
                     val del=Button(this).apply { text="Hapus"; isAllCaps=false; setOnClickListener {

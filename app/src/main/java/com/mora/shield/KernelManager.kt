@@ -43,7 +43,7 @@ object KernelManager {
             val r=Root.sh("rm -f '$path'")
             return if(r.ok) "Apply on Boot dimatikan" else "Gagal menghapus konfigurasi: ${r.out}"
         }
-        val lines=policies.mapNotNull { p ->
+        val lines=policies().mapNotNull { p ->
             val g=read("$p/scaling_governor")
             if(g.isBlank() || !g.matches(Regex("[A-Za-z0-9_-]+"))) null
             else "${p.substringAfterLast('/')}=$g"
@@ -61,18 +61,18 @@ object KernelManager {
         val kgsl="/sys/class/kgsl/kgsl-3d0"
         val keys=listOf("gpuclk","max_gpuclk","min_gpuclk","gpu_available_frequencies")
         val lines=keys.mapNotNull { k->read("$kgsl/$k").takeIf { it.isNotBlank() }?.let { "$k: $it" } }
-        val df=Root.sh("for d in /sys/class/devfreq/*; do [ -d \"$d\" ] && echo \"${'$'}{d##*/}\"; done").out
+        val df=Root.sh("for d in /sys/class/devfreq/*; do [ -d \"\$d\" ] && echo \"\${d##*/}\"; done").out
         return (lines+if(df.isNotBlank()) listOf("devfreq devices: $df") else emptyList()).joinToString("\n")
     }
     fun memory():String {
         val a=Root.sh("head -n 8 /proc/meminfo").out
         val z=Root.sh("cat /sys/block/zram*/mm_stat 2>/dev/null").out
-        val io=Root.sh("for f in /sys/block/*/queue/scheduler; do [ -r \"$f\" ] && echo \"${'$'}f: $(cat \"$f\")\"; done").out
+        val io=Root.sh("for f in /sys/block/*/queue/scheduler; do [ -r \"\$f\" ] && echo \"\$f: $(cat \"\$f\")\"; done").out
         return "RAM:\n${a.ifBlank { "Tidak tersedia" }}\nZRAM:\n${z.ifBlank { "Tidak tersedia" }}\nI/O scheduler:\n${io.ifBlank { "Tidak tersedia" }}"
     }
     fun thermal():String {
-        val t=Root.sh("for z in /sys/class/thermal/thermal_zone*; do [ -r \"$z/temp\" ] && echo \"$(cat \"$z/type\" 2>/dev/null)=$(cat \"$z/temp\")\"; done").out
-        val b=Root.sh("for f in capacity temp status current_now voltage_now; do p=/sys/class/power_supply/battery/$f; [ -r \"$p\" ] && echo \"$f=$(cat \"$p\")\"; done").out
+        val t=Root.sh("for z in /sys/class/thermal/thermal_zone*; do [ -r \"\$z/temp\" ] && echo \"$(cat \"\$z/type\" 2>/dev/null)=$(cat \"\$z/temp\")\"; done").out
+        val b=Root.sh("for f in capacity temp status current_now voltage_now; do p=/sys/class/power_supply/battery/\$f; [ -r \"\$p\" ] && echo \"\$f=$(cat \"\$p\")\"; done").out
         return "Thermal zones:\n${t.ifBlank { "Tidak tersedia" }}\nBattery:\n${b.ifBlank { "Tidak tersedia" }}"
     }
 }
