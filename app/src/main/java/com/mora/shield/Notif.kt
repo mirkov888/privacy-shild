@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 
 object Notif {
     const val CH_SERVICE = "svc"
+    const val CH_STATS = "stats"
     const val CH_ACCESS = "access"
     const val CH_ALERT = "alert"
     const val ACT_BLOCK = "com.mora.shield.BLOCK"
@@ -22,6 +23,9 @@ object Notif {
             NotificationChannel(CH_SERVICE, "Pemantau berjalan", NotificationManager.IMPORTANCE_MIN)
         )
         nm.createNotificationChannel(
+            NotificationChannel(CH_STATS, "Statistik Mora Shield", NotificationManager.IMPORTANCE_LOW)
+        )
+        nm.createNotificationChannel(
             NotificationChannel(CH_ACCESS, "Akses sensor dan data", NotificationManager.IMPORTANCE_DEFAULT)
         )
         nm.createNotificationChannel(
@@ -29,24 +33,51 @@ object Notif {
         )
     }
 
-    fun foreground(c: Context): Notification {
+    fun foreground(c: Context, title: String = "Mora Shield memantau", body: String = "Menunggu kejadian dari modul"): Notification {
         val open = PendingIntent.getActivity(
             c, 0, Intent(c, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        return Notification.Builder(c, CH_SERVICE)
+        return Notification.Builder(c, CH_STATS)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
-            .setContentTitle("Mora Shield memantau")
-            .setContentText("Menunggu kejadian dari modul")
+            .setContentTitle(title)
+            .setContentText(body.lines().firstOrNull() ?: "")
+            .setStyle(Notification.BigTextStyle().bigText(body))
             .setContentIntent(open)
+            .setOnlyAlertOnce(true)
             .setOngoing(true)
             .build()
+    }
+
+    /** Pasangan (judul, isi) statistik gaya TCCM. Memanggil su, jadi jangan di thread utama. */
+    fun statsText(c: Context): Pair<String, String> {
+        val cfg = Ps.sync()
+        val score = SCORE_KEYS.count { cfg.on(it) } * 100 / SCORE_KEYS.size
+        val startDay = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0)
+        }.timeInMillis / 1000
+        val evs = Ps.events(1500).filter { it.ts >= startDay }
+        fun n(t: String) = evs.count { it.type == t }
+        val blocked = (cfg["fw_pkgs"] ?: "").split(",").count { it.isNotBlank() }
+        val batt = KernelManager.battery()
+        val ram = KernelManager.ramPercent()
+        val sb = StringBuilder()
+        sb.append("Hari ini: mikrofon ${n("MIC")} · kamera ${n("CAM")} · lokasi ${n("LOC")} · kontak ${n("CONTACTS")}\n")
+        sb.append("Data keluar besar ${n("NETBIG")} · aplikasi baru ${n("NEWAPP")} · diblokir $blocked\n")
+        val bt = if (batt.first >= 0) "Baterai ${batt.first}%" + (if (batt.second >= 0) " · ${batt.second}°C" else "") else ""
+        val rm = if (ram >= 0) "RAM $ram%" else ""
+        val line3 = listOf(bt, rm).filter { it.isNotEmpty() }.joinToString(" · ")
+        if (line3.isNotEmpty()) sb.append(line3).append("\n")
+        val patch = cfg["patch"] ?: ""
+        sb.append("Modul ${cfg["mod_version"] ?: "?"}" + (if (patch.isNotEmpty()) " · patch $patch" else "") +
+            (if ((cfg["vpn_active"] ?: "0") != "0") " · VPN aktif" else ""))
+        return Pair("Mora Shield · skor $score% · ${evs.size} kejadian", sb.toString())
     }
 
     fun label(c: Context, pkg: String): String = try {
         val pm = c.packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-    } catch (e: PackageManager.NameNotFoundException) {
+    } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
         pkg
     }
 
@@ -75,9 +106,10 @@ object Notif {
             "NETBIG" -> "mengirim data besar (${ev.detail})"
             "NEWAPP" -> "aplikasi baru diblokir dari internet"
             "ACTION" -> ev.detail
+            "BOOTGUARD" -> ev.detail
             else -> ev.type
         }
-        val urgent = ev.type == "NETBIG" || ev.type == "NEWAPP" || ev.type == "ACTION"
+        val urgent = ev.type == "NETBIG" || ev.type == "NEWAPP" || ev.type == "ACTION" || ev.type == "BOOTGUARD"
         val id = (ev.type + ev.pkg).hashCode()
         val b = Notification.Builder(c, if (urgent) CH_ALERT else CH_ACCESS)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
@@ -90,7 +122,7 @@ object Notif {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
-        if (ev.pkg.isNotEmpty() && ev.type != "ACTION") {
+        if (ev.pkg.isNotEmpty() && ev.type != "ACTION" && ev.type != "BOOTGUARD") {
             if (ev.type == "NEWAPP") {
                 b.addAction(android.R.drawable.ic_menu_add, "Izinkan internet", act(c, Notif.ACT_ALLOW, ev.pkg, ev.type, id))
             }

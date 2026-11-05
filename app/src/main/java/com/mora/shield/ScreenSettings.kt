@@ -57,6 +57,7 @@ fun SettingsScreen() {
         ContentCard()
         SensorCard()
         DeviceCard()
+        VpnCard()
         NetworkCard()
         AutoCard()
         TriggerCard()
@@ -112,6 +113,26 @@ fun MonitorCard(ctx: Context) {
             Spacer(Modifier.width(12.dp))
             var sec by remember { mutableStateOf(prefs.getBoolean("secure", true)) }
             Switch(checked = sec, onCheckedChange = { on -> sec = on; prefs.edit().putBoolean("secure", on).apply() })
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            RowText("Kunci aplikasi", "Membuka Mora Shield harus memakai PIN/pola/sidik jari layar kunci. Terkunci lagi setelah 30 detik di latar belakang.", Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = Store.appLock, onCheckedChange = { on ->
+                val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                if (on && !km.isDeviceSecure) {
+                    Store.message = "Atur kunci layar HP dulu (PIN/pola/sandi)"
+                } else {
+                    Store.appLock = on
+                    Store.unlocked = true
+                    prefs.edit().putBoolean("applock", on).apply()
+                }
+            })
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            RowText("Notifikasi statistik", "Notifikasi tetap seperti TCCM: skor, kejadian hari ini, baterai, patch. Diperbarui tiap menit.", Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
+            var sn by remember { mutableStateOf(prefs.getBoolean("statnotif", true)) }
+            Switch(checked = sn, onCheckedChange = { on -> sn = on; prefs.edit().putBoolean("statnotif", on).apply() })
         }
         ActionRow("Daftar diabaikan", "Notifikasi dari aplikasi yang kamu 'Abaikan' akan muncul lagi", "Kosongkan") {
             prefs.edit().remove("ignored").apply(); Store.message = "Daftar diabaikan dikosongkan"
@@ -266,7 +287,6 @@ fun DeviceCard() {
 @Composable
 fun NetworkCard() {
     SectionCard("Jaringan lanjutan", collapsible = true, startOpen = false) {
-        SwitchRow("Kill switch", "Putus internet bila VPN/Tor terputus", "killswitch", confirmOn = "Bila VPN belum aktif, internet akan terputus. Bila terkunci, pakai 'Perbaiki internet' di Beranda.")
         SwitchRow("Peringatan Wi-Fi terbuka", null, "wifi_open")
         SwitchRow("Mode Wi-Fi ketat", "Blokir Wi-Fi tanpa enkripsi", "wifi_strict")
         SwitchRow("Firewall saat layar mati", null, "fw_screenoff")
@@ -474,6 +494,69 @@ fun TorAppsRow() {
             confirmButton = {
                 TextButton(onClick = { open = false; Store.set("tor_apps", sel.joinToString(",")) }) { Text("Simpan") }
             },
+            dismissButton = { TextButton(onClick = { open = false }) { Text("Batal") } }
+        )
+    }
+}
+
+
+@Composable
+fun VpnCard() {
+    val ctx = LocalContext.current
+    val always = (Store.cfg["vpn_always"] ?: "").let { if (it == "null") "" else it }
+    val lock = Store.cfg["vpn_lockdown"] == "1"
+    val tun = (Store.cfg["vpn_active"] ?: "0") != "0"
+    SectionCard("VPN dan kill switch", "Status: " + (if (tun) "VPN aktif" else "tidak ada VPN aktif"), collapsible = true, startOpen = false) {
+        Text(
+            "VPN Android selalu-aktif: " + (if (always.isEmpty()) "tidak diatur" else always) + (if (always.isNotEmpty()) (if (lock) " · blokir tanpa VPN: ya" else " · blokir tanpa VPN: tidak") else ""),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 2.dp)
+        )
+        SwitchRow("Kill switch modul", "Putus internet bila VPN/Tor terputus", "killswitch", confirmOn = "Bila VPN belum aktif, internet akan terputus. Bila terkunci, pakai 'Perbaiki internet' di Beranda.")
+        AppPickRow("Aplikasi VPN yang diizinkan", "vpn_pkgs", "bawaan (WireGuard, Mullvad, Proton, OpenVPN, Orbot, dll.)")
+        ActionRow("Pengaturan VPN Android", "Pilih VPN selalu-aktif dan 'Blokir koneksi tanpa VPN' (kill switch bawaan Android, paling andal)", "Buka") {
+            try {
+                ctx.startActivity(Intent(android.provider.Settings.ACTION_VPN_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (e: Exception) {
+                Store.message = "Tidak bisa membuka pengaturan VPN"
+            }
+        }
+        InfoNote("Aplikasi ini tidak membuat atau menjalankan VPN sendiri (tanpa izin internet). Pasang klien VPN pilihanmu lalu aturnya di sini. Tes kebocoran IP/DNS butuh internet, jadi ada di WebUI modul.")
+    }
+}
+
+@Composable
+fun AppPickRow(title: String, key: String, emptyLabel: String) {
+    val cur = (Store.cfg[key] ?: "").split(",").filter { it.isNotBlank() }.toSet()
+    var open by remember { mutableStateOf(false) }
+    var sel by remember { mutableStateOf(cur) }
+    Row(
+        Modifier.fillMaxWidth().clickableRow { sel = cur; open = true }.padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RowText(title, if (cur.isEmpty()) emptyLabel else null, Modifier.weight(1f))
+        Text(if (cur.isEmpty()) "bawaan" else "${cur.size} aplikasi", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+    }
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(title) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Kosongkan semua pilihan untuk memakai daftar bawaan.", style = MaterialTheme.typography.bodySmall)
+                    for (a in Store.apps) {
+                        Row(
+                            Modifier.fillMaxWidth().clickableRow { sel = if (a.pkg in sel) sel - a.pkg else sel + a.pkg },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(checked = a.pkg in sel, onCheckedChange = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(a.label, modifier = Modifier.padding(vertical = 8.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { open = false; Store.set(key, sel.joinToString(",")) }) { Text("Simpan") } },
             dismissButton = { TextButton(onClick = { open = false }) { Text("Batal") } }
         )
     }

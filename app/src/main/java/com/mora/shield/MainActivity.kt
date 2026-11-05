@@ -15,6 +15,7 @@ import androidx.activity.enableEdgeToEdge
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
 
@@ -52,6 +53,7 @@ import androidx.compose.runtime.setValue
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
 
@@ -69,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
         // Membaca konfigurasi service
         val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
+        Store.appLock = prefs.getBoolean("applock", false)
         if (prefs.getBoolean("secure", true)) {
             window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
@@ -102,12 +105,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (Store.appLock && android.os.SystemClock.elapsedRealtime() - Store.lastPause > 30000L) Store.unlocked = false
 
         Store.refresh(applicationContext)
         Store.startPolling(applicationContext)
     }
 
     override fun onPause() {
+        Store.lastPause = android.os.SystemClock.elapsedRealtime()
         Store.stopPolling()
         super.onPause()
     }
@@ -119,6 +124,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MoraApp() {
+    if (Store.appLock && !Store.unlocked) {
+        LockScreen()
+        return
+    }
 
     var selectedTab by remember {
         mutableIntStateOf(0)
@@ -299,5 +308,37 @@ fun MoraApp() {
                 }
             }
         )
+    }
+}
+
+
+@Composable
+fun LockScreen() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == android.app.Activity.RESULT_OK) {
+            Store.lastPause = android.os.SystemClock.elapsedRealtime()
+            Store.unlocked = true
+        }
+    }
+    val km = ctx.getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+    fun ask() {
+        @Suppress("DEPRECATION")
+        val i = km.createConfirmDeviceCredentialIntent("Mora Shield", "Verifikasi untuk membuka")
+        if (i == null) Store.unlocked = true else launcher.launch(i)
+    }
+    LaunchedEffect(Store.unlocked) { if (!Store.unlocked) ask() }
+    androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().padding(32.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            Text("Mora Shield terkunci", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(8.dp))
+            androidx.compose.material3.Button(onClick = { ask() }) { Text("Buka kunci") }
+        }
     }
 }

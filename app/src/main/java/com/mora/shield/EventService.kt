@@ -16,7 +16,7 @@ class EventService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Notif.ensureChannels(this)
         startForeground(1, Notif.foreground(this))
-        if (!running) startReader()
+        if (!running) { startReader(); startStats() }
         return START_STICKY
     }
 
@@ -39,6 +39,29 @@ class EventService : Service() {
                     } catch (e: InterruptedException) {
                         return@Thread
                     }
+                }
+            }
+        }
+        t.isDaemon = true
+        t.start()
+    }
+
+    private fun startStats() {
+        val t = Thread {
+            while (running) {
+                try {
+                    val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
+                    if (prefs.getBoolean("statnotif", true) && Root.available()) {
+                        val st = Notif.statsText(this)
+                        getSystemService(android.app.NotificationManager::class.java).notify(1, Notif.foreground(this, st.first, st.second))
+                    }
+                } catch (e: Exception) {
+                    // abaikan; coba lagi menit depan
+                }
+                try {
+                    Thread.sleep(60000)
+                } catch (e: InterruptedException) {
+                    return@Thread
                 }
             }
         }

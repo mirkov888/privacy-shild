@@ -63,6 +63,14 @@ object Store {
     var ram by mutableStateOf(-1)
     var batt by mutableStateOf(Pair(-1, -1))
     var scripts by mutableStateOf<List<String>>(emptyList())
+    var tests by mutableStateOf<List<TestRow>>(emptyList())
+    var testSum by mutableStateOf("")
+    var sus by mutableStateOf<List<SusRow>>(emptyList())
+    var susSum by mutableStateOf("")
+    var susRan by mutableStateOf(false)
+    var appLock by mutableStateOf(false)
+    var unlocked by mutableStateOf(false)
+    var lastPause = 0L
 
     /** Mengecek tiap beberapa detik apakah konfigurasi/kejadian berubah (mis. dari WebUI) lalu memuat ulang. */
     fun startPolling(ctx: Context) {
@@ -76,7 +84,7 @@ object Store {
                         lastRev = r
                         val sy = Ps.sync()
                         cfg = sy
-                        events = Ps.events(600)
+                        events = Ps.events(3000)
                         lastSync = System.currentTimeMillis()
                     }
                 }
@@ -124,7 +132,7 @@ object Store {
             cfg = sy
             lastRev = sy["rev"] ?: ""
             lastSync = System.currentTimeMillis()
-            events = Ps.events(600)
+            events = Ps.events(3000)
             loadApps(app)
         }
     }
@@ -219,5 +227,65 @@ object Store {
         val onCount = SCORE_KEYS.count { cfg.on(it) }
         val score = if (cfg.isEmpty()) 0 else onCount * 100 / SCORE_KEYS.size
         return Stats(evs.size, byType, top, hourly, levels, score, apps.count { it.blocked }, apps.count { it.newApp })
+    }
+
+    fun runSelftest() {
+        thread {
+            busy = true
+            val r = Ps.run("selftest")
+            busy = false
+            if (!r.ok) { message = "Uji sistem gagal: " + r.out.take(120); return@thread }
+            val rows = ArrayList<TestRow>()
+            var sum = ""
+            for (l in r.out.lines()) {
+                val p = l.split("|")
+                if (p.size >= 4 && p[0] == "T") rows.add(TestRow(p[1], p[2], p.drop(3).joinToString("|")))
+                if (p.size >= 4 && p[0] == "SUM") sum = "${p[1]} lulus, ${p[2]} gagal, ${p[3]} dilewati"
+            }
+            tests = rows
+            testSum = sum
+        }
+    }
+
+    fun runSus() {
+        thread {
+            busy = true
+            val r = Ps.run("sus")
+            busy = false
+            if (!r.ok) { message = "Pemeriksaan gagal: " + r.out.take(120); return@thread }
+            val rows = ArrayList<SusRow>()
+            for (l in r.out.lines()) {
+                val p = l.split("|")
+                if (p.size >= 5 && p[0] == "S") rows.add(SusRow(p[1], p[2], p[3], p.drop(4).joinToString("|")))
+            }
+            sus = rows
+            susRan = true
+        }
+    }
+
+    fun fwSet(pkg: String, mode: String) {
+        thread {
+            val r = Ps.run("fwset $pkg $mode")
+            message = if (r.ok) "Firewall diperbarui" else "Gagal: " + r.out.take(120)
+            if (r.ok) refresh(appCtx)
+        }
+    }
+
+    class WeekRow(val type: String, val now: Int, val prev: Int, val top: String)
+
+    fun weekly(): List<WeekRow> {
+        val nowS = System.currentTimeMillis() / 1000
+        val w = 7 * 86400L
+        val label = HashMap<String, String>()
+        for (a in apps) label[a.pkg] = a.label
+        val out = ArrayList<WeekRow>()
+        for (t in listOf("MIC", "CAM", "LOC", "CONTACTS", "SMS", "CALLLOG", "NETBIG")) {
+            val cur = events.filter { it.type == t && it.ts >= nowS - w }
+            val prev = events.count { it.type == t && it.ts >= nowS - 2 * w && it.ts < nowS - w }
+            if (cur.isEmpty() && prev == 0) continue
+            val top = cur.filter { it.pkg.isNotEmpty() }.groupBy { it.pkg }.maxByOrNull { it.value.size }?.key
+            out.add(WeekRow(t, cur.size, prev, if (top == null) "" else (label[top] ?: top)))
+        }
+        return out
     }
 }

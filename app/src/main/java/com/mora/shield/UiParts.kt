@@ -400,6 +400,7 @@ fun typeName(t: String): String = when (t) {
     "NETBIG" -> "Data keluar besar"
     "NEWAPP" -> "Aplikasi baru"
     "ACTION" -> "Aksi"
+    "BOOTGUARD" -> "Pengaman boot"
     else -> t
 }
 

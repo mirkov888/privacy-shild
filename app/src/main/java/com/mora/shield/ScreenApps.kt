@@ -6,6 +6,9 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -116,7 +119,7 @@ fun AppsScreen() {
             onDismissRequest = { detail = null },
             title = { Text(d.label) },
             text = {
-                Column {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
                     Text(d.pkg, style = MaterialTheme.typography.labelSmall)
                     Spacer(Modifier.size(8.dp))
                     Text(
@@ -126,6 +129,27 @@ fun AppsScreen() {
                     Spacer(Modifier.size(8.dp))
                     Text(if (d.blocked) "Internet: DIBLOKIR" else "Internet: diizinkan")
                     if (d.tor) Text("Lewat Tor")
+                    Spacer(Modifier.size(8.dp))
+                    Text("Firewall jaringan", style = MaterialTheme.typography.labelMedium)
+                    val inList = { k: String -> (Store.cfg[k] ?: "").split(",").contains(d.pkg) }
+                    val mode = when {
+                        inList("fw_pkgs") -> "both"
+                        inList("fw_wifi") -> "wifi"
+                        inList("fw_mobile") -> "mobile"
+                        else -> "none"
+                    }
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for ((m, l) in listOf("none" to "Bebas", "wifi" to "Blokir Wi-Fi", "mobile" to "Blokir seluler", "both" to "Blokir semua")) {
+                            FilterChip(selected = mode == m, onClick = { Store.fwSet(d.pkg, m) }, label = { Text(l) })
+                        }
+                    }
+                    val tl = Store.events.filter { it.pkg == d.pkg }.take(12)
+                    Spacer(Modifier.size(8.dp))
+                    Text("Linimasa", style = MaterialTheme.typography.labelMedium)
+                    if (tl.isEmpty()) Text("Belum ada kejadian.", style = MaterialTheme.typography.bodySmall)
+                    for (e in tl) {
+                        Text(fmtTime(e.ts) + " · " + typeName(e.type) + (if (e.detail.isNotEmpty()) " (" + e.detail + ")" else ""), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             },
             confirmButton = {

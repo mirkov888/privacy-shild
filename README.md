@@ -1,4 +1,4 @@
-# Mora Shield 3.2 (Material 3)
+# Mora Shield 3.4 (Material 3)
 
 Aplikasi pendamping modul **Mora Privacy Shield v3.3.0**. Semua pengaturan modul bisa diubah dari aplikasi tanpa WebUI, lengkap dengan statistik.
 
@@ -22,3 +22,15 @@ Aplikasi tidak memakai izin internet. Butuh root (KernelSU/Magisk) dan modul ter
 
 ## Tautan (v3.2)
 Tab **Alat > Tautan**: bersihkan parameter pelacak (utm_, fbclid, gclid, si=, dll), bongkar tautan pengalihan (Google, Facebook, Reddit, dll), lalu alihkan YouTube/X/Reddit ke frontend privat (Invidious/Piped/NewPipe/LibreTube, Nitter, Redlib). Menu Bagikan > "Mora Shield: tautan bersih" selalu bisa dipakai. Pengalihan otomatis saat mengetuk tautan butuh izin sekali di Pengaturan sistem > Buka secara default. Semua lokal; aturan ditanam di aplikasi.
+
+## v3.3.0
+- Alat: **Uji sistem** (fitur modul mana yang jalan), **Pemeriksa tanda mencurigakan** (heuristik), **Cadangan pengaturan** (simpan/pulihkan ke file).
+- Beranda: **Profil situasi** (Demo/Protes, Perjalanan, Rumah), **Laporan 7 hari**, kartu **Pengaman boot**.
+- Aplikasi: firewall per jenis jaringan (Wi-Fi/seluler/semua) dan linimasa per aplikasi.
+- Pengaturan: **Kunci aplikasi** (kunci layar HP), tile cepat **PANIC** dan **Mode demo**.
+- Butuh modul v3.4.0.
+
+## v3.4.0
+- **Notifikasi statistik** tetap (gaya TCCM): skor, kejadian hari ini (mikrofon/kamera/lokasi/kontak), data keluar besar, aplikasi diblokir, baterai, RAM, patch, versi modul. Diperbarui tiap menit; bisa dimatikan di Pengaturan > Pemantauan.
+- **VPN dan kill switch** di Pengaturan: status VPN selalu-aktif Android, kill switch modul, daftar aplikasi VPN yang diizinkan, pintasan ke pengaturan VPN.
+- **Jejak root dan bootloader** di Alat: apa yang terlihat oleh aplikasi lain (hanya membaca), daftar alat penyembunyi terpasang (Zygisk/Shamiko/PIF/LSPosed/SuSFS), pintasan ke pengelola root.

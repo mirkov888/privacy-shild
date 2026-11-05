@@ -45,7 +45,9 @@ fun HomeScreen() {
         Hero(s.score)
         StatusCard()
         if (Store.installed) {
+            BootGuardCard()
             SecurityCard()
+            SituationCard()
             SectionCard("Skor perlindungan", "Berdasarkan ${SCORE_KEYS.size} proteksi inti yang aktif") {
                 Row(Modifier.padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column {
@@ -67,6 +69,7 @@ fun HomeScreen() {
                 StatTile("${s.blockedApps}", "app diblokir", Modifier.weight(1f))
                 StatTile("${s.newApps}", "app baru ditahan", Modifier.weight(1f))
             }
+            WeeklyCard()
             SectionCard("Jam rawan", "Kapan aplikasi paling sering mengakses sensor/data (7 hari)") {
                 Hourly(s.hourly, MaterialTheme.colorScheme.primary)
             }
@@ -127,8 +130,8 @@ fun StatusCard() {
     val (title, body, warn) = when {
         ok == null -> Triple("Memeriksa…", "Mengecek akses root dan modul.", false)
         ok == false -> Triple("Root belum diizinkan", "Buka KernelSU Manager > Superuser lalu izinkan Mora Shield.", true)
-        !Store.installed -> Triple("Modul tidak ditemukan", "Pasang modul Mora Privacy Shield v3.3 lalu reboot.", true)
-        Ps.major(Store.version) < 3 -> Triple("Modul terlalu lama", "Terpasang ${Store.version}. Pasang v3.3.0 lalu reboot.", true)
+        !Store.installed -> Triple("Modul tidak ditemukan", "Pasang modul Mora Privacy Shield v3.5 lalu reboot.", true)
+        Ps.major(Store.version) < 3 -> Triple("Modul terlalu lama", "Terpasang ${Store.version}. Pasang v3.5.0 lalu reboot.", true)
         !Store.cfg.containsKey("rev") -> Triple("Modul ${Store.version}", "Sinkron otomatis aktif di modul v3.2+. Fitur lain tetap jalan.", false)
         else -> Triple("Modul ${Store.version} aktif", "Sinkron dengan WebUI: perubahan di sana muncul di sini otomatis.", false)
     }
@@ -217,6 +220,83 @@ fun SecurityCard() {
                     Store.message = "Tidak bisa membuka pengaturan pembaruan"
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+fun BootGuardCard() {
+    val dis = Store.cfg["mod_disabled"] == "1"
+    val tries = Store.cfg["boot_try"]?.toIntOrNull() ?: 0
+    if (dis) {
+        InfoNote("Pengaman boot menonaktifkan modul karena HP gagal menyelesaikan boot 3 kali berturut-turut. Perlindungan modul MATI sampai kamu mengaktifkannya lagi.", true)
+        ActionRow("Aktifkan modul lagi", "Berlaku setelah reboot berikutnya", "Aktifkan") {
+            Store.run("bootguard reset", "Modul akan aktif setelah reboot") { Store.refresh(Store.appCtx) }
+        }
+    } else if (tries >= 1) {
+        InfoNote("Percobaan boot belum selesai: $tries dari 3. Bila HP baru saja bootloop, modul akan menonaktifkan diri pada percobaan ke-3.", true)
+    }
+}
+
+@Composable
+fun SituationCard() {
+    var pick by remember { mutableStateOf<String?>(null) }
+    val cur = Store.cfg["sprofile"] ?: ""
+    val desc = mapOf(
+        "demo" to "Biometrik mati dalam 1 jam, USB data terkunci, NFC/Bluetooth/ADB mati, peringatan Wi-Fi terbuka, aplikasi baru ditahan, pemantau akses dan pemicu tombol dinyalakan.",
+        "travel" to "USB terkunci, ADB mati, aplikasi baru ditahan, pantau akses dan data keluar, biometrik mati setelah 8 jam, reboot tiap 24 jam (tetap mode uji bila belum kamu matikan).",
+        "home" to "Melonggarkan: USB data, biometrik, Bluetooth/NFC, timer Wi-Fi, kill switch, reboot otomatis dan pemicu tombol dimatikan. Iklan dan telemetri tetap diblokir."
+    )
+    SectionCard("Profil situasi", "Satu ketukan untuk keadaan tertentu" + (if (cur.isNotEmpty()) ". Terakhir: $cur" else "")) {
+        Row(Modifier.padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for ((id, label) in listOf("demo" to "Demo/Protes", "travel" to "Perjalanan", "home" to "Rumah")) {
+                androidx.compose.material3.FilterChip(selected = cur == id, onClick = { pick = id }, label = { Text(label) })
+            }
+        }
+        Text(
+            "Tidak pernah mengubah mode uji, persetujuan hapus data, atau perlindungan terkunci PIN.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
+        )
+    }
+    val p = pick
+    if (p != null) Confirm("Terapkan profil $p?", desc[p] ?: "", "Terapkan", { pick = null }) {
+        Store.run("sprofile $p", "Profil $p diterapkan") { Store.refresh(Store.appCtx) }
+    }
+}
+
+@Composable
+fun WeeklyCard() {
+    val ctx = LocalContext.current
+    val rows = Store.weekly()
+    SectionCard("Laporan 7 hari", "Dibanding 7 hari sebelumnya (dari kejadian yang tersimpan)") {
+        if (rows.isEmpty()) {
+            EmptyHint("Belum cukup data.")
+            return@SectionCard
+        }
+        for (r in rows) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(typeName(r.type), style = MaterialTheme.typography.bodyLarge)
+                    if (r.top.isNotEmpty()) Text("Terbanyak: ${r.top}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                val d = r.now - r.prev
+                Text("${r.now}", fontWeight = FontWeight.Bold)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    if (d > 0) "▲ $d" else if (d < 0) "▼ ${-d}" else "–",
+                    color = if (d > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+        ActionRow("Bagikan ringkasan", null, "Bagikan") {
+            val sb = StringBuilder("Laporan Mora Shield 7 hari\n")
+            for (r in rows) sb.append(typeName(r.type)).append(": ").append(r.now).append(" (sebelumnya ").append(r.prev).append(")")
+                .append(if (r.top.isNotEmpty()) ", terbanyak ${r.top}" else "").append("\n")
+            val i = android.content.Intent(android.content.Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, sb.toString()) }
+            ctx.startActivity(android.content.Intent.createChooser(i, "Bagikan").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
 }
