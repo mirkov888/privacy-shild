@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.mora.shield"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.mora.shield"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 6
-        versionName = "3.0.0"
+        targetSdk = 35
+        versionCode = 9
+        versionName = "3.2.0"
     }
 
     buildFeatures {

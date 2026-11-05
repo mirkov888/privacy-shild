@@ -93,7 +93,7 @@ fun ProfileCard() {
 fun MonitorCard(ctx: Context) {
     val prefs = ctx.getSharedPreferences("mora", Context.MODE_PRIVATE)
     var svc by remember { mutableStateOf(prefs.getBoolean("service", true)) }
-    SectionCard("Pemantauan", "Seperti indikator privasi GrapheneOS: tahu siapa mengakses apa") {
+    SectionCard("Pemantauan", "Seperti indikator privasi GrapheneOS: tahu siapa mengakses apa", collapsible = true) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             RowText("Notifikasi kejadian", "Layanan latar di aplikasi ini; tombol Blokir/Izinkan/Abaikan di notifikasi", Modifier.weight(1f))
             Spacer(Modifier.width(12.dp))
@@ -106,6 +106,12 @@ fun MonitorCard(ctx: Context) {
                     ctx.stopService(Intent(ctx, EventService::class.java))
                 }
             })
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            RowText("Sembunyikan dari tangkapan layar", "Layar aplikasi hitam di daftar aplikasi terbaru dan tidak bisa di-screenshot. Berlaku setelah aplikasi dibuka ulang.", Modifier.weight(1f))
+            Spacer(Modifier.width(12.dp))
+            var sec by remember { mutableStateOf(prefs.getBoolean("secure", true)) }
+            Switch(checked = sec, onCheckedChange = { on -> sec = on; prefs.edit().putBoolean("secure", on).apply() })
         }
         ActionRow("Daftar diabaikan", "Notifikasi dari aplikasi yang kamu 'Abaikan' akan muncul lagi", "Kosongkan") {
             prefs.edit().remove("ignored").apply(); Store.message = "Daftar diabaikan dikosongkan"
@@ -128,7 +134,7 @@ fun MonitorCard(ctx: Context) {
 
 @Composable
 fun PrivacyCard() {
-    SectionCard("Iklan, pelacak, jaringan", "Lapisan dasar") {
+    SectionCard("Iklan, pelacak, jaringan", "Lapisan dasar", collapsible = true, startOpen = false) {
         SwitchRow("Blokir iklan dan pelacak", "Daftar hosts sistemless", "ads")
         SwitchRow("Blokir telemetri", "Domain analitik OEM dan Google", "telemetry")
         ChoiceRow(
@@ -140,7 +146,9 @@ fun PrivacyCard() {
             ),
             "off", "Modul otomatis kembali ke DNS biasa bila DNS pribadi gagal."
         )
-        InfoNote("Di /e/OS: bila 'Advanced Privacy' pemblokir pelacak juga aktif, DNS pribadi bisa saling menimpa. Pilih salah satu bila internet bermasalah.")
+        if (Store.cfg["eos"] == "1" && Store.cfg["adv_privacy"] == "1") {
+            InfoNote("/e/OS terdeteksi dengan Advanced Privacy. Bila pemblokir pelacaknya aktif (VPN lokal${if ((Store.cfg["vpn_active"] ?: "0") != "0") " sedang menyala" else ""}), DNS pribadi di sini bisa saling menimpa. Pilih salah satu bila internet bermasalah.")
+        }
         SwitchRow("Acak MAC Wi-Fi", "Memakai pengacakan bawaan Android (tidak dipaksa)", "mac_rand")
         SwitchRow("Matikan IPv6", "Menutup kebocoran lewat IPv6", "ipv6_off")
     }
@@ -150,7 +158,7 @@ fun PrivacyCard() {
 fun ContentCard() {
     var ask by remember { mutableStateOf<String?>(null) }
     var pinMode by remember { mutableStateOf("") }
-    SectionCard("Konten dewasa dan judi", "Bisa dikunci diri supaya tidak mudah dimatikan") {
+    SectionCard("Konten dewasa dan judi", "Bisa dikunci diri supaya tidak mudah dimatikan", collapsible = true, startOpen = false) {
         ProtectedRow("Blokir situs dewasa", "adult_block") { ask = it }
         ProtectedRow("Blokir judi online", "gambling_block") { ask = it }
         ProtectedRow("Kunci diri (self-lock)", "selflock") { ask = it }
@@ -226,7 +234,7 @@ fun PinSetDialog(mode: String, onDone: () -> Unit) {
 
 @Composable
 fun SensorCard() {
-    SectionCard("Sensor dan lokasi") {
+    SectionCard("Sensor dan lokasi", collapsible = true, startOpen = false) {
         SwitchRow("Blokir mikrofon", "Lewat saklar privasi Android (butuh dukungan ROM)", "mic_block")
         SwitchRow("Blokir kamera", null, "cam_block")
         SwitchRow("Matikan lokasi", null, "loc_off")
@@ -237,7 +245,7 @@ fun SensorCard() {
 
 @Composable
 fun DeviceCard() {
-    SectionCard("Perangkat dan kunci") {
+    SectionCard("Perangkat dan kunci", collapsible = true, startOpen = false) {
         SwitchRow("Privasi layar kunci", "Sembunyikan isi notifikasi", "lock_priv")
         SwitchRow("Matikan ADB", "Tutup debugging USB", "adb_off")
         SwitchRow("Matikan NFC", null, "nfc_off")
@@ -257,7 +265,7 @@ fun DeviceCard() {
 
 @Composable
 fun NetworkCard() {
-    SectionCard("Jaringan lanjutan") {
+    SectionCard("Jaringan lanjutan", collapsible = true, startOpen = false) {
         SwitchRow("Kill switch", "Putus internet bila VPN/Tor terputus", "killswitch", confirmOn = "Bila VPN belum aktif, internet akan terputus. Bila terkunci, pakai 'Perbaiki internet' di Beranda.")
         SwitchRow("Peringatan Wi-Fi terbuka", null, "wifi_open")
         SwitchRow("Mode Wi-Fi ketat", "Blokir Wi-Fi tanpa enkripsi", "wifi_strict")
@@ -275,7 +283,9 @@ fun NetworkCard() {
         TorAppsRow()
         ChoiceRow("Port transparan", "tor_trans", listOf("9040" to "9040 (bawaan)", "9041" to "9041"), "9040")
         ChoiceRow("Port DNS", "tor_dns", listOf("5400" to "5400 (bawaan)", "5353" to "5353"), "5400")
-        InfoNote("Di /e/OS: fitur 'Hide My IP' dan Tor per aplikasi ini bisa tumpang tindih. Pakai salah satu per aplikasi.")
+        if (Store.cfg["eos"] == "1" && Store.cfg["adv_privacy"] == "1") {
+            InfoNote("/e/OS: fitur 'Hide My IP' dan kill switch/Tor di sini bisa tumpang tindih karena sama-sama memakai VPN lokal. Pakai salah satu per aplikasi.")
+        }
     }
 }
 
@@ -283,7 +293,7 @@ fun NetworkCard() {
 
 @Composable
 fun AutoCard() {
-    SectionCard("Reboot otomatis", "Membersihkan memori dan mengunci ulang HP") {
+    SectionCard("Reboot otomatis", "Membersihkan memori dan mengunci ulang HP", collapsible = true, startOpen = false) {
         SwitchRow("Reboot terjadwal", null, "autoreboot")
         ChoiceRow("Setiap", "autoreboot_h", nums(6, 12, 24, 48, 72, unit = " jam"), "12")
         DryRow("autoreboot_dry", "reboot")
@@ -296,7 +306,7 @@ fun AutoCard() {
 fun TriggerCard() {
     var rec by remember { mutableStateOf(false) }
     var wipe by remember { mutableStateOf<String?>(null) }
-    SectionCard("Pemicu darurat", "Aksi otomatis. Semua mulai dalam MODE UJI; hapus data butuh persetujuan terpisah.") {
+    SectionCard("Pemicu darurat", "Aksi otomatis. Semua mulai dalam MODE UJI; hapus data butuh persetujuan terpisah.", collapsible = true, startOpen = false) {
         Text("Kombinasi tombol", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp))
         SwitchRow("Aktifkan kombinasi tombol", "Pola tekanan volume/daya memicu aksi", "kt_on")
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {

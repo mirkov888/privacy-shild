@@ -2,6 +2,8 @@
 
 package com.mora.shield
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +31,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,26 +51,43 @@ import androidx.compose.ui.unit.sp
 // ---------------------------------------------------------------- Kartu & judul
 
 @Composable
-fun SectionCard(title: String, subtitle: String? = null, content: @Composable () -> Unit) {
+fun SectionCard(
+    title: String, subtitle: String? = null, collapsible: Boolean = false, startOpen: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    var open by remember { mutableStateOf(startOpen || !collapsible) }
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
         shape = RoundedCornerShape(24.dp)
     ) {
         Column(Modifier.padding(vertical = 14.dp)) {
-            Text(
-                title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 18.dp)
-            )
-            if (subtitle != null) {
-                Text(
-                    subtitle, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 2.dp)
-                )
+            Row(
+                Modifier.fillMaxWidth().then(if (collapsible) Modifier.clickable { open = !open } else Modifier)
+                    .padding(horizontal = 18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            subtitle, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+                if (collapsible) {
+                    Text(if (open) "▲" else "▼", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                }
             }
-            Spacer(Modifier.height(6.dp))
-            content()
+            if (open) {
+                Spacer(Modifier.height(6.dp))
+                content()
+            }
         }
     }
 }
@@ -258,6 +278,7 @@ fun Confirm(title: String, text: String, ok: String, onDismiss: () -> Unit, onOk
 
 @Composable
 fun ScoreRing(score: Int, modifier: Modifier = Modifier) {
+    val anim by animateFloatAsState(targetValue = score / 100f, animationSpec = tween(900), label = "score")
     val track = MaterialTheme.colorScheme.surfaceVariant
     val col = when {
         score >= 70 -> MaterialTheme.colorScheme.primary
@@ -270,7 +291,7 @@ fun ScoreRing(score: Int, modifier: Modifier = Modifier) {
             val inset = sw / 2
             val sz = Size(size.width - sw, size.height - sw)
             drawArc(track, 135f, 270f, false, Offset(inset, inset), sz, style = Stroke(sw, cap = StrokeCap.Round))
-            drawArc(col, 135f, 270f * score / 100f, false, Offset(inset, inset), sz, style = Stroke(sw, cap = StrokeCap.Round))
+            drawArc(col, 135f, 270f * anim, false, Offset(inset, inset), sz, style = Stroke(sw, cap = StrokeCap.Round))
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("$score", fontSize = 34.sp, fontWeight = FontWeight.Bold)
@@ -282,9 +303,12 @@ fun ScoreRing(score: Int, modifier: Modifier = Modifier) {
 /** Batang horizontal berlabel. */
 @Composable
 fun BarList(rows: List<Pair<String, Int>>, color: Color) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(rows) { shown = true }
     val max = (rows.maxOfOrNull { it.second } ?: 1).coerceAtLeast(1)
     Column(Modifier.padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for ((label, n) in rows) {
+            val frac by animateFloatAsState(targetValue = if (shown) n.toFloat() / max else 0f, animationSpec = tween(700), label = "bar")
             Column {
                 Row {
                     Text(label, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
@@ -293,7 +317,7 @@ fun BarList(rows: List<Pair<String, Int>>, color: Color) {
                 Spacer(Modifier.height(3.dp))
                 Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(color.copy(alpha = 0.15f))) {
                     Box(
-                        Modifier.fillMaxWidth(n.toFloat() / max).height(8.dp)
+                        Modifier.fillMaxWidth(frac).height(8.dp)
                             .clip(RoundedCornerShape(4.dp)).background(color)
                     )
                 }

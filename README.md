@@ -1,6 +1,6 @@
-# Mora Shield 3.0 (Material 3)
+# Mora Shield 3.2 (Material 3)
 
-Aplikasi pendamping modul **Mora Privacy Shield v3.2.0**. Semua pengaturan modul bisa diubah dari aplikasi tanpa WebUI, lengkap dengan statistik.
+Aplikasi pendamping modul **Mora Privacy Shield v3.3.0**. Semua pengaturan modul bisa diubah dari aplikasi tanpa WebUI, lengkap dengan statistik.
 
 ## Isi
 - **Beranda**: skor perlindungan, kejadian 7 hari, jam rawan, jenis kejadian, aplikasi teraktif, tingkat pelacak, aksi cepat.
@@ -19,3 +19,6 @@ Aplikasi memeriksa `ps.sh rev` tiap 6 detik saat dibuka. Bila WebUI mengubah pen
 4. Bila gagal, kirim log baris error pertama.
 
 Aplikasi tidak memakai izin internet. Butuh root (KernelSU/Magisk) dan modul terpasang.
+
+## Tautan (v3.2)
+Tab **Alat > Tautan**: bersihkan parameter pelacak (utm_, fbclid, gclid, si=, dll), bongkar tautan pengalihan (Google, Facebook, Reddit, dll), lalu alihkan YouTube/X/Reddit ke frontend privat (Invidious/Piped/NewPipe/LibreTube, Nitter, Redlib). Menu Bagikan > "Mora Shield: tautan bersih" selalu bisa dipakai. Pengalihan otomatis saat mengetuk tautan butuh izin sekali di Pengaturan sistem > Buka secara default. Semua lokal; aturan ditanam di aplikasi.

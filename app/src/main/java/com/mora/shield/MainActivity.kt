@@ -11,6 +11,7 @@ import android.os.Bundle
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
@@ -56,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         // Meminta izin notifikasi Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -67,6 +69,9 @@ class MainActivity : ComponentActivity() {
 
         // Membaca konfigurasi service
         val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("secure", true)) {
+            window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
 
         if (prefs.getBoolean("service", true)) {
             try {

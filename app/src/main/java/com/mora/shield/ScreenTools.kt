@@ -42,6 +42,7 @@ fun ToolsScreen() {
     }
     var confirm by remember { mutableStateOf("") }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
+        LinkCard()
         if (!Store.installed) {
             StatusCard()
         } else {
