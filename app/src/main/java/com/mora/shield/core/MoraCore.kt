@@ -102,6 +102,8 @@ object MoraCore {
     internal suspend fun acceptConnectorEvent(principal: ConnectorPrincipal, event: MoraEvent): Boolean {
         val app = registryOrThrow().verifiedApp(principal) ?: return false
         if (app.connectionState != "CONNECTED") return false
+        val advertised = app.capabilities.split('\n').filter { it.isNotBlank() }.toSet()
+        if ("events.publish" !in advertised) return false
         val policy = appPolicy(principal.packageName)
         if (policy?.enabled != true || !policy.monitoringEnabled) return false
         return eventHubOrThrow().publish(event.copy(sourcePackage = principal.packageName))
@@ -117,6 +119,32 @@ object MoraCore {
         request: MoraCommandRequest,
         approvedByUser: Boolean = false
     ): MoraCommandResult = routerOrThrow().execute(principal, request, approvedByUser)
+
+    /** Authenticated connector policy snapshot. */
+    internal suspend fun connectorPolicy(principal: ConnectorPrincipal): AppPolicy? {
+        val app = registryOrThrow().verifiedApp(principal) ?: return null
+        if (app.connectionState != "CONNECTED") return null
+        return appPolicy(principal.packageName)
+    }
+
+    internal suspend fun markConnectorDisconnected(packageName: String) =
+        registryOrThrow().markDisconnected(packageName)
+
+    /** Start an app-owned remote command only after the Core policy gate approves it. */
+    internal suspend fun authorizeRemoteCommand(
+        principal: ConnectorPrincipal,
+        request: MoraCommandRequest,
+        approvedByUser: Boolean = false
+    ): MoraCommandResult = routerOrThrow().authorizeRemote(principal, request, approvedByUser)
+
+    /** Persist a connector result only for the matching in-flight package/capability/request tuple. */
+    internal suspend fun completeRemoteCommand(
+        principal: ConnectorPrincipal,
+        requestId: String,
+        commandId: String,
+        success: Boolean,
+        summary: String
+    ): Boolean = routerOrThrow().completeRemote(principal, requestId, commandId, success, summary)
 
     fun publishShieldEvent(event: Ps.Ev) {
         if (!isInitialized()) return

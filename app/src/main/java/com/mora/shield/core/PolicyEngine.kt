@@ -47,7 +47,7 @@ internal class PolicyEngine(private val dao: CoreDao) {
     suspend fun evaluate(principal: ConnectorPrincipal, commandId: String, approvedByUser: Boolean): PolicyDecision {
         if (!CoreSanitizer.validCommandId(commandId)) return PolicyDecision.Denied("Command ID tidak valid")
         val app = dao.getApp(principal.packageName) ?: return PolicyDecision.Denied("Aplikasi belum terdaftar")
-        if (app.certificateSha256.isNotBlank() && !app.certificateSha256.equals(principal.certificateSha256, true)) {
+        if (app.certificateSha256.isBlank() || !app.certificateSha256.equals(principal.certificateSha256, true)) {
             return PolicyDecision.Denied("Identitas connector tidak cocok")
         }
         if (app.connectionState != "CONNECTED") return PolicyDecision.Denied("Connector belum terhubung")

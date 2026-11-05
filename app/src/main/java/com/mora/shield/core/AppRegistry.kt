@@ -36,6 +36,8 @@ internal class AppRegistry(
             val state = when {
                 packageName == context.packageName -> "INTERNAL"
                 appInfo == null -> "NOT_INSTALLED"
+                // A registry refresh for another companion must not silently disconnect this one.
+                previous?.connectionState == "CONNECTED" -> "CONNECTED"
                 else -> "INSTALLED"
             }
             dao.upsertApp(

@@ -115,6 +115,9 @@ interface CoreDao {
 
     @Query("SELECT * FROM command_audit ORDER BY createdAtMs DESC LIMIT :limit")
     suspend fun recentCommandAudit(limit: Int): List<CommandAuditEntity>
+
+    @Query("SELECT * FROM command_audit WHERE requestId = :requestId LIMIT 1")
+    suspend fun getCommandAudit(requestId: String): CommandAuditEntity?
 }
 
 @Database(

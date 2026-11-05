@@ -1,0 +1,7 @@
+<!-- Put this uses-permission directly under <manifest> in each companion APK. -->
+<uses-permission android:name="com.mora.shield.permission.CONNECTOR" />
+
+<!-- Optional package visibility declaration for diagnostics/package checks. -->
+<queries>
+    <package android:name="com.mora.shield" />
+</queries>

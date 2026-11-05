@@ -1,43 +1,52 @@
-# Mora Core Phase 1 — Mora Shield Master Controller
+# Mora Connector SDK v1 — Phase 2 Patch
 
-Patch untuk repository `mirkov888/privacy-shild`. Mora Core ditanam di APK Mora Shield yang sudah ada; tidak membuat APK kedua.
+Patch for the existing `mirkov888/privacy-shild` project after Mora Core Phase 1 has been installed.
 
-## Isi
+## What is included
 
-- `app/src/main/java/com/mora/shield/core/` — Room DB, app registry, event hub, policy engine, command router, sanitizer, model.
-- `MoraShieldApplication.kt` — inisialisasi Core saat proses aplikasi dibuat.
-- `MoraCoreCard.kt` — ringkasan registry dan timeline pada menu Alat.
-- `apply-mora-core-phase1.py` — installer idempotent ke project yang sudah di-clone.
-- `docs/MORA_CORE_PHASE1.md` — rincian fase dan batas keamanan.
-- `VALIDATION.md` — hasil pemeriksaan yang dilakukan dan batas validasinya.
+- Authenticated Binder/Messenger host service in Mora Shield.
+- Signature-level custom permission protecting the exported service.
+- Caller UID -> unique package -> signer SHA-256 verification.
+- Registration, heartbeat, event publish, policy read, command delivery, command result and disconnect messages.
+- Per-session random token to reject stale Binder sessions after reconnect.
+- Remote command authorization using Core policy, advertised capabilities, approval gate and command audit.
+- Companion-side Kotlin SDK source package for MoraDownloader and MoraSystemManager.
+- Idempotent installer, API documentation, signing notes and static tests.
 
-## Pemasangan
+## Install the Shield host side
 
-Ekstrak ZIP, lalu jalankan:
+Extract the ZIP. Then run:
 
 ```bash
-python3 apply-mora-core-phase1.py ~/privacy-shild
+python3 apply-mora-connector-phase2.py ~/privacy-shild
 cd ~/privacy-shild
 ./gradlew assembleRelease --no-daemon
 ```
 
-Periksa hasil perubahan:
+The installer expects Phase 1 files and does not create another APK. It upgrades the Shield project from 3.5.0/versionCode 12 to 3.6.0/versionCode 13 when those exact values are present.
+
+## Prepare companion APKs
+
+Copy these Kotlin files from `sdk/src/main/java/com/mora/connector/sdk/` into the same package path in each worker project:
+
+- `MoraConnectorContract.kt`
+- `MoraConnectorModels.kt`
+- `MoraConnectorClient.kt`
+
+Add the manifest snippet from `sdk/manifests/AndroidManifest-snippet.xml`. Sign all APKs with the same controlled production signing key. Then integrate a single `MoraConnectorClient` into the long-lived owner component of each application.
+
+The SDK currently supplies transport and lifecycle only. It does not pretend that downloader or system-manager operations are implemented; those app-specific handlers arrive in the next phases.
+
+## Session hardening
+
+API v1 uses a random per-session token issued by Shield. Every worker request after registration carries that token; commands sent from Shield also carry it. This prevents a stale client instance from publishing events, sending command results, or disconnecting a newer session. Core command policy fails closed when the installed signer digest is missing.
+
+## Tests and limitations
+
+Run static/installer tests with:
 
 ```bash
-git status --short
-git diff -- app/build.gradle.kts build.gradle.kts app/src/main/AndroidManifest.xml
+python3 -m unittest discover -s tests -v
 ```
 
-Setelah build berhasil:
-
-```bash
-git add -A
-git commit -m "Add Mora Core Phase 1 master controller"
-git push
-```
-
-## Catatan fase
-
-Ini adalah Phase 1: Core + database + registry + policy + event timeline + audit. Connector IPC yang diekspor dan perintah lintas-aplikasi belum diaktifkan; itu sengaja ditunda ke Phase 2 sampai verifikasi caller UID, package dan sertifikat penanda tangan selesai diuji. Perintah eksternal default-nya ditolak.
-
-Patch ini menaikkan versi Mora Shield dari 3.4.0 (versionCode 11) ke 3.5.0 (versionCode 12). Jika project sudah memiliki versi lebih tinggi, sesuaikan kenaikan versionCode secara manual sebelum build.
+See `VALIDATION.md` for passed checks and items that still require a real Android build/device test.
