@@ -1,8 +1,9 @@
-# Validation status
+# Validation report — Mora Core Phase 1
 
-- `MoraCore`, connector contracts, and built-in connector Kotlin sources: compiled with `kotlinc` using minimal Android-independent stubs.
-- Core registry initialization, event ordering, and duplicate suppression: runtime smoke test passed.
-- Installer script: Python syntax check passed; integration smoke test passed twice against a repository fixture (idempotency verified).
-- Generated Android manifest: XML parser validation passed.
-- Full Android `assembleRelease`: not run in this environment because Android SDK/platform tools are not installed here.
-- GitHub push/branch creation: unavailable through the connected GitHub integration (API returned HTTP 403); this package is therefore supplied for local application and build.
+- Installer Python syntax: validated with `python3 -m py_compile`.
+- Installer idempotence: applied twice to a fixture project; the second pass reported existing integrations and did not duplicate dependencies or UI insertion.
+- Source parser check: `kotlinc` reported unresolved Android/Room/Coroutine references because this environment has no Android SDK or Gradle dependency cache; no Kotlin parser/`expecting` syntax errors were found in the Core sources.
+- Android APK build: not run. The working environment has no Android SDK and no cached Android Gradle Plugin / Room dependencies.
+- GitHub push: not performed. The connected GitHub integration returned HTTP 403 for repository write operations earlier in this session.
+
+Before releasing, run `./gradlew assembleRelease --no-daemon` in the Mora Shield repository and inspect the first compiler error if any. No APK is claimed as built by this patch.

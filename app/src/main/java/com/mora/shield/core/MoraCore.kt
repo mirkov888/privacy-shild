@@ -1,149 +1,156 @@
 package com.mora.shield.core
 
+import android.content.Context
+import androidx.room.Room
 import com.mora.shield.Ps
-import com.mora.shield.connector.DeviceTelemetryConnector
-import com.mora.shield.connector.ShieldModuleConnector
-import java.util.ArrayDeque
-import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Pusat event dan registry connector Mora Shield.
- *
- * Core menyimpan event secara lokal di memori. Core tidak mengirim data ke internet
- * dan tidak mengeksekusi perintah shell yang dikirim oleh connector eksternal.
+ * Mora Core is the on-device control plane for the Mora ecosystem.
+ * It owns the registry, policies, durable activity timeline and command audit.
+ * No arbitrary shell command API is exposed here.
  */
 object MoraCore {
-    private const val MAX_EVENTS = 500
     private val lock = Any()
-    private val connectors = LinkedHashMap<String, MoraConnector>()
-    private val history = ArrayDeque<MoraEvent>()
-    private val listeners = CopyOnWriteArrayList<(MoraEvent) -> Unit>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val initializationStarted = AtomicBoolean(false)
 
-    @Volatile
-    private var initialized = false
+    @Volatile private var database: MoraCoreDatabase? = null
+    @Volatile private var registry: AppRegistry? = null
+    @Volatile private var eventHub: EventHub? = null
+    @Volatile private var policyEngine: PolicyEngine? = null
+    @Volatile private var commandRouter: CommandRouter? = null
 
-    fun initialize() {
+    fun initialize(context: Context) {
+        if (database != null || !initializationStarted.compareAndSet(false, true)) return
         synchronized(lock) {
-            if (initialized) return
-            registerLocked(ShieldModuleConnector())
-            registerLocked(DeviceTelemetryConnector())
-            initialized = true
+            if (database != null) return
+            val appContext = context.applicationContext
+            val db = Room.databaseBuilder(
+                appContext,
+                MoraCoreDatabase::class.java,
+                "mora_core.db"
+            ).build()
+            database = db
+            registry = AppRegistry(appContext, db.coreDao())
+            eventHub = EventHub(db.coreDao())
+            policyEngine = PolicyEngine(db.coreDao())
+            commandRouter = CommandRouter(db.coreDao(), policyEngine!!)
+        }
+        scope.launch {
+            runCatching { registryOrThrow().seedKnownApps() }
         }
     }
 
-    fun isInitialized(): Boolean = initialized
+    fun isInitialized(): Boolean = database != null
 
-    fun registerConnector(connector: MoraConnector): Boolean {
-        val id = connector.id.trim()
-        if (!id.matches(Regex("^[A-Za-z0-9._-]{1,80}$"))) return false
-        synchronized(lock) {
-            if (connectors.containsKey(id)) return false
-            connectors[id] = connector
-            return true
-        }
-    }
+    private fun registryOrThrow(): AppRegistry = registry
+        ?: error("Mora Core belum diinisialisasi")
 
-    fun unregisterConnector(id: String): Boolean {
-        synchronized(lock) {
-            return connectors.remove(id) != null
-        }
-    }
+    private fun eventHubOrThrow(): EventHub = eventHub
+        ?: error("Mora Core belum diinisialisasi")
 
-    private fun registerLocked(connector: MoraConnector) {
-        connectors[connector.id] = connector
-    }
+    private fun policyOrThrow(): PolicyEngine = policyEngine
+        ?: error("Mora Core belum diinisialisasi")
 
-    fun inspectConnectors(): List<ConnectorStatus> {
-        val snapshot = synchronized(lock) { connectors.values.toList() }
-        return snapshot.map { connector ->
-            try {
-                connector.inspect()
-            } catch (error: Exception) {
-                ConnectorStatus(
-                    id = connector.id,
-                    displayName = connector.displayName,
-                    state = ConnectorState.ERROR,
-                    message = error.message ?: "Pemeriksaan connector gagal"
-                )
-            }
-        }
-    }
+    private fun routerOrThrow(): CommandRouter = commandRouter
+        ?: error("Mora Core belum diinisialisasi")
 
-    fun publish(event: MoraEvent) {
-        val source = event.sourceId.trim()
-        val type = event.type.trim()
-        val title = event.title.trim().take(100)
-        if (!source.matches(Regex("^[A-Za-z0-9._:-]{1,120}$"))) return
-        if (!type.matches(Regex("^[A-Za-z0-9._-]{1,48}$")) || title.isBlank()) return
-
-        val normalized = event.copy(
-            sourceId = source,
-            type = type,
-            title = title,
-            packageName = event.packageName.trim().take(255),
-            detail = event.detail.trim().take(500),
-            id = event.id.take(160)
+    suspend fun overview(): CoreOverview {
+        val dao = database?.coreDao() ?: return CoreOverview()
+        return CoreOverview(
+            registeredApps = dao.countApps(),
+            connectedApps = dao.countConnectedApps(),
+            storedEvents = dao.countEvents(),
+            pendingCommands = dao.countPendingCommands()
         )
-
-        synchronized(lock) {
-            if (history.any { it.id == normalized.id }) return
-            history.addLast(normalized)
-            while (history.size > MAX_EVENTS) history.removeFirst()
-        }
-
-        listeners.forEach { listener ->
-            try {
-                listener(normalized)
-            } catch (_: Exception) {
-                // Listener yang gagal tidak boleh menghentikan alur event lain.
-            }
-        }
     }
 
-    /** Mengimpor riwayat modul yang sudah dibaca Store, dengan ID stabil agar tidak duplikat. */
-    fun ingestShieldEvents(events: List<Ps.Ev>) {
-        // Ps.events() mengembalikan urutan newest-first; masukkan terbalik supaya deque tetap oldest-first.
-        events.asReversed().forEach { event -> publishShieldEvent(event) }
+    suspend fun registeredApps(): List<RegisteredAppEntity> = registryOrThrow().apps()
+
+    suspend fun refreshRegistry() = registryOrThrow().seedKnownApps()
+
+    suspend fun recentEvents(limit: Int = 100): List<ActivityEventEntity> =
+        eventHubOrThrow().recent(limit)
+
+    suspend fun recentCommandAudit(limit: Int = 100): List<CommandAuditEntity> =
+        (database ?: error("Mora Core belum diinisialisasi")).coreDao().recentCommandAudit(limit.coerceIn(1, 1000))
+
+    fun observeEvents(limit: Int = 100) = eventHubOrThrow().observe(limit)
+
+    suspend fun appPolicy(packageName: String): AppPolicy? = policyOrThrow().get(packageName)
+
+    /** Update central policy. Commands remain disabled unless explicitly enabled and allowlisted. */
+    suspend fun updateAppPolicy(policy: AppPolicy): Boolean = policyOrThrow().update(policy)
+
+    /** Internal hook for the upcoming authenticated Connector IPC service. */
+    internal suspend fun markConnectorConnected(
+        principal: ConnectorPrincipal,
+        apiVersion: Int,
+        capabilities: Set<String>
+    ): Boolean = registryOrThrow().markConnected(principal, apiVersion, capabilities)
+
+    /** Internal hook for connector heartbeat. */
+    internal suspend fun connectorHeartbeat(principal: ConnectorPrincipal): Boolean =
+        registryOrThrow().heartbeat(principal)
+
+    /** Internal hook for connector events after package/signature authentication. */
+    internal suspend fun acceptConnectorEvent(principal: ConnectorPrincipal, event: MoraEvent): Boolean {
+        val app = registryOrThrow().verifiedApp(principal) ?: return false
+        if (app.connectionState != "CONNECTED") return false
+        val policy = appPolicy(principal.packageName)
+        if (policy?.enabled != true || !policy.monitoringEnabled) return false
+        return eventHubOrThrow().publish(event.copy(sourcePackage = principal.packageName))
     }
+
+    /** Register a narrowly scoped app-owned handler. There is deliberately no shell executor. */
+    internal fun registerCommandHandler(packageName: String, commandId: String, handler: MoraCommandHandler): Boolean =
+        routerOrThrow().registerHandler(packageName, commandId, handler)
+
+    /** Command invocation is denied by default and requires an authenticated principal + policy allowlist. */
+    internal suspend fun executeCommand(
+        principal: ConnectorPrincipal,
+        request: MoraCommandRequest,
+        approvedByUser: Boolean = false
+    ): MoraCommandResult = routerOrThrow().execute(principal, request, approvedByUser)
 
     fun publishShieldEvent(event: Ps.Ev) {
-        val severity = when (event.type.uppercase()) {
-            "MIC", "CAM", "LOC", "CONTACTS", "SMS", "CALLLOG" -> MoraSeverity.MEDIUM
-            "NETBIG" -> MoraSeverity.LOW
-            else -> MoraSeverity.INFO
-        }
-        val stableId = listOf(
-            "shield",
-            event.ts.toString(),
-            event.type,
-            event.pkg,
-            event.detail.hashCode().toString()
-        ).joinToString(":")
-        publish(
-            MoraEvent(
-                id = stableId,
-                sourceId = "shield-module",
-                type = event.type.ifBlank { "EVENT" },
-                title = "Aktivitas " + event.type.ifBlank { "Shield" },
-                packageName = event.pkg,
-                detail = event.detail,
-                severity = severity,
-                occurredAtMs = event.ts * 1000L
+        if (!isInitialized()) return
+        scope.launch {
+            val severity = when (event.type.uppercase()) {
+                "MIC", "CAM", "LOC", "CONTACTS", "SMS", "CALLLOG" -> EventSeverity.MEDIUM
+                "NETBIG" -> EventSeverity.LOW
+                else -> EventSeverity.INFO
+            }
+            val stableId = listOf(
+                "shield",
+                event.ts.toString(),
+                event.type,
+                event.pkg,
+                event.detail.hashCode().toString()
+            ).joinToString(":")
+            eventHubOrThrow().publish(
+                MoraEvent(
+                    eventId = stableId,
+                    sourcePackage = "com.mora.shield",
+                    eventType = event.type.ifBlank { "SHIELD_EVENT" },
+                    title = "Aktivitas " + event.type.ifBlank { "Shield" },
+                    affectedPackage = event.pkg,
+                    detail = event.detail,
+                    severity = severity,
+                    occurredAtMs = event.ts * 1000L
+                )
             )
-        )
-    }
-
-    fun recentEvents(limit: Int = 100): List<MoraEvent> {
-        val safeLimit = limit.coerceIn(0, MAX_EVENTS)
-        return synchronized(lock) {
-            history.toList().takeLast(safeLimit).asReversed()
         }
     }
 
-    fun subscribe(listener: (MoraEvent) -> Unit): () -> Unit {
-        listeners.add(listener)
-        return { listeners.remove(listener) }
+    fun ingestShieldEvents(events: List<Ps.Ev>) {
+        if (!isInitialized()) return
+        // Ps.events() returns newest-first; reverse to keep insert order deterministic.
+        events.asReversed().forEach(::publishShieldEvent)
     }
-
-    fun connectorCount(): Int = synchronized(lock) { connectors.size }
 }
