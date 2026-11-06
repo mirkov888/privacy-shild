@@ -41,7 +41,8 @@ jobs:
         env:
           MORA_KEYSTORE_BASE64: ${{ secrets.MORA_KEYSTORE_BASE64 }}
         run: |
-          echo "$MORA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mora-release.jks"
+          printf '%s' "$MORA_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mora-release.jks"
+          test -s "$RUNNER_TEMP/mora-release.jks"
           chmod 600 "$RUNNER_TEMP/mora-release.jks"
 
       - name: Run automated link-cleaner tests
@@ -53,7 +54,7 @@ jobs:
           MORA_KEYSTORE_PASSWORD: ${{ secrets.MORA_KEYSTORE_PASSWORD }}
           MORA_KEY_ALIAS: ${{ secrets.MORA_KEY_ALIAS }}
           MORA_KEY_PASSWORD: ${{ secrets.MORA_KEY_PASSWORD }}
-        run: ./gradlew clean assembleRelease --no-daemon
+        run: bash ./gradlew clean assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
