@@ -45,7 +45,7 @@ jobs:
           chmod 600 "$RUNNER_TEMP/mora-release.jks"
 
       - name: Run automated link-cleaner tests
-        run: ./gradlew testDebugUnitTest --no-daemon
+        run: bash ./gradlew testDebugUnitTest --no-daemon
 
       - name: Build release APK with persistent signature
         env:
