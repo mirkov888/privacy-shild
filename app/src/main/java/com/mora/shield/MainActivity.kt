@@ -149,7 +149,7 @@ fun MoraApp() {
 
     val titles = listOf(
         "Beranda",
-        "Aktivitas",
+        "Monitor",
         "Aplikasi",
         "Pengaturan",
         "Alat"
@@ -257,7 +257,7 @@ fun MoraApp() {
 
                 0 -> HomeScreen()
 
-                1 -> ActivityScreen()
+                1 -> ActivityMonitorScreen()
 
                 2 -> AppsScreen()
 

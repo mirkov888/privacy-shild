@@ -13,8 +13,8 @@ android {
         applicationId = "com.mora.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "3.4.0"
+        versionCode = 12
+        versionName = "3.5.0"
     }
 
     buildFeatures {
@@ -24,12 +24,36 @@ android {
     // Compile the shared Connector API v1 source in the host app.
     sourceSets["main"].java.srcDir("../sdk/src/main/java")
 
+    signingConfigs {
+        create("moraRelease") {
+            val storePath = System.getenv("MORA_KEYSTORE_PATH")
+            val storePass = System.getenv("MORA_KEYSTORE_PASSWORD")
+            val alias = System.getenv("MORA_KEY_ALIAS")
+            val keyPass = System.getenv("MORA_KEY_PASSWORD")
+            if (!storePath.isNullOrBlank() && !storePass.isNullOrBlank() &&
+                !alias.isNullOrBlank() && !keyPass.isNullOrBlank()) {
+                storeFile = file(storePath)
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = keyPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Ditandatangani dengan debug key supaya APK langsung bisa diinstal.
-            signingConfig = signingConfigs.getByName("debug")
+            // GitHub Actions wajib menyediakan keystore tetap. Debug fallback hanya untuk build lokal.
+            signingConfig = if (System.getenv("MORA_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfigs.getByName("debug")
+            } else {
+                signingConfigs.getByName("moraRelease")
+            }
         }
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     compileOptions {
@@ -57,4 +81,5 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
+    testImplementation("junit:junit:4.13.2")
 }

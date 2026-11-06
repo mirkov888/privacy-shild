@@ -85,6 +85,7 @@ object Store {
                         val sy = Ps.sync()
                         cfg = sy
                         events = Ps.events(3000)
+                        com.mora.shield.core.MoraCore.ingestShieldEvents(events)
                         lastSync = System.currentTimeMillis()
                     }
                 }
@@ -133,6 +134,7 @@ object Store {
             lastRev = sy["rev"] ?: ""
             lastSync = System.currentTimeMillis()
             events = Ps.events(3000)
+            com.mora.shield.core.MoraCore.ingestShieldEvents(events)
             loadApps(app)
         }
     }
