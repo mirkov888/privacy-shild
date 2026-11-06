@@ -23,3 +23,8 @@ Install the updated Mora Shield APK. For live worker status, install/open the ma
 
 ## Validation
 The installer is designed to be idempotent and uses an exact `MonitorCard(ctx)` insertion anchor. Build and device IPC validation must be run against the user's current checkout. This package does not include a verified APK.
+
+
+## Phase 11 — Security & Privacy Extensions
+
+See `PHASE11-SECURITY-PRIVACY-EXTENSIONS.md` for persistent GitHub release signing, link-cleaner tests, network-risk heuristics, permission overview, dry-run unused-app review, traffic history, home-screen widget, reversible app hide/restore, and encrypted audit export. Configure the documented GitHub Actions secrets before the release workflow is expected to pass.
