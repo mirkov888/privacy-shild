@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.kapt")
 }
 
 android {
@@ -19,6 +20,9 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Compile the shared Connector API v1 source in the host app.
+    sourceSets["main"].java.srcDir("../sdk/src/main/java")
 
     buildTypes {
         release {
@@ -48,4 +52,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.core:core-ktx:1.13.1")
+
+    // Mora Core persistent storage.
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
 }
