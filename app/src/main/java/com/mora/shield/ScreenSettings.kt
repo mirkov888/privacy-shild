@@ -47,6 +47,7 @@ private val WIPE_WARN =
 fun SettingsScreen() {
     val ctx = LocalContext.current
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
+        PageIntro("Pengaturan", "Atur perlindungan privasi dan perilaku sistem dari satu tempat.")
         if (!Store.installed) {
             StatusCard()
             return@Column
