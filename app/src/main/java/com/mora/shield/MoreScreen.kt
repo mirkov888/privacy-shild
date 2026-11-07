@@ -35,6 +35,7 @@ fun MoreScreen(onSelect: (Int) -> Unit) {
         MoreItem("Mora Core", "App Registry, konektor, kebijakan aplikasi, dan audit perintah", "◈", onClick = { onSelect(5) })
         MoreItem("Keamanan & Privasi", "Deteksi risiko jaringan, audit izin, sembunyikan/pulihkan aplikasi, dan ekspor laporan terenkripsi", "🛡", onClick = { onSelect(9) })
         MoreItem("Statistik Jaringan", "Riwayat penggunaan data total dan per aplikasi", "⇅", onClick = { onSelect(10) })
+        MoreItem("Integrasi Modul v3.8", "Pengawas jaringan, audit izin, trafik, brankas, dan profil border/home", "◉", onClick = { onSelect(11) })
         MoreItem("Alat", "Screen Time, terminal, diagnostik, Kernel Manager, dan utilitas", "⌘", onClick = { onSelect(6) })
     }
 }
