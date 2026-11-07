@@ -46,13 +46,10 @@ fun ScreenTimeCard() {
             }
             LinearProgressIndicator(progress = { 1f - activeRatio }, modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.tertiary)
-            androidx.compose.material3.AssistChip(
-                onClick = {},
-                label = { Text(if (snapshot.isScreenOn) "Layar sedang menyala" else "Layar mati · standby") },
-                leadingIcon = { androidx.compose.material3.Icon(
-                    if (snapshot.isScreenOn) androidx.compose.material.icons.Icons.Default.PhoneAndroid
-                    else androidx.compose.material.icons.Icons.Default.Bedtime, contentDescription = null
-                ) }
+            Text(
+                if (snapshot.isScreenOn) "Status: layar sedang menyala" else "Status: layar mati · standby",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
