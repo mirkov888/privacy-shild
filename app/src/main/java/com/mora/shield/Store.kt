@@ -77,7 +77,7 @@ object Store {
         val gen = ++pollGen
         thread {
             while (gen == pollGen) {
-                Thread.sleep(6000)
+                Thread.sleep(15000)
                 if (rootOk == true && installed && !busy) {
                     val r = Ps.rev()
                     if (r.isNotEmpty() && r != lastRev) {
