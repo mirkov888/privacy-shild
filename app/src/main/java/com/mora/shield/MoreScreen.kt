@@ -4,10 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -19,24 +20,33 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+private data class MoreEntry(val title: String, val subtitle: String, val symbol: String, val route: Int)
+
 @Composable
 fun MoreScreen(onSelect: (Int) -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+    val entries = listOf(
+        MoreEntry("Terminal", "Shell Android dan perintah root dalam halaman khusus", "⌁", 8),
+        MoreEntry("Pengaturan", "Preferensi aplikasi, keamanan, dan konfigurasi modul", "⚙", 4),
+        MoreEntry("Mora Core", "App Registry, konektor, kebijakan aplikasi, dan audit perintah", "◈", 5),
+        MoreEntry("Keamanan & Privasi", "Deteksi risiko jaringan, audit izin, sembunyikan/pulihkan aplikasi, dan ekspor laporan", "🛡", 9),
+        MoreEntry("Statistik Jaringan", "Riwayat penggunaan data total dan per aplikasi", "⇅", 10),
+        MoreEntry("Integrasi Modul v3.8", "Pengawas jaringan, audit izin, trafik, brankas, dan profil border/home", "◉", 11),
+        MoreEntry("Alat", "Diagnostik, pemantauan layar, Kernel Manager, dan utilitas", "⌘", 6)
+    )
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text("Pusat fitur", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(
-            "Pengaturan dan fitur lanjutan Mora Shield dikumpulkan di sini agar navigasi utama tetap ringkas.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        MoreItem("Pengaturan", "Preferensi aplikasi, keamanan, dan konfigurasi modul", "⚙", onClick = { onSelect(4) })
-        MoreItem("Mora Core", "App Registry, konektor, kebijakan aplikasi, dan audit perintah", "◈", onClick = { onSelect(5) })
-        MoreItem("Keamanan & Privasi", "Deteksi risiko jaringan, audit izin, sembunyikan/pulihkan aplikasi, dan ekspor laporan terenkripsi", "🛡", onClick = { onSelect(9) })
-        MoreItem("Statistik Jaringan", "Riwayat penggunaan data total dan per aplikasi", "⇅", onClick = { onSelect(10) })
-        MoreItem("Integrasi Modul v3.8", "Pengawas jaringan, audit izin, trafik, brankas, dan profil border/home", "◉", onClick = { onSelect(11) })
-        MoreItem("Alat", "Screen Time, terminal, diagnostik, Kernel Manager, dan utilitas", "⌘", onClick = { onSelect(6) })
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(bottom = 4.dp)) {
+                Text("Pusat fitur", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Fitur lanjutan dipisahkan agar navigasi utama tetap ringkas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        items(entries, key = { it.route }) { entry ->
+            MoreItem(entry.title, entry.subtitle, entry.symbol) { onSelect(entry.route) }
+        }
     }
 }
 
@@ -45,17 +55,17 @@ private fun MoreItem(title: String, subtitle: String, symbol: String, onClick: (
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(symbol, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
             Text("›", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
