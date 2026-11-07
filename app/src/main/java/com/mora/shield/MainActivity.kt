@@ -237,7 +237,7 @@ fun MoraApp() {
     ) { innerPadding ->
 
         Column(
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
         ) {
 
             // Indikator proses
