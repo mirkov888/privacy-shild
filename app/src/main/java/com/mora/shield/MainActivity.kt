@@ -157,6 +157,7 @@ fun MoraApp() {
         6 -> "Alat"
         7 -> "Statistik aplikasi"
         8 -> "Terminal"
+        11 -> "Integrasi Modul v3.8"
         9 -> "Keamanan & Privasi"
         10 -> "Statistik Jaringan"
         else -> "Lainnya"
@@ -272,6 +273,8 @@ fun MoraApp() {
                 7 -> AppUsageScreen()
 
                 8 -> TerminalScreen()
+
+                11 -> ModuleV36Screen()
 
                 9 -> ActivityMonitorScreen(initialSection = "SECURITY")
 
