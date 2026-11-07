@@ -27,6 +27,7 @@ private const val SYSTEM_MANAGER_PACKAGE = "com.mora.systemmanager"
 @Composable
 fun MoraCoreScreen() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
+        PageIntro("Mora Core", "Pusat integrasi aplikasi, konektor, kebijakan, dan audit.")
         MoraCoreCard()
         MoraCoreRegistryCard()
         MoraDownloaderControlCard()
