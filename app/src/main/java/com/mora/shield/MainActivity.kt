@@ -147,23 +147,17 @@ fun MoraApp() {
         }
     }
 
-    val titles = listOf(
-        "Beranda",
-        "Monitor",
-        "Aplikasi",
-        "Pengaturan",
-        "Mora Core",
-        "Alat"
-    )
-
-    val icons = listOf(
-        Icons.Filled.Home,
-        Icons.Filled.Notifications,
-        Icons.Filled.List,
-        Icons.Filled.Settings,
-        Icons.Filled.BuildIcon,
-        Icons.Filled.BuildIcon
-    )
+    val navTitles = listOf("Beranda", "Monitor", "Aplikasi", "Lainnya")
+    val pageTitle = when (selectedTab) {
+        0 -> "Beranda"
+        1 -> "Monitor"
+        2 -> "Aplikasi"
+        4 -> "Pengaturan"
+        5 -> "Mora Core"
+        6 -> "Alat"
+        else -> "Lainnya"
+    }
+    val icons = listOf(Icons.Filled.Home, Icons.Filled.Notifications, Icons.Filled.List, Icons.Filled.BuildIcon)
 
     Scaffold(
 
@@ -180,7 +174,7 @@ fun MoraApp() {
                         )
 
                         Text(
-                            text = titles[selectedTab],
+                            text = pageTitle,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -207,10 +201,10 @@ fun MoraApp() {
         bottomBar = {
             NavigationBar {
 
-                titles.forEachIndexed { index, title ->
+                navTitles.forEachIndexed { index, title ->
 
                     NavigationBarItem(
-                        selected = selectedTab == index,
+                        selected = if (index == 3) selectedTab >= 3 else selectedTab == index,
 
                         onClick = {
                             selectedTab = index
@@ -263,11 +257,13 @@ fun MoraApp() {
 
                 2 -> AppsScreen()
 
-                3 -> SettingsScreen()
+                3 -> MoreScreen(onSelect = { selectedTab = it })
 
-                4 -> MoraCoreScreen()
+                4 -> SettingsScreen()
 
-                5 -> ToolsScreen()
+                5 -> MoraCoreScreen()
+
+                6 -> ToolsScreen()
             }
         }
     }
