@@ -96,7 +96,8 @@ fun ModuleV36Screen() {
         } } }
         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text("Riwayat data keluar",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-            Text("Membutuhkan nb_on aktif pada modul.")
+            ModuleToggle("Aktifkan pencatatan data keluar (nb_on)",Store.cfg["nb_on"]=="1",ok&&!busy){setKey("nb_on",if(it)"1" else "0")}
+            Text("Modul merekam counter berkala. Riwayat tersedia setelah ada sampel baru.")
             OutlinedTextField(limit,{limit=it.filter(Char::isDigit).take(4)},label={Text("Jumlah baris (maks. 2000)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true)
             Button(enabled=ok&&!busy,onClick={val n=(limit.toIntOrNull()?:200).coerceIn(1,2000);runCmd("traffic $n"){raw->traffic=raw.lineSequence().mapNotNull{l->val p=l.split("|",limit=4);if(p.size==4&&p[0]=="D")ModTraffic(p[1],p[2],p[3].toLongOrNull()?:0)else null}.toList()}}){Text("Muat trafik")}
             traffic.take(100).forEach{Text("${it.day} · ${it.pkg} · ${moduleFormatBytes(it.bytes)}",style=MaterialTheme.typography.bodySmall)}
