@@ -57,8 +57,8 @@ fun ActivityScreen() {
                     ) {
                         Column(Modifier.padding(14.dp)) {
                             val who = if (e.pkg.isEmpty()) "Sistem" else (labels[e.pkg] ?: e.pkg)
-                            Text(who, fontWeight = FontWeight.SemiBold)
-                            Text(typeName(e.type) + (if (e.detail.isNotEmpty()) " · " + e.detail else ""), style = MaterialTheme.typography.bodyMedium)
+                            Text(who, fontWeight = FontWeight.SemiBold, maxLines = 2, softWrap = true)
+                            Text(typeName(e.type) + (if (e.detail.isNotEmpty()) " · " + e.detail else ""), style = MaterialTheme.typography.bodyMedium, softWrap = true)
                             Text(fmtTime(e.ts), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
