@@ -42,7 +42,7 @@ fun ToolsScreen() {
     }
     var confirm by remember { mutableStateOf("") }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
-        PageIntro("Alat", "Diagnostik, terminal, pemantauan layar, dan utilitas lanjutan.")
+        PageIntro("Alat", "Diagnostik, pemantauan layar, dan utilitas lanjutan. Terminal tersedia di halaman tersendiri.")
         LinkCard()
         ScreenTimeCard()
         TerminalCard()
