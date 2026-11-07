@@ -45,7 +45,6 @@ fun ToolsScreen() {
         PageIntro("Alat", "Diagnostik, pemantauan layar, dan utilitas lanjutan. Terminal tersedia di halaman tersendiri.")
         LinkCard()
         ScreenTimeCard()
-        TerminalCard()
         if (Store.installed) {
             DiagCard()
             RootCard()
