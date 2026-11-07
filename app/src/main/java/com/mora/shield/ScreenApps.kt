@@ -40,7 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight\nimport androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -95,7 +95,7 @@ fun AppsScreen() {
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(a.label, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                Text(a.label, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, softWrap = true)
                                 Text(
                                     when {
                                         a.newApp -> "Baru · internet ditahan"
@@ -121,7 +121,7 @@ fun AppsScreen() {
             title = { Text(d.label) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(d.pkg, style = MaterialTheme.typography.labelSmall)
+                    Text(d.pkg, style = MaterialTheme.typography.labelSmall, softWrap = true)
                     Spacer(Modifier.size(8.dp))
                     Text(
                         if (d.trackers.isEmpty()) "Tidak ada SDK pelacak yang dikenali (atau belum dipindai)."
