@@ -152,6 +152,7 @@ fun MoraApp() {
         "Monitor",
         "Aplikasi",
         "Pengaturan",
+        "Mora Core",
         "Alat"
     )
 
@@ -160,6 +161,7 @@ fun MoraApp() {
         Icons.Filled.Notifications,
         Icons.Filled.List,
         Icons.Filled.Settings,
+        Icons.Filled.BuildIcon,
         Icons.Filled.BuildIcon
     )
 
@@ -263,7 +265,9 @@ fun MoraApp() {
 
                 3 -> SettingsScreen()
 
-                4 -> ToolsScreen()
+                4 -> MoraCoreScreen()
+
+                5 -> ToolsScreen()
             }
         }
     }

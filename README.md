@@ -55,3 +55,15 @@ git push
 9. Uji terminal non-root dahulu; aktifkan root hanya untuk perintah yang dipahami.
 
 **Validasi:** installer lolos syntax check dan smoke-test fixture dua kali (termasuk uji idempotensi). Build Gradle dan pengujian perangkat belum dijalankan; APK belum dinyatakan terverifikasi.
+
+
+## Mora Shield Phase 3 Integrated
+
+- Dedicated Mora Core tab with the three-app registry and exact connection states.
+- Per-app policy master switch, activity monitoring, connector command access and capability allowlist.
+- Central activity timeline, connector overview and command audit.
+- Existing Downloader controls and SystemManager policy UI.
+- Daily screen-on/standby tracking and local terminal in Tools.
+- See `docs/MORA_SHIELD_APP_MODULE_ROADMAP.md` for future app and module updates.
+
+Connector commands remain deny-by-default and require user approval. Terminal is local to Shield, not exposed through Connector IPC. Network/background policies are not OS-enforced unless the worker implements the corresponding handler.
