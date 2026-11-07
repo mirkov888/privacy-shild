@@ -78,9 +78,9 @@ private data class MonitorSnapshot(
 )
 
 @Composable
-fun ActivityMonitorScreen() {
+fun ActivityMonitorScreen(initialSection: String = "DASHBOARD") {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var section by remember { mutableStateOf(MonitorSection.DASHBOARD) }
+    var section by remember { mutableStateOf(MonitorSection.values().firstOrNull { it.name == initialSection } ?: MonitorSection.DASHBOARD) }
     var query by remember { mutableStateOf("") }
     var snapshot by remember { mutableStateOf(MonitorSnapshot()) }
     var loading by remember { mutableStateOf(true) }
