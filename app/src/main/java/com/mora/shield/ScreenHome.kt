@@ -48,6 +48,7 @@ fun HomeScreen() {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
         Hero(s.score)
         StatusCard()
+        EcosystemDashboard()
         if (Store.installed) {
             BootGuardCard()
             SecurityCard()
