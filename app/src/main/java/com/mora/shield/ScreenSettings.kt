@@ -4,6 +4,10 @@ package com.mora.shield
 
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,6 +31,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.BitmapFactory
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,10 +50,68 @@ private val WIPE_WARN =
         "Hitung mundur batal bila HP dibuka atau file /sdcard/PS_off dibuat. Pilih hanya bila kamu paham risikonya."
 
 @Composable
+private fun BannerSettingsCard() {
+    val ctx = LocalContext.current
+    var files by remember { mutableStateOf(BannerStore.files(ctx)) }
+    var message by remember { mutableStateOf("") }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { BannerStore.importZip(ctx, uri) }
+                .onSuccess { count ->
+                    files = BannerStore.files(ctx)
+                    message = "$count banner berhasil diimpor dari ZIP."
+                }
+                .onFailure { message = "Gagal mengimpor ZIP: " + (it.message ?: "file tidak valid") }
+        }
+    }
+    SectionCard("Banner Beranda", "Pilih banner dari ZIP koleksi. Banner bawaan tetap tersedia sebagai default.") {
+        Text("Banner aktif: " + if (BannerStore.selectedIndex == 0) "Bawaan Mora Shield" else "Banner " + BannerStore.selectedIndex,
+            modifier = Modifier.padding(horizontal = 18.dp), style = MaterialTheme.typography.bodyMedium)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.Button(onClick = { picker.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")) }) {
+                Text("Impor banner ZIP")
+            }
+            androidx.compose.material3.OutlinedButton(onClick = {
+                BannerStore.select(ctx, 0)
+                message = "Banner bawaan dipulihkan."
+            }) { Text("Atur ulang default") }
+        }
+        if (files.isNotEmpty()) {
+            Text("Pilih salah satu dari " + files.size + " gambar:", modifier = Modifier.padding(horizontal = 18.dp),
+                style = MaterialTheme.typography.labelLarge)
+            files.forEachIndexed { index, file ->
+                val bitmap = remember(file.absolutePath, file.lastModified()) { BitmapFactory.decodeFile(file.absolutePath) }
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 5.dp)
+                        .clickable { BannerStore.select(ctx, index + 1) },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (bitmap != null) Image(bitmap.asImageBitmap(), contentDescription = "Banner " + (index + 1),
+                        modifier = Modifier.width(112.dp).height(64.dp).padding(end = 10.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                    Column(Modifier.weight(1f)) {
+                        Text("Banner " + (index + 1), style = MaterialTheme.typography.bodyMedium)
+                        Text(file.name, style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
+                    if (BannerStore.selectedIndex == index + 1) {
+                        Text("AKTIF", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        } else {
+            EmptyHint("Belum ada banner kustom. Impor file banner1.zip dari penyimpanan HP.")
+        }
+        if (message.isNotBlank()) Text(message, modifier = Modifier.padding(horizontal = 18.dp),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
 fun SettingsScreen() {
     val ctx = LocalContext.current
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
         PageIntro("Pengaturan", "Atur perlindungan privasi dan perilaku sistem dari satu tempat.")
+        BannerSettingsCard()
         if (!Store.installed) {
             StatusCard()
             return@Column
