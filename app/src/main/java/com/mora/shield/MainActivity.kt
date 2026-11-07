@@ -60,6 +60,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Meminta refresh rate tinggi; sistem memilih mode tertinggi yang didukung perangkat.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.attributes = window.attributes.apply { preferredRefreshRate = 120f }
+        }
 
         // Meminta izin notifikasi Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
