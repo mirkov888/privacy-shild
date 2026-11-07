@@ -96,6 +96,7 @@ fun ActivityMonitorScreen() {
     }
 
     Column(Modifier.fillMaxSize()) {
+        PageIntro("Monitor", "Pantau aktivitas aplikasi, jaringan, dan sinyal keamanan perangkat.")
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
