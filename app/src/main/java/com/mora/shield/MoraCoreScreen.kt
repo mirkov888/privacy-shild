@@ -45,19 +45,23 @@ private fun MoraCoreRegistryCard() {
     var message by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        MoraCore.initialize(context.applicationContext)
-        delay(350)
-        runCatching { MoraCore.refreshRegistry() }
+        withContext(Dispatchers.IO) {
+            MoraCore.initialize(context.applicationContext)
+            runCatching { MoraCore.refreshRegistry() }
+        }
         while (true) {
-            runCatching {
-                val currentApps = MoraCore.registeredApps()
-                val currentPolicies = currentApps.mapNotNull { app ->
-                    MoraCore.appPolicy(app.packageName)?.let { app.packageName to it }
-                }.toMap()
-                apps = currentApps
-                policies = currentPolicies
+            val snapshot = withContext(Dispatchers.IO) {
+                runCatching {
+                    val currentApps = MoraCore.registeredApps()
+                    val currentPolicies = currentApps.mapNotNull { app ->
+                        MoraCore.appPolicy(app.packageName)?.let { app.packageName to it }
+                    }.toMap()
+                    currentApps to currentPolicies
+                }.getOrDefault(emptyList<RegisteredAppEntity>() to emptyMap())
             }
-            delay(5000)
+            apps = snapshot.first
+            policies = snapshot.second
+            delay(15000)
         }
     }
 
@@ -177,10 +181,12 @@ private fun MoraCoreCommandAuditCard() {
     var rows by remember { mutableStateOf(emptyList<com.mora.shield.core.CommandAuditEntity>()) }
     val context = LocalContext.current
     LaunchedEffect(Unit) {
-        MoraCore.initialize(context.applicationContext)
+        withContext(Dispatchers.IO) { MoraCore.initialize(context.applicationContext) }
         while (true) {
-            rows = runCatching { MoraCore.recentCommandAudit(30) }.getOrDefault(emptyList())
-            delay(5000)
+            rows = withContext(Dispatchers.IO) {
+                runCatching { MoraCore.recentCommandAudit(30) }.getOrDefault(emptyList())
+            }
+            delay(20000)
         }
     }
     SectionCard("Command Audit", "Riwayat perintah connector yang disimpan lokal.") {
