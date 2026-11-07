@@ -1,0 +1,115 @@
+name: Mora Shield Android CI
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mora-shield-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test Mora Shield
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "::error::Android sdkmanager not found"
+            exit 1
+          fi
+          set +o pipefail
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+          status=$?
+          set -o pipefail
+          if [ "$status" -ne 0 ] && [ "$status" -ne 141 ]; then exit "$status"; fi
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and run unit tests with diagnostics
+        shell: bash
+        run: |
+          set -o pipefail
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace --info clean testDebugUnitTest assembleDebug 2>&1 | tee build.log
+
+      - name: Verify APK
+        if: success()
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          mkdir -p artifacts
+          cp "$APK" artifacts/MoraShield-debug.apk
+          sha256sum artifacts/MoraShield-debug.apk | tee build-diagnostics.txt
+
+      - name: Build failure summary
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo "## Mora Shield build failed"
+            echo
+            echo "Download the mora-shield-diagnostics artifact for the full Gradle log."
+            if [ -f build.log ]; then
+              echo
+              echo "### Last 120 lines"
+              tail -n 120 build.log
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoraShield-debug-apk
+          path: artifacts/MoraShield-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload diagnostics even when build fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mora-shield-diagnostics
+          path: |
+            build.log
+            build-diagnostics.txt
+            app/build/reports/
+            app/build/outputs/logs/
+          if-no-files-found: warn
+          retention-days: 30
