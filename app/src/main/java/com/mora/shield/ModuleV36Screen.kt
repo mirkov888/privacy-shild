@@ -60,12 +60,6 @@ fun ModuleV36Screen() {
     }
     val v=Regex("(\\d+)\\.(\\d+)\\.(\\d+)").find(Store.version)?.groupValues?.drop(1)?.mapNotNull{it.toIntOrNull()} ?: emptyList()
     val ok=v.size==3 && (v[0]>3 || (v[0]==3 && v[1]>=6))
-    @Composable fun Toggle(label:String,key:String,default:Boolean=false) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
-            Text(label,Modifier.weight(1f))
-            Switch(checked=(Store.cfg[key] ?: if(default) "1" else "0")=="1",enabled=ok && !busy,onCheckedChange={setKey(key,if(it)"1" else "0")})
-        }
-    }
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
             Text("Integrasi Mora Privacy Shield",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
@@ -74,22 +68,21 @@ fun ModuleV36Screen() {
         }
         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text("Pengawas jaringan",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-            Toggle("Pengawas jaringan","nw_on"); Toggle("Deteksi 2G/operator","nw_2g"); Toggle("Deteksi Wi-Fi kembar","nw_wifi")
-            Toggle("Aksi matikan Wi-Fi saat kembar","nw_act") // nw_act is a string, rendered separately below
+            ModuleToggle("Pengawas jaringan",Store.cfg["nw_on"]=="1",ok&&!busy){setKey("nw_on",if(it)"1" else "0")}; ModuleToggle("Deteksi 2G/operator",Store.cfg["nw_2g"]=="1",ok&&!busy){setKey("nw_2g",if(it)"1" else "0")}; ModuleToggle("Deteksi Wi-Fi kembar",Store.cfg["nw_wifi"]=="1",ok&&!busy){setKey("nw_wifi",if(it)"1" else "0")}
             Text("Aksi otomatis Wi-Fi",fontWeight=FontWeight.Medium)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled=ok&&!busy,onClick={setKey("nw_act","off")}){Text("Aksi mati")}
                 OutlinedButton(enabled=ok&&!busy,onClick={setKey("nw_act","wifioff")}){Text("Wi-Fi off")}
             }
-            Toggle("Mode uji aksi Wi-Fi","nw_dry",true)
+            ModuleToggle("Mode uji aksi Wi-Fi",Store.cfg["nw_dry"]!="0",ok&&!busy){setKey("nw_dry",if(it)"1" else "0")}
             Text("Mode uji harus dimatikan secara sadar sebelum Wi-Fi benar-benar diputus.",style=MaterialTheme.typography.bodySmall)
         } } }
         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text("Audit & cabut izin",style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.SemiBold)
-            Toggle("Cabut izin otomatis","ar_on")
+            ModuleToggle("Cabut izin otomatis",Store.cfg["ar_on"]=="1",ok&&!busy){setKey("ar_on",if(it)"1" else "0")}
             OutlinedTextField(days,{days=it.filter(Char::isDigit).take(3)},label={Text("Batas hari (7–365)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true)
             OutlinedTextField(excludes,{excludes=it},label={Text("Pengecualian package, pisahkan koma")},modifier=Modifier.fillMaxWidth(),minLines=2)
-            Toggle("Mode uji cabut izin","ar_dry",true)
+            ModuleToggle("Mode uji cabut izin",Store.cfg["ar_dry"]!="0",ok&&!busy){setKey("ar_dry",if(it)"1" else "0")}
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(enabled=ok&&!busy,onClick={val n=days.toIntOrNull(); if(n==null||n !in 7..365) output="Batas harus 7–365 hari." else setKey("ar_days",n.toString())}){Text("Simpan hari")}
                 OutlinedButton(enabled=ok&&!busy,onClick={setKey("ar_ex",excludes.trim())}){Text("Simpan pengecualian")}
@@ -106,7 +99,7 @@ fun ModuleV36Screen() {
             Text("Membutuhkan nb_on aktif pada modul.")
             OutlinedTextField(limit,{limit=it.filter(Char::isDigit).take(4)},label={Text("Jumlah baris (maks. 2000)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Number),singleLine=true)
             Button(enabled=ok&&!busy,onClick={val n=(limit.toIntOrNull()?:200).coerceIn(1,2000);runCmd("traffic $n"){raw->traffic=raw.lineSequence().mapNotNull{l->val p=l.split("|",limit=4);if(p.size==4&&p[0]=="D")ModTraffic(p[1],p[2],p[3].toLongOrNull()?:0)else null}.toList()}}){Text("Muat trafik")}
-            traffic.take(100).forEach{Text("${it.day} · ${it.pkg} · ${formatBytes(it.bytes)}",style=MaterialTheme.typography.bodySmall)}
+            traffic.take(100).forEach{Text("${it.day} · ${it.pkg} · ${moduleFormatBytes(it.bytes)}",style=MaterialTheme.typography.bodySmall)}
             Text("TRAFSPIKE tampil sebagai kejadian di Monitor > Timeline.",style=MaterialTheme.typography.bodySmall)
         } } }
         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -139,4 +132,22 @@ fun ModuleV36Screen() {
         if(output.isNotBlank()) item { Card(Modifier.fillMaxWidth()){Column(Modifier.padding(12.dp)){Text("Hasil perintah",fontWeight=FontWeight.SemiBold);Text(output,style=MaterialTheme.typography.bodySmall)}} }
     }
     if(purge!=null) AlertDialog(onDismissRequest={purge=null},title={Text("Hapus riwayat ${purge}?")},text={Text("Tindakan ini tidak dapat dibatalkan.")},confirmButton={TextButton(onClick={val p=purge!!;purge=null;runCmd("purge $p")}){Text("Hapus")}},dismissButton={TextButton(onClick={purge=null}){Text("Batal")}})
+}
+
+@Composable
+private fun ModuleToggle(label:String, checked:Boolean, enabled:Boolean, onChange:(Boolean)->Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween) {
+        Text(label,Modifier.weight(1f))
+        Switch(checked=checked,enabled=enabled,onCheckedChange=onChange)
+    }
+}
+
+private fun moduleFormatBytes(value:Long):String {
+    if(value<0L) return "Tidak didukung"
+    if(value<1024L) return "$value B"
+    val units=arrayOf("KB","MB","GB","TB")
+    var amount=value.toDouble()
+    var index=-1
+    do { amount/=1024.0; index++ } while(amount>=1024.0 && index<units.lastIndex)
+    return String.format(java.util.Locale.getDefault(),"%.1f %s",amount,units[index])
 }
