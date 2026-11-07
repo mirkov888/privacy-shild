@@ -1,30 +1,57 @@
-# Mora Ecosystem Phase 5 — Central Policy UI
+# Mora Shield — Phase 3 Integrated Patch (Full)
 
-Adds a MoraSystemManager policy card to Mora Shield Settings and places the existing MoraDownloader central-control card in the same central settings area.
+Patch untuk repository `mirkov888/privacy-shild`; tidak membuat aplikasi kedua dan tidak mengubah signing key.
 
-## Controls
-- Worker policy enable/disable
-- Event monitoring enable/disable
-- Network policy value: inherit / allow / block / Wi-Fi only / mobile only
-- Background policy value: normal / restricted / allowed
-- Live connector status and policy refresh
+## Fitur
+1. Tab khusus Mora Core di navigasi utama.
+2. Registry Mora Shield, MoraDownloader, MoraSystemManager.
+3. Status `INTERNAL`, `NOT_INSTALLED`, `INSTALLED`, `CONNECTED`.
+4. Ringkasan Core, timeline aktivitas, status konektor dan command audit.
+5. Kebijakan per aplikasi: master enable, monitoring, remote command access, capability allowlist.
+6. Kontrol Downloader yang sudah ada dan policy UI SystemManager yang sudah ada.
+7. Screen Time harian: screen-on dan standby.
+8. Terminal lokal dengan mode shell atau root manual.
+9. Roadmap update app dan modul.
 
-## Safety boundary
-This phase adds policy UI only. It does not expose arbitrary shell, Root, Shizuku, package uninstall, property editing, or service management commands through Connector IPC. Network/background values are persisted centrally; OS-level enforcement requires a separately reviewed worker-side capability/handler and is not claimed here.
+## Batas keamanan
+- Connector command access nonaktif secara default.
+- Hanya capability yang diiklankan connector yang dapat di-allowlist.
+- Semua perintah connector wajib meminta persetujuan pengguna.
+- Tidak ada arbitrary shell command melalui Connector IPC.
+- Terminal lokal bukan remote terminal; mode root tetap meminta izin root manager.
+- Network/background policy tidak diklaim sebagai OS-level enforcement sebelum worker mengimplementasikan handler.
+- Screen Time menghitung total layar aktif/standby, bukan per-app usage.
 
-## Apply
+## Instalasi
+Ekstrak ZIP lalu jalankan:
+
 ```bash
-python3 apply-mora-ecosystem-phase5.py ~/privacy-shild
+python3 apply_mora_shield_phase3.py ~/privacy-shild
 cd ~/privacy-shild
-./gradlew assembleDebug --no-daemon
+git diff --check
+git diff
+bash ./gradlew :app:assembleDebug --no-daemon
 ```
 
-Install the updated Mora Shield APK. For live worker status, install/open the matching worker APKs. Connector IPC still requires matching signing certificates across the release APKs.
+Installer membuat backup `.phase3.bak` untuk file yang dimodifikasi. Jika file tujuan sudah ada dengan isi berbeda atau source tidak cocok, installer berhenti agar tidak menimpa diam-diam.
 
-## Validation
-The installer is designed to be idempotent and uses an exact `MonitorCard(ctx)` insertion anchor. Build and device IPC validation must be run against the user's current checkout. This package does not include a verified APK.
+Jika build sukses:
 
+```bash
+git add app/src/main/java/com/mora/shield docs/MORA_SHIELD_APP_MODULE_ROADMAP.md README.md
+git commit -m "Integrate Mora Core Phase 3 control center"
+git push
+```
 
-## Phase 11 — Security & Privacy Extensions
+## Urutan uji
+1. Build dan install Shield terlebih dahulu.
+2. Pastikan semua APK companion memakai signing certificate release yang sama.
+3. Install dan buka Downloader serta SystemManager.
+4. Buka tab Mora Core; pastikan tiga paket muncul.
+5. Uji `CONNECTED` setelah connector register dan heartbeat.
+6. Force-stop companion; status harus kembali ke `INSTALLED` setelah sesi ditutup/timeout.
+7. Uji event timeline, policy deny-by-default, allowlist, approval dan audit.
+8. Uji screen time dengan layar ON/OFF.
+9. Uji terminal non-root dahulu; aktifkan root hanya untuk perintah yang dipahami.
 
-See `PHASE11-SECURITY-PRIVACY-EXTENSIONS.md` for persistent GitHub release signing, link-cleaner tests, network-risk heuristics, permission overview, dry-run unused-app review, traffic history, home-screen widget, reversible app hide/restore, and encrypted audit export. Configure the documented GitHub Actions secrets before the release workflow is expected to pass.
+**Validasi:** installer lolos syntax check dan smoke-test fixture dua kali (termasuk uji idempotensi). Build Gradle dan pengujian perangkat belum dijalankan; APK belum dinyatakan terverifikasi.
