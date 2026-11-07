@@ -57,11 +57,11 @@ fun SectionCard(
 ) {
     var open by remember { mutableStateOf(startOpen || !collapsible) }
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)),
-        shape = RoundedCornerShape(24.dp)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f)),
+        shape = RoundedCornerShape(20.dp)
     ) {
-        Column(Modifier.padding(vertical = 14.dp)) {
+        Column(Modifier.padding(vertical = 16.dp)) {
             Row(
                 Modifier.fillMaxWidth().then(if (collapsible) Modifier.clickable { open = !open } else Modifier)
                     .padding(horizontal = 18.dp),
@@ -70,7 +70,7 @@ fun SectionCard(
                 Column(Modifier.weight(1f)) {
                     Text(
                         title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (subtitle != null) {
                         Text(
@@ -81,7 +81,7 @@ fun SectionCard(
                     }
                 }
                 if (collapsible) {
-                    Text(if (open) "▲" else "▼", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text(if (open) "−" else "+", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
             if (open) {
