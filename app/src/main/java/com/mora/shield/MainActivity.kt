@@ -154,7 +154,11 @@ fun MoraApp() {
         2 -> "Aplikasi"
         4 -> "Pengaturan"
         5 -> "Mora Core"
-        6 -> "Alat"\n        7 -> "Statistik aplikasi"\n        8 -> "Terminal"
+        6 -> "Alat"
+        7 -> "Statistik aplikasi"
+        8 -> "Terminal"
+        9 -> "Keamanan & Privasi"
+        10 -> "Statistik Jaringan"
         else -> "Lainnya"
     }
     val icons = listOf(Icons.Filled.Home, Icons.Filled.Notifications, Icons.Filled.List, Icons.Filled.BuildIcon)
@@ -263,7 +267,15 @@ fun MoraApp() {
 
                 5 -> MoraCoreScreen()
 
-                6 -> ToolsScreen()\n\n                7 -> AppUsageScreen()\n\n                8 -> TerminalScreen()
+                6 -> ToolsScreen()
+
+                7 -> AppUsageScreen()
+
+                8 -> TerminalScreen()
+
+                9 -> ActivityMonitorScreen(initialSection = "SECURITY")
+
+                10 -> ActivityMonitorScreen(initialSection = "NETWORK")
             }
         }
     }
