@@ -59,6 +59,7 @@ fun AppsScreen() {
             }
     }
     Column(Modifier.fillMaxSize()) {
+        PageIntro("Aplikasi", "Cari aplikasi, periksa pelacak, dan kendalikan akses jaringan.")
         OutlinedTextField(
             value = query, onValueChange = { query = it }, singleLine = true,
             label = { Text("Cari aplikasi") },
