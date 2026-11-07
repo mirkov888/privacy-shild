@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -80,9 +83,25 @@ fun TerminalCard() {
             Text("Output terminal akan muncul di sini.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             history.forEach { entry ->
-                Text("$ ${entry.command}", style = MaterialTheme.typography.labelLarge)
-                Text("Exit: ${entry.exitCode ?: "timeout/error"}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(entry.output.ifBlank { "(tidak ada output)" }, style = MaterialTheme.typography.bodySmall)
+                androidx.compose.material3.Surface(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("$ ${entry.command}", style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace, softWrap = true)
+                        Text("Exit: ${entry.exitCode ?: "timeout/error"}", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        androidx.compose.foundation.text.selection.SelectionContainer {
+                            Text(entry.output.ifBlank { "(tidak ada output)" },
+                                modifier = Modifier.fillMaxWidth(),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                softWrap = true)
+                        }
+                    }
+                }
             }
         }
     }
