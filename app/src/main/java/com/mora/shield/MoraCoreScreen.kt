@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import com.mora.shield.core.AppPolicy
 import com.mora.shield.core.MoraCore
 import com.mora.shield.core.RegisteredAppEntity
@@ -86,15 +87,15 @@ private fun MoraCoreRegistryCard() {
             val policy = policies[app.packageName]
             val isSaving = app.packageName in saving
             if (index > 0) Divider()
-            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(app.displayName, style = MaterialTheme.typography.titleSmall)
-                        Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(app.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 2, softWrap = true)
+                        Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, softWrap = true)
                     }
-                    Text(app.connectionState, style = MaterialTheme.typography.labelLarge)
+                    Text(app.connectionState, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(statusDescription(app.connectionState), style = MaterialTheme.typography.bodySmall)
+                Text(statusDescription(app.connectionState), style = MaterialTheme.typography.bodySmall, softWrap = true)
                 Text(
                     "Versi ${app.versionName} · API ${app.apiVersion}" +
                         if (app.lastSeenAtMs > 0L) " · Aktif ${java.text.DateFormat.getTimeInstance().format(java.util.Date(app.lastSeenAtMs))}" else "",
@@ -141,7 +142,7 @@ private fun MoraCoreRegistryCard() {
                                             save(policy.copy(allowedCommands = allowed, approvalRequiredCommands = setOf("*")))
                                         }
                                     )
-                                    Text(capability, style = MaterialTheme.typography.bodySmall)
+                                    Text(capability, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, softWrap = true)
                                 }
                             }
                         }
@@ -194,10 +195,10 @@ private fun MoraCoreCommandAuditCard() {
         if (rows.isEmpty()) EmptyHint("Belum ada perintah connector yang tercatat.")
         rows.take(15).forEachIndexed { index, item ->
             if (index > 0) Divider()
-            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                Text("${item.commandId} · ${item.status}", style = MaterialTheme.typography.bodyMedium)
-                Text(item.packageName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(item.resultSummary, style = MaterialTheme.typography.bodySmall)
+            Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 10.dp)) {
+                Text("${item.commandId} · ${item.status}", style = MaterialTheme.typography.bodyMedium, softWrap = true)
+                Text(item.packageName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, softWrap = true)
+                Text(item.resultSummary, style = MaterialTheme.typography.bodySmall, softWrap = true)
                 Text(
                     java.text.DateFormat.getDateTimeInstance().format(java.util.Date(item.createdAtMs)),
                     style = MaterialTheme.typography.labelSmall,
