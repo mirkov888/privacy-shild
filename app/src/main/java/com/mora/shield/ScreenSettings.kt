@@ -113,6 +113,7 @@ fun SettingsScreen() {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
         PageIntro("Pengaturan", "Atur perlindungan privasi dan perilaku sistem dari satu tempat.")
         BannerSettingsCard()
+        if (Store.installed) PolicyProfilesCard()
         if (!Store.installed) {
             StatusCard()
             return@Column
