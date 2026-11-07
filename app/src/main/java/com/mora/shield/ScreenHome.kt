@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -39,6 +40,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen() {
     val s = Store.stats()
+    val bannerContext = LocalContext.current
+    LaunchedEffect(bannerContext) { BannerStore.load(bannerContext) }
     var confirmLock by remember { mutableStateOf(false) }
     var confirmFix by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
@@ -143,10 +146,18 @@ fun StatusCard() {
 fun Hero(score: Int) {
     val bg = MaterialTheme.colorScheme.background
     Box(Modifier.fillMaxWidth().height(210.dp)) {
-        Image(
-            painter = painterResource(R.drawable.hero_cat), contentDescription = null,
-            modifier = Modifier.fillMaxWidth().height(210.dp), contentScale = ContentScale.Crop, alpha = 0.55f
-        )
+        val customBanner = BannerStore.bitmap(LocalContext.current)
+        if (customBanner != null) {
+            Image(
+                bitmap = customBanner.asImageBitmap(), contentDescription = "Banner Mora Shield",
+                modifier = Modifier.fillMaxWidth().height(210.dp), contentScale = ContentScale.Crop, alpha = 0.62f
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.hero_cat), contentDescription = "Banner bawaan Mora Shield",
+                modifier = Modifier.fillMaxWidth().height(210.dp), contentScale = ContentScale.Crop, alpha = 0.55f
+            )
+        }
         Box(
             Modifier.fillMaxWidth().height(210.dp).background(
                 Brush.verticalGradient(listOf(Color.Transparent, bg.copy(alpha = 0.55f), bg))
