@@ -10,7 +10,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.mora.shield.MainActivity
 import com.mora.shield.Notif
-import com.mora.shield.R
 import com.mora.shield.core.MoraEvent
 
 /**
