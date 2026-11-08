@@ -33,7 +33,7 @@ data class LocationCoordinate(val latitude: Double, val longitude: Double)
 object LocationSpoofEngine {
     private const val EARTH_RADIUS_METERS = 6_371_000.0
     private val random = SecureRandom()
-    private data class CacheEntry(val bucket: Long, val coordinate: LocationCoordinate)
+    private data class CacheEntry(val bucket: Long, val signature: String, val coordinate: LocationCoordinate)
     private val cache = ConcurrentHashMap<String, CacheEntry>()
 
     fun validate(profile: PerAppLocationProfile): String? {
@@ -87,14 +87,15 @@ object LocationSpoofEngine {
         if (profile.mode == LocationMode.STATIC) return LocationCoordinate(profile.latitude, profile.longitude)
         val intervalMs = profile.intervalMinutes.coerceIn(1, 1440) * 60_000L
         val bucket = elapsedRealtimeMs.coerceAtLeast(0L) / intervalMs
+        val signature = listOf(profile.mode.name, profile.latitude.toBits(), profile.longitude.toBits(), profile.radiusMeters, profile.intervalMinutes).joinToString(":")
         val previous = cache[profile.packageName]
-        if (previous != null && previous.bucket == bucket) return previous.coordinate
+        if (previous != null && previous.bucket == bucket && previous.signature == signature) return previous.coordinate
         val next = if (profile.mode == LocationMode.RADIUS) {
             randomCoordinateInRadius(profile.latitude, profile.longitude, profile.radiusMeters)
         } else {
             randomWorldCoordinate()
         }
-        cache[profile.packageName] = CacheEntry(bucket, next)
+        cache[profile.packageName] = CacheEntry(bucket, signature, next)
         return next
     }
 
