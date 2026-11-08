@@ -4,12 +4,14 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -56,7 +58,7 @@ object AppControlManager {
 
     fun list(context: Context): List<ManagedApp> {
         val pm = context.packageManager
-        val installed = pm.getInstalledApplications(PackageManager.MATCH_DISABLED_COMPONENTS or PackageManager.MATCH_UNINSTALLED_PACKAGES)
+        val installed = pm.getInstalledApplications(PackageManager.MATCH_DISABLED_COMPONENTS)
             .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
             .filter { isSafeThirdPartyPackage(it.packageName) }
         val disabled = parsePackages(Root.sh("pm list packages -3 -d --user 0 2>/dev/null").out)
@@ -138,7 +140,7 @@ fun AppControlScreen() {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(22.dp)
             )
-            Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = filter == "all", onClick = { filter = "all" }, label = { Text("Semua") })
                 FilterChip(selected = filter == "enabled", onClick = { filter = "enabled" }, label = { Text("Aktif") })
                 FilterChip(selected = filter == "disabled", onClick = { filter = "disabled" }, label = { Text("Dibekukan") })
