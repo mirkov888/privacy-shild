@@ -13,6 +13,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -208,7 +210,10 @@ fun MoraApp() {
         // ================= BOTTOM NAVIGATION =================
 
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
 
                 navTitles.forEachIndexed { index, title ->
 
@@ -258,31 +263,25 @@ fun MoraApp() {
 
             // ================= SCREEN CONTENT =================
 
-            when (selectedTab) {
-
-                0 -> HomeScreen()
-
-                1 -> ActivityMonitorScreen()
-
-                2 -> AppsScreen()
-
-                3 -> MoreScreen(onSelect = { selectedTab = it })
-
-                4 -> SettingsScreen()
-
-                5 -> MoraCoreScreen()
-
-                6 -> ToolsScreen()
-
-                7 -> AppUsageScreen()
-
-                8 -> TerminalScreen()
-
-                11 -> ModuleV36Screen()
-
-                9 -> ActivityMonitorScreen(initialSection = "SECURITY")
-
-                10 -> ActivityMonitorScreen(initialSection = "NETWORK")
+            Crossfade(
+                targetState = selectedTab,
+                animationSpec = tween(durationMillis = 220),
+                label = "mora-screen-transition"
+            ) { tab ->
+                when (tab) {
+                    0 -> HomeScreen()
+                    1 -> ActivityMonitorScreen()
+                    2 -> AppsScreen()
+                    3 -> MoreScreen(onSelect = { selectedTab = it })
+                    4 -> SettingsScreen()
+                    5 -> MoraCoreScreen()
+                    6 -> ToolsScreen()
+                    7 -> AppUsageScreen()
+                    8 -> TerminalScreen()
+                    11 -> ModuleV36Screen()
+                    9 -> ActivityMonitorScreen(initialSection = "SECURITY")
+                    10 -> ActivityMonitorScreen(initialSection = "NETWORK")
+                }
             }
         }
     }
