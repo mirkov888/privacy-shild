@@ -150,12 +150,19 @@ fun PerAppLocationScreen() {
                         checked = profile?.enabled == true,
                         enabled = backendActive && profile?.mode != LocationMode.REAL,
                         onCheckedChange = { enabled ->
-                            val next = profileFromFields()?.copy(enabled = enabled) ?: return@Switch
-                            val error = LocationSpoofEngine.validate(next)
-                            if (error != null) status = error else {
+                            if (!enabled) {
+                                val next = profile?.copy(enabled = false) ?: return@Switch
                                 PerAppLocationStore.save(context, next)
                                 profile = next
-                                status = if (enabled) "Spoofing diaktifkan untuk " + app.label else "Lokasi asli dipulihkan untuk " + app.label
+                                status = "Lokasi asli dipulihkan untuk " + app.label
+                            } else {
+                                val next = profileFromFields()?.copy(enabled = true) ?: return@Switch
+                                val error = LocationSpoofEngine.validate(next)
+                                if (error != null) status = error else {
+                                    PerAppLocationStore.save(context, next)
+                                    profile = next
+                                    status = "Spoofing diaktifkan untuk " + app.label
+                                }
                             }
                         }
                     )
@@ -167,9 +174,19 @@ fun PerAppLocationScreen() {
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         LocationMode.values().forEach { mode ->
                             DropdownMenuItem(text = { Text(mode.title) }, onClick = {
-                                profile = profile?.copy(mode = mode, enabled = false)
+                                val next = profile?.copy(mode = mode, enabled = false)
+                                if (next != null) {
+                                    val error = LocationSpoofEngine.validate(next)
+                                    if (error == null) {
+                                        PerAppLocationStore.save(context, next)
+                                        profile = next
+                                    } else {
+                                        profile = next
+                                        status = error
+                                    }
+                                }
                                 expanded = false
-                                status = if (mode == LocationMode.REAL) "Mode lokasi asli dipilih; spoofing dinonaktifkan." else null
+                                if (mode == LocationMode.REAL) status = "Mode lokasi asli dipilih; spoofing langsung dinonaktifkan."
                             })
                         }
                     }
@@ -207,8 +224,12 @@ fun PerAppLocationScreen() {
                         presets.forEach { preset ->
                             DropdownMenuItem(text = { Text(preset.name) }, onClick = {
                                 selectedPresetId = preset.id
-                                profile = profile?.copy(mode = preset.mode, latitude = preset.latitude, longitude = preset.longitude,
+                                val next = profile?.copy(mode = preset.mode, latitude = preset.latitude, longitude = preset.longitude,
                                     radiusMeters = preset.radiusMeters, intervalMinutes = preset.intervalMinutes, enabled = false)
+                                if (next != null) {
+                                    PerAppLocationStore.save(context, next)
+                                    profile = next
+                                }
                                 latText = preset.latitude.toString()
                                 lonText = preset.longitude.toString()
                                 radiusText = preset.radiusMeters.toString()
