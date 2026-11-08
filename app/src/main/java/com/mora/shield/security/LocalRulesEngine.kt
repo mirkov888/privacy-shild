@@ -44,9 +44,7 @@ object LocalRulesEngine {
     fun evaluate(context: Context, event: MoraEvent) {
         val cfg = config(context)
         if (!cfg.enabled) return
-        val rank = severityRank(event.severity.wireValue)
-        val threshold = if (cfg.minimumSeverity == MIN_MEDIUM) 2 else 3
-        if (rank < threshold) return
+        if (!matchesThreshold(event.severity.wireValue, cfg.minimumSeverity)) return
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
 
@@ -80,6 +78,11 @@ object LocalRulesEngine {
             )
             prefs.edit().putLong(key, now).apply()
         }
+    }
+
+    internal fun matchesThreshold(value: String, minimumSeverity: String): Boolean {
+        val threshold = if (minimumSeverity == MIN_MEDIUM) 2 else 3
+        return severityRank(value) >= threshold
     }
 
     private fun severityRank(value: String): Int = when (value.lowercase()) {
