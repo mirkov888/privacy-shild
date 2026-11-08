@@ -151,6 +151,24 @@ object MoraCore {
         summary: String
     ): Boolean = routerOrThrow().completeRemote(principal, requestId, commandId, success, summary)
 
+    /** Persist a local security heuristic as a normal timeline event and evaluate opt-in rules. */
+    suspend fun publishLocalSecuritySignal(title: String, detail: String, severity: EventSeverity) {
+        if (!isInitialized()) return
+        val now = System.currentTimeMillis()
+        val stableId = "network-risk:${(title + detail).hashCode()}:${now / 60_000L}"
+        val event = MoraEvent(
+            eventId = stableId,
+            sourcePackage = "com.mora.shield",
+            eventType = "NETWORK_RISK",
+            title = title,
+            detail = detail,
+            severity = severity,
+            occurredAtMs = now
+        )
+        val inserted = eventHubOrThrow().publish(event)
+        if (inserted) appContext?.let { com.mora.shield.security.LocalRulesEngine.evaluate(it, event) }
+    }
+
     fun publishShieldEvent(event: Ps.Ev) {
         if (!isInitialized()) return
         scope.launch {
