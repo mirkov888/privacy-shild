@@ -1,4 +1,4 @@
-# Phase 13 — Hide / Restore Launcher Icons
+# App Control — Hide / Restore Launcher Icons (separate from Phase 13 location)
 
 ## Added
 - Separate **Sembunyikan / Tampilkan** action alongside Freeze / Activate in App Control.
