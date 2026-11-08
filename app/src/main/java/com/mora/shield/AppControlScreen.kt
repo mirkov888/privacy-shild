@@ -23,7 +23,8 @@ data class ManagedApp(
     val packageName: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.ImageBitmap?,
-    val disabled: Boolean
+    val disabled: Boolean,
+    val hidden: Boolean
 )
 
 object AppControlManager {
@@ -42,19 +43,32 @@ object AppControlManager {
         .filter { isSafeThirdPartyPackage(it) }
         .toSet()
 
+    fun parseHiddenPackages(output: String): Set<String> {
+        val result = mutableSetOf<String>()
+        var current: String? = null
+        output.lineSequence().forEach { line ->
+            val header = Regex("^\\s*Package \\[([^]]+)]").find(line)
+            if (header != null) current = header.groupValues[1]
+            else if (current != null && line.contains("User 0:") && line.contains("hidden=true")) result += current!!
+        }
+        return result
+    }
+
     fun list(context: Context): List<ManagedApp> {
         val pm = context.packageManager
-        val installed = pm.getInstalledApplications(PackageManager.MATCH_DISABLED_COMPONENTS)
+        val installed = pm.getInstalledApplications(PackageManager.MATCH_DISABLED_COMPONENTS or PackageManager.MATCH_UNINSTALLED_PACKAGES)
             .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
             .filter { isSafeThirdPartyPackage(it.packageName) }
         val disabled = parsePackages(Root.sh("pm list packages -3 -d --user 0 2>/dev/null").out)
+        val hidden = parseHiddenPackages(Root.sh("dumpsys package 2>/dev/null").out)
         return installed.map { info ->
             val icon = try { pm.getApplicationIcon(info).toBitmap(96, 96).asImageBitmap() } catch (_: Exception) { null }
             ManagedApp(
                 info.packageName,
                 try { pm.getApplicationLabel(info).toString() } catch (_: Exception) { info.packageName },
                 icon,
-                info.packageName in disabled || !info.enabled
+                info.packageName in disabled || !info.enabled,
+                info.packageName in hidden
             )
         }.sortedWith(compareBy<ManagedApp> { it.disabled }.thenBy { it.label.lowercase() })
     }
@@ -62,6 +76,12 @@ object AppControlManager {
     fun setDisabled(packageName: String, disabled: Boolean): Root.Result {
         if (!isSafeThirdPartyPackage(packageName)) return Root.Result(2, "Paket tidak diizinkan untuk dikendalikan")
         val command = if (disabled) "pm disable-user --user 0" else "pm enable --user 0"
+        return Root.sh("$command '$packageName'")
+    }
+
+    fun setHidden(packageName: String, hidden: Boolean): Root.Result {
+        if (!isSafeThirdPartyPackage(packageName)) return Root.Result(2, "Paket tidak diizinkan untuk dikendalikan")
+        val command = if (hidden) "pm hide --user 0" else "pm unhide --user 0"
         return Root.sh("$command '$packageName'")
     }
 }
@@ -75,6 +95,7 @@ fun AppControlScreen() {
     var loading by remember { mutableStateOf(true) }
     var rootAvailable by remember { mutableStateOf<Boolean?>(null) }
     var pending by remember { mutableStateOf<ManagedApp?>(null) }
+    var pendingAction by remember { mutableStateOf("freeze") }
     var actionBusy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf<String?>(null) }
 
@@ -95,12 +116,13 @@ fun AppControlScreen() {
         matches && when (filter) {
             "enabled" -> !app.disabled
             "disabled" -> app.disabled
+            "hidden" -> app.hidden
             else -> true
         }
     }
 
     Column(Modifier.fillMaxSize()) {
-        PageIntro("Kontrol aplikasi", "Bekukan atau aktifkan kembali aplikasi pihak ketiga satu per satu. Membekukan aplikasi juga menghilangkannya dari launcher.")
+        PageIntro("Kontrol aplikasi", "Bekukan aplikasi atau sembunyikan ikon launcher tanpa menonaktifkannya.")
         if (rootAvailable == false) {
             Card(Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -120,9 +142,10 @@ fun AppControlScreen() {
                 FilterChip(selected = filter == "all", onClick = { filter = "all" }, label = { Text("Semua") })
                 FilterChip(selected = filter == "enabled", onClick = { filter = "enabled" }, label = { Text("Aktif") })
                 FilterChip(selected = filter == "disabled", onClick = { filter = "disabled" }, label = { Text("Dibekukan") })
+                FilterChip(selected = filter == "hidden", onClick = { filter = "hidden" }, label = { Text("Disembunyikan") })
                 TextButton(onClick = { reload() }) { Text("Refresh") }
             }
-            Text("${visible.size} aplikasi · ${apps.count { it.disabled }} dibekukan", Modifier.padding(horizontal = 18.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium)
+            Text("${visible.size} aplikasi · ${apps.count { it.disabled }} dibekukan · ${apps.count { it.hidden }} disembunyikan", Modifier.padding(horizontal = 18.dp, vertical = 6.dp), style = MaterialTheme.typography.labelMedium)
             if (loading) {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
@@ -143,10 +166,13 @@ fun AppControlScreen() {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(app.label, fontWeight = FontWeight.SemiBold)
                                     Text(app.packageName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(if (app.disabled) "Dibekukan · tidak berjalan" else "Aktif", style = MaterialTheme.typography.labelSmall,
+                                    Text(when { app.disabled -> "Dibekukan · tidak berjalan"; app.hidden -> "Aktif · ikon disembunyikan"; else -> "Aktif · terlihat di launcher" }, style = MaterialTheme.typography.labelSmall,
                                         color = if (app.disabled) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                                 }
-                                Button(enabled = !actionBusy, onClick = { pending = app }) { Text(if (app.disabled) "Aktifkan" else "Bekukan") }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Button(enabled = !actionBusy, onClick = { pendingAction = "freeze"; pending = app }) { Text(if (app.disabled) "Aktifkan" else "Bekukan") }
+                                    TextButton(enabled = !actionBusy && !app.disabled, onClick = { pendingAction = "hide"; pending = app }) { Text(if (app.hidden) "Tampilkan" else "Sembunyikan") }
+                                }
                             }
                         }
                     }
@@ -154,7 +180,7 @@ fun AppControlScreen() {
             }
         }
         status?.let { Text(it, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.primary) }
-        Text("Batasan: hanya aplikasi pihak ketiga yang ditampilkan. Aplikasi sistem dan Mora Shield dilindungi. Ini bukan fitur menyembunyikan APK dari aplikasi lain.",
+        Text("Sembunyikan memakai status hidden Android untuk user 0. Ikon disembunyikan dari launcher, tetapi paket masih dapat terlihat melalui Settings, ADB, atau pemeriksaan sistem. Aplikasi sistem dan Mora Shield dilindungi.",
             Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
