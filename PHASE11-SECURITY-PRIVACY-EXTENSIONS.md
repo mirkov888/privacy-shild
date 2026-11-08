@@ -13,6 +13,7 @@ This update extends the existing Phase 7–10 Activity Monitor in the same Mora 
 7. **Home-screen widget**: shows latest traffic counters and 24-hour event count; it refreshes when a new traffic sample is recorded while the Monitor screen is active.
 8. **Sensitive app hide/restore**: user-selected packages can be disabled with `pm disable-user` and restored with `pm enable`. A confirmation is shown; core Android packages and Mora Shield are protected. This only disables access/visibility and does not erase data or protect against forensic examination.
 9. **Encrypted audit export primitive and UI**: exports the current Mora Core event timeline as AES-256-GCM encrypted bytes using a passphrase-derived key (PBKDF2-HMAC-SHA256, 210,000 iterations). The passphrase must be at least 10 characters and is not saved.
+10. **Local automation rules (opt-in)**: configurable Medium+ or High/Critical event thresholds, local notifications only, and a five-minute per-source/type/affected-app cooldown. Rules are disabled by default and evaluated only for newly inserted events from Shield or authenticated connectors. They never execute shell commands, block apps, revoke permissions, or send telemetry.
 
 ## Explicit limitations / follow-up
 
@@ -23,6 +24,8 @@ This update extends the existing Phase 7–10 Activity Monitor in the same Mora 
 - The widget currently shows traffic counters and event count, not a separate risk score. It has no independent background polling service; it refreshes when Mora Shield records a new sample.
 - The app-hide feature requires working root authorization and may be restricted by the ROM. It is not an emergency data wipe or anti-forensics feature.
 - The encrypted export currently covers Mora Core event records; it does not include every Android log, packet capture, or raw permission manager database.
+- Local automation rules require notification permission on Android 13+. If permission is absent, rules remain saved but notifications are not posted.
+- Local automation only reacts to events that reach Mora Core; it does not independently inspect all apps or run a background scanner.
 - No APK build or device test is claimed here. Run CI after adding the signing secrets and verify behavior on the target device.
 
 ## GitHub Secrets setup
