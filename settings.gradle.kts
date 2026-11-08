@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "MoraShield"
-include(":app", ":location-hook")
+include(":app", ":location-hook", ":location-engine")

@@ -18,7 +18,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    sourceSets["main"].java.srcFile("../app/src/main/java/com/mora/shield/LocationSpoofEngine.kt")
     signingConfigs {
         create("moraRelease") {
             val storePath = System.getenv("MORA_KEYSTORE_PATH")
@@ -45,5 +44,6 @@ android {
 }
 
 dependencies {
+    implementation(project(":location-engine"))
     compileOnly("de.robv.android.xposed:api:82")
 }
