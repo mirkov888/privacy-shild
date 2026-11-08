@@ -189,6 +189,15 @@ private suspend fun loadMonitorSnapshot(context: Context): MonitorSnapshot {
         }.sortedWith(compareByDescending<MonitorAppRow> { it.eventCount }.thenBy { it.label.lowercase() })
         val socketResult = if (Store.rootOk == true) Root.sh("ss -Htunap 2>/dev/null | head -n 80") else Root.Result(1, "")
         val signals = runCatching { com.mora.shield.security.NetworkRiskMonitor.inspect(context) }.getOrDefault(emptyList())
+        signals.forEach { signal ->
+            runCatching {
+                MoraCore.publishLocalSecuritySignal(
+                    signal.title,
+                    signal.detail,
+                    com.mora.shield.core.EventSeverity.fromWire(signal.severity)
+                )
+            }
+        }
         val permissionApps = runCatching { com.mora.shield.security.PermissionAudit.collect(context) }.getOrDefault(emptyList())
         val totalRx = TrafficStats.getTotalRxBytes()
         val totalTx = TrafficStats.getTotalTxBytes()
