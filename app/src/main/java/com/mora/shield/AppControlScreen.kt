@@ -29,9 +29,13 @@ data class ManagedApp(
 object AppControlManager {
     private val packagePattern = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+")
     private val protectedPackages = setOf("com.mora.shield")
+    private val protectedPrefixes = listOf("com.android.", "com.google.android.", "com.miui.", "com.xiaomi.", "android.")
 
     fun isSafeThirdPartyPackage(packageName: String): Boolean =
-        packagePattern.matches(packageName) && packageName !in protectedPackages
+        packagePattern.matches(packageName) &&
+            packageName !in protectedPackages &&
+            packageName != "android" &&
+            protectedPrefixes.none { packageName.startsWith(it) }
 
     fun parsePackages(output: String): Set<String> = output.lineSequence()
         .map { it.trim().removePrefix("package:") }
