@@ -19,6 +19,18 @@ class AppControlManagerTest {
         assertTrue(AppControlManager.isSafeThirdPartyPackage("org.mozilla.firefox"))
     }
 
+    @Test fun hiddenParserReadsOnlyUserZeroHiddenPackages() {
+        val dump = """
+            Package [com.example.hidden] (abc):
+              User 0: ceDataInode=1 installed=true hidden=true suspended=false
+            Package [com.example.visible] (def):
+              User 0: ceDataInode=2 installed=true hidden=false suspended=false
+            Package [com.example.otheruser] (ghi):
+              User 10: ceDataInode=3 installed=true hidden=true suspended=false
+        """.trimIndent()
+        assertEquals(setOf("com.example.hidden"), AppControlManager.parseHiddenPackages(dump))
+    }
+
     @Test fun parserStripsPackagePrefixAndFiltersInvalidEntries() {
         assertEquals(
             setOf("com.example.app", "org.mozilla.firefox"),
