@@ -19,6 +19,7 @@ object MoraCore {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val initializationStarted = AtomicBoolean(false)
 
+    @Volatile private var appContext: Context? = null
     @Volatile private var database: MoraCoreDatabase? = null
     @Volatile private var registry: AppRegistry? = null
     @Volatile private var eventHub: EventHub? = null
@@ -30,6 +31,7 @@ object MoraCore {
         synchronized(lock) {
             if (database != null) return
             val appContext = context.applicationContext
+            this.appContext = appContext
             val db = Room.databaseBuilder(
                 appContext,
                 MoraCoreDatabase::class.java,
@@ -106,7 +108,10 @@ object MoraCore {
         if ("events.publish" !in advertised) return false
         val policy = appPolicy(principal.packageName)
         if (policy?.enabled != true || !policy.monitoringEnabled) return false
-        return eventHubOrThrow().publish(event.copy(sourcePackage = principal.packageName))
+        val acceptedEvent = event.copy(sourcePackage = principal.packageName)
+        val inserted = eventHubOrThrow().publish(acceptedEvent)
+        if (inserted) appContext?.let { com.mora.shield.security.LocalRulesEngine.evaluate(it, acceptedEvent) }
+        return inserted
     }
 
     /** Register a narrowly scoped app-owned handler. There is deliberately no shell executor. */
@@ -161,18 +166,18 @@ object MoraCore {
                 event.pkg,
                 event.detail.hashCode().toString()
             ).joinToString(":")
-            eventHubOrThrow().publish(
-                MoraEvent(
-                    eventId = stableId,
-                    sourcePackage = "com.mora.shield",
-                    eventType = event.type.ifBlank { "SHIELD_EVENT" },
-                    title = "Aktivitas " + event.type.ifBlank { "Shield" },
-                    affectedPackage = event.pkg,
-                    detail = event.detail,
-                    severity = severity,
-                    occurredAtMs = event.ts * 1000L
-                )
+            val moraEvent = MoraEvent(
+                eventId = stableId,
+                sourcePackage = "com.mora.shield",
+                eventType = event.type.ifBlank { "SHIELD_EVENT" },
+                title = "Aktivitas " + event.type.ifBlank { "Shield" },
+                affectedPackage = event.pkg,
+                detail = event.detail,
+                severity = severity,
+                occurredAtMs = event.ts * 1000L
             )
+            val inserted = eventHubOrThrow().publish(moraEvent)
+            if (inserted) appContext?.let { com.mora.shield.security.LocalRulesEngine.evaluate(it, moraEvent) }
         }
     }
 
