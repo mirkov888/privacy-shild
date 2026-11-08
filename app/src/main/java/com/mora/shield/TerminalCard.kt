@@ -114,7 +114,7 @@ fun TerminalCard() {
                 color = tint
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(if (running) Icons.Default.Memory else Icons.Default.PlayArrow,
+                    Icon(if (running) Icons.Default.Settings else Icons.Default.PlayArrow,
                         contentDescription = "Jalankan perintah", tint = ink, modifier = Modifier.size(30.dp))
                 }
             }
