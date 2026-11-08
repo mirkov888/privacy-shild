@@ -1,6 +1,10 @@
 package com.mora.shield
 
 import androidx.compose.foundation.layout.Box
+import java.util.concurrent.TimeUnit
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -181,40 +185,6 @@ fun TerminalCard() {
         }
     }
 }
-lse
-                    }
-                }
-            ) { Text(if (running) "Menjalankan…" else "Jalankan") }
-            TextButton(onClick = { history.clear() }, enabled = history.isNotEmpty()) { Text("Bersihkan") }
-        }
-        if (history.isEmpty()) {
-            Text("Output terminal akan muncul di sini.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } else {
-            history.forEach { entry ->
-                androidx.compose.material3.Surface(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("$ ${entry.command}", style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = FontFamily.Monospace, softWrap = true)
-                        Text("Exit: ${entry.exitCode ?: "timeout/error"}", style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        androidx.compose.foundation.text.selection.SelectionContainer {
-                            Text(entry.output.ifBlank { "(tidak ada output)" },
-                                modifier = Modifier.fillMaxWidth(),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                softWrap = true)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 private fun runTerminalCommand(command: String, root: Boolean): Pair<String, Int?> {
     return try {
         val process = if (root) {
