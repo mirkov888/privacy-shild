@@ -1,17 +1,19 @@
-# Phase 13 — Hide / Restore Apps
+# Phase 13 — Hide / Restore Launcher Icons
 
 ## Added
 - Separate **Sembunyikan / Tampilkan** action alongside Freeze / Activate in App Control.
-- Uses Android Package Manager hidden state for user 0 through root:
-  - `pm hide --user 0 PACKAGE`
-  - `pm unhide --user 0 PACKAGE`
-- Reads hidden state from `dumpsys package` and exposes a dedicated **Disembunyikan** filter.
+- Queries the app's launcher activities and disables only those activity components for Android user 0.
+- The package itself remains installed and enabled; background services and non-launcher activities are not intentionally disabled.
+- Stores the exact launcher component names in Mora Shield preferences so **Tampilkan** can restore them.
+- Adds a dedicated **Disembunyikan** filter and parser unit coverage.
 - Hide is available only for enabled third-party apps; frozen apps must be activated first.
 - Mora Shield and Android/OEM system packages remain protected.
-- Added parser unit coverage for hidden state and user 0 scoping.
 
 ## Important behavior
-This hides the app from the normal launcher/user-facing app surface while leaving the package installed. It is **not** package-name spoofing or guaranteed concealment from Settings, ADB, privileged apps, or system package queries. Freeze remains a separate operation that disables the package for user 0. App data is not deleted by either operation.
+This removes the app's normal launcher icon. It is not package-name spoofing or package concealment: Settings, ADB, and privileged package queries can still see the app. The app may still be started by an explicit intent/deep link or its background components. Freeze remains separate and disables the entire package for user 0. App data is not deleted.
+
+## Compatibility and recovery
+The hide action depends on `cmd package query-activities --brief --components` and root permission to disable/enable components. If the ROM does not return launcher components or a command fails, the operation reports an error and rolls back components already changed. The component list is stored locally for restoration; clearing Mora Shield app data while an app is hidden also clears that recovery list.
 
 ## Validation
-CI unit tests and release APK build are triggered by the commits. Actual behavior of `pm hide/unhide` still requires validation on a rooted target device/ROM; CI cannot verify vendor-specific Package Manager behavior.
+CI unit tests and release APK build are triggered by the commits. Actual launcher behavior still requires validation on the rooted target device/ROM; CI cannot verify vendor launcher behavior.
