@@ -185,26 +185,34 @@ fun AppControlScreen() {
     }
 
     pending?.let { app ->
+        val hiding = pendingAction == "hide"
         val disabling = !app.disabled
         AlertDialog(
             onDismissRequest = { if (!actionBusy) pending = null },
-            title = { Text(if (disabling) "Bekukan aplikasi?" else "Aktifkan aplikasi?") },
-            text = { Text(if (disabling)
-                "${app.label} akan dinonaktifkan untuk pengguna saat ini, dihentikan, dan ikon launcher-nya tidak tampil. Data aplikasi tidak dihapus. Aplikasi yang bergantung padanya mungkin ikut terganggu."
-                else "${app.label} akan diaktifkan kembali. Data aplikasi tetap dipertahankan.") },
+            title = { Text(when { hiding && app.hidden -> "Tampilkan aplikasi?"; hiding -> "Sembunyikan aplikasi?"; disabling -> "Bekukan aplikasi?"; else -> "Aktifkan aplikasi?" }) },
+            text = { Text(when {
+                hiding && app.hidden -> "${app.label} akan ditampilkan kembali di launcher. Aplikasi tetap aktif."
+                hiding -> "${app.label} tetap aktif, tetapi ikon launcher disembunyikan menggunakan status hidden Android. Paket masih dapat terlihat melalui Settings, ADB, atau pemeriksaan sistem."
+                disabling -> "${app.label} akan dinonaktifkan untuk pengguna saat ini. Data tidak dihapus, tetapi aplikasi tidak dapat dijalankan."
+                else -> "${app.label} akan diaktifkan kembali. Data aplikasi tetap dipertahankan."
+            }) },
             confirmButton = {
                 TextButton(enabled = !actionBusy, onClick = {
                     actionBusy = true
                     pending = null
                     thread {
-                        val result = AppControlManager.setDisabled(app.packageName, disabling)
+                        val result = if (hiding) AppControlManager.setHidden(app.packageName, !app.hidden)
+                                     else AppControlManager.setDisabled(app.packageName, disabling)
                         apps = if (result.ok) AppControlManager.list(context.applicationContext) else apps
-                        status = if (result.ok) {
-                            if (disabling) "${app.label} berhasil dibekukan." else "${app.label} berhasil diaktifkan."
+                        status = if (result.ok) when {
+                            hiding && app.hidden -> "${app.label} ditampilkan kembali."
+                            hiding -> "${app.label} disembunyikan dari launcher."
+                            disabling -> "${app.label} berhasil dibekukan."
+                            else -> "${app.label} berhasil diaktifkan."
                         } else "Gagal mengubah ${app.label}: ${result.out.take(160)}"
                         actionBusy = false
                     }
-                }) { Text(if (disabling) "Bekukan" else "Aktifkan") }
+                }) { Text(when { hiding && app.hidden -> "Tampilkan"; hiding -> "Sembunyikan"; disabling -> "Bekukan"; else -> "Aktifkan" }) }
             },
             dismissButton = { TextButton(enabled = !actionBusy, onClick = { pending = null }) { Text("Batal") } }
         )
