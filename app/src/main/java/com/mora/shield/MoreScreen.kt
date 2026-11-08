@@ -34,6 +34,7 @@ fun MoreScreen(onSelect: (Int) -> Unit) {
         MoreEntry("Statistik Jaringan", "Riwayat penggunaan data total dan per aplikasi", "⇅", 10),
         MoreEntry("Integrasi Modul v3.8", "Pengawas jaringan, audit izin, trafik, brankas, dan profil border/home", "◉", 11),
         MoreEntry("Kontrol aplikasi", "Bekukan dan aktifkan kembali aplikasi pihak ketiga secara individual", "◫", 12),
+        MoreEntry("Per-App Location", "Profil lokasi statis, random, radius, dan interval untuk tiap aplikasi", "⌖", 13),
         MoreEntry("Alat", "Diagnostik, pemantauan layar, Kernel Manager, dan utilitas", "⌘", 6)
     )
     LazyColumn(
