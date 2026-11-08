@@ -45,16 +45,22 @@ object AppControlManager {
         .filter { isSafeThirdPartyPackage(it) }
         .toSet()
 
-    fun parseHiddenPackages(output: String): Set<String> {
-        val result = mutableSetOf<String>()
-        var current: String? = null
-        output.lineSequence().forEach { line ->
-            val header = Regex("^\\s*Package \\[([^]]+)]").find(line)
-            if (header != null) current = header.groupValues[1]
-            else if (current != null && line.contains("User 0:") && line.contains("hidden=true")) result += current!!
-        }
-        return result
-    }
+    fun parseLauncherComponents(output: String, packageName: String): Set<String> =
+        output.lineSequence()
+            .map { it.trim().substringBefore(' ') }
+            .filter {
+                it.startsWith("$packageName/") &&
+                    Regex(Regex.escape(packageName) + "/[A-Za-z0-9_.$]+").matches(it)
+            }
+            .toSet()
+
+    private const val HIDDEN_LAUNCHER_PREFIX = "hidden_launcher:"
+
+    private fun hiddenPackages(context: Context): Set<String> =
+        context.getSharedPreferences("app_control", Context.MODE_PRIVATE).all.keys
+            .filter { it.startsWith(HIDDEN_LAUNCHER_PREFIX) }
+            .map { it.removePrefix(HIDDEN_LAUNCHER_PREFIX) }
+            .toSet()
 
     fun list(context: Context): List<ManagedApp> {
         val pm = context.packageManager
@@ -62,7 +68,7 @@ object AppControlManager {
             .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 }
             .filter { isSafeThirdPartyPackage(it.packageName) }
         val disabled = parsePackages(Root.sh("pm list packages -3 -d --user 0 2>/dev/null").out)
-        val hidden = parseHiddenPackages(Root.sh("dumpsys package 2>/dev/null").out)
+        val hidden = hiddenPackages(context)
         return installed.map { info ->
             val icon = try { pm.getApplicationIcon(info).toBitmap(96, 96).asImageBitmap() } catch (_: Exception) { null }
             ManagedApp(
@@ -81,10 +87,36 @@ object AppControlManager {
         return Root.sh("$command '$packageName'")
     }
 
-    fun setHidden(packageName: String, hidden: Boolean): Root.Result {
+    fun setHidden(context: Context, packageName: String, hidden: Boolean): Root.Result {
         if (!isSafeThirdPartyPackage(packageName)) return Root.Result(2, "Paket tidak diizinkan untuk dikendalikan")
-        val command = if (hidden) "pm hide --user 0" else "pm unhide --user 0"
-        return Root.sh("$command '$packageName'")
+        val prefs = context.getSharedPreferences("app_control", Context.MODE_PRIVATE)
+        val key = HIDDEN_LAUNCHER_PREFIX + packageName
+
+        if (hidden) {
+            val query = Root.sh("cmd package query-activities --brief --components --user 0 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p '$packageName' 2>/dev/null")
+            val components = parseLauncherComponents(query.out, packageName)
+            if (components.isEmpty()) return Root.Result(3, query.out.ifBlank { "Komponen launcher tidak ditemukan; ROM mungkin tidak mendukung query-activities." })
+            val changed = mutableListOf<String>()
+            for (component in components) {
+                val result = Root.sh("pm disable-user --user 0 '$component'")
+                if (!result.ok) {
+                    changed.forEach { Root.sh("pm enable --user 0 '$it'") }
+                    return Root.Result(result.code, result.out)
+                }
+                changed += component
+            }
+            prefs.edit().putStringSet(key, components).apply()
+            return Root.Result(0, "Ikon launcher disembunyikan; aplikasi tetap aktif.")
+        }
+
+        val components = prefs.getStringSet(key, null)?.toSet().orEmpty()
+        if (components.isEmpty()) return Root.Result(3, "Data komponen launcher tidak ditemukan; tidak ada perubahan yang dilakukan.")
+        for (component in components) {
+            val result = Root.sh("pm enable --user 0 '$component'")
+            if (!result.ok) return Root.Result(result.code, result.out)
+        }
+        prefs.edit().remove(key).apply()
+        return Root.Result(0, "Ikon launcher ditampilkan kembali.")
     }
 }
 
@@ -182,7 +214,7 @@ fun AppControlScreen() {
             }
         }
         status?.let { Text(it, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.primary) }
-        Text("Sembunyikan memakai status hidden Android untuk user 0. Ikon disembunyikan dari launcher, tetapi paket masih dapat terlihat melalui Settings, ADB, atau pemeriksaan sistem. Aplikasi sistem dan Mora Shield dilindungi.",
+        Text("Sembunyikan menonaktifkan komponen ikon launcher saja. Aplikasi tetap terpasang dan dapat berjalan, serta paketnya tetap terlihat melalui Settings, ADB, dan pemeriksaan sistem. Aplikasi sistem dan Mora Shield dilindungi.",
             Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
@@ -194,7 +226,7 @@ fun AppControlScreen() {
             title = { Text(when { hiding && app.hidden -> "Tampilkan aplikasi?"; hiding -> "Sembunyikan aplikasi?"; disabling -> "Bekukan aplikasi?"; else -> "Aktifkan aplikasi?" }) },
             text = { Text(when {
                 hiding && app.hidden -> "${app.label} akan ditampilkan kembali di launcher. Aplikasi tetap aktif."
-                hiding -> "${app.label} tetap aktif, tetapi ikon launcher disembunyikan menggunakan status hidden Android. Paket masih dapat terlihat melalui Settings, ADB, atau pemeriksaan sistem."
+                hiding -> "${app.label} tetap terpasang dan dapat berjalan. Hanya komponen ikon launcher yang dinonaktifkan; aplikasi masih dapat dipanggil melalui intent atau tautan, dan paket tetap terlihat melalui Settings/ADB."
                 disabling -> "${app.label} akan dinonaktifkan untuk pengguna saat ini. Data tidak dihapus, tetapi aplikasi tidak dapat dijalankan."
                 else -> "${app.label} akan diaktifkan kembali. Data aplikasi tetap dipertahankan."
             }) },
@@ -203,7 +235,7 @@ fun AppControlScreen() {
                     actionBusy = true
                     pending = null
                     thread {
-                        val result = if (hiding) AppControlManager.setHidden(app.packageName, !app.hidden)
+                        val result = if (hiding) AppControlManager.setHidden(context.applicationContext, app.packageName, !app.hidden)
                                      else AppControlManager.setDisabled(app.packageName, disabling)
                         apps = if (result.ok) AppControlManager.list(context.applicationContext) else apps
                         status = if (result.ok) when {
