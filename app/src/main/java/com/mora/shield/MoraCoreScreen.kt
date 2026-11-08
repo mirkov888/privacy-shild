@@ -232,18 +232,18 @@ private fun LocalAutomationRulesCard() {
             "Evaluasi event baru dari Shield dan connector yang terautentikasi",
             config.enabled,
             false
-        ) { persist(config.copy(enabled = it)); saved = false }
+        ) { persist(config.copy(enabled = it)) }
 
         Text("Ambang tingkat kejadian", style = MaterialTheme.typography.labelLarge)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.FilterChip(
                 selected = config.minimumSeverity == com.mora.shield.security.LocalRulesEngine.MIN_HIGH,
-                onClick = { persist(config.copy(minimumSeverity = com.mora.shield.security.LocalRulesEngine.MIN_HIGH)); saved = false },
+                onClick = { persist(config.copy(minimumSeverity = com.mora.shield.security.LocalRulesEngine.MIN_HIGH)) },
                 label = { Text("High + Critical") }
             )
             androidx.compose.material3.FilterChip(
                 selected = config.minimumSeverity == com.mora.shield.security.LocalRulesEngine.MIN_MEDIUM,
-                onClick = { persist(config.copy(minimumSeverity = com.mora.shield.security.LocalRulesEngine.MIN_MEDIUM)); saved = false },
+                onClick = { persist(config.copy(minimumSeverity = com.mora.shield.security.LocalRulesEngine.MIN_MEDIUM)) },
                 label = { Text("Medium ke atas") }
             )
         }
