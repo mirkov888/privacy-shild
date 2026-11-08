@@ -47,7 +47,8 @@ object LocalRulesEngine {
         val rank = severityRank(event.severity.wireValue)
         val threshold = if (cfg.minimumSeverity == MIN_MEDIUM) 2 else 3
         if (rank < threshold) return
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
 
         val key = "last_" + listOf(event.sourcePackage, event.eventType, event.affectedPackage).joinToString("_").hashCode()
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
