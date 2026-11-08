@@ -75,7 +75,10 @@ jobs:
           test -s "$APK"
           mkdir -p artifacts
           cp "$APK" artifacts/MoraShield-debug.apk
-          sha256sum artifacts/MoraShield-debug.apk | tee build-diagnostics.txt
+          HOOK_APK="location-hook/build/outputs/apk/debug/location-hook-debug.apk"
+          test -s "$HOOK_APK"
+          cp "$HOOK_APK" artifacts/Mora-Location-Hook-debug.apk
+          sha256sum artifacts/*.apk | tee build-diagnostics.txt
 
       - name: Build failure summary
         if: failure()
@@ -97,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MoraShield-debug-apk
-          path: artifacts/MoraShield-debug.apk
+          path: artifacts/*.apk
           if-no-files-found: error
           retention-days: 30
 

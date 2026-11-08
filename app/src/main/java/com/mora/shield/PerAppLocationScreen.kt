@@ -1,6 +1,5 @@
 package com.mora.shield
 
-import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import androidx.compose.foundation.clickable
@@ -15,54 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import java.util.Locale
-
-enum class LocationMode(val title: String) {
-    REAL("Lokasi asli"), STATIC("Lokasi statis"), RANDOM("Lokasi random"), RADIUS("Random dalam radius")
-}
-
-data class PerAppLocationProfile(
-    val packageName: String,
-    val mode: LocationMode = LocationMode.REAL,
-    val latitude: Double = 0.0,
-    val longitude: Double = 0.0,
-    val radiusMeters: Int = 1000,
-    val intervalMinutes: Int = 15
-)
-
-data class LocationApp(val packageName: String, val label: String)
-
-object PerAppLocationStore {
-    private const val PREFS = "per_app_location_profiles"
-    private fun key(pkg: String, field: String) = pkg + ":" + field
-
-    fun load(context: Context, pkg: String): PerAppLocationProfile {
-        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val mode = runCatching { LocationMode.valueOf(p.getString(key(pkg, "mode"), "REAL") ?: "REAL") }.getOrDefault(LocationMode.REAL)
-        return PerAppLocationProfile(
-            pkg, mode,
-            java.lang.Double.longBitsToDouble(p.getLong(key(pkg, "lat"), java.lang.Double.doubleToRawLongBits(0.0))),
-            java.lang.Double.longBitsToDouble(p.getLong(key(pkg, "lon"), java.lang.Double.doubleToRawLongBits(0.0))),
-            p.getInt(key(pkg, "radius"), 1000).coerceIn(1, 500000),
-            p.getInt(key(pkg, "interval"), 15).coerceIn(1, 1440)
-        )
-    }
-
-    fun save(context: Context, profile: PerAppLocationProfile) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(key(profile.packageName, "mode"), profile.mode.name)
-            .putLong(key(profile.packageName, "lat"), java.lang.Double.doubleToRawLongBits(profile.latitude))
-            .putLong(key(profile.packageName, "lon"), java.lang.Double.doubleToRawLongBits(profile.longitude))
-            .putInt(key(profile.packageName, "radius"), profile.radiusMeters)
-            .putInt(key(profile.packageName, "interval"), profile.intervalMinutes)
-            .apply()
-    }
-}
-
-object PerAppLocationBackend {
-    fun availability(): Pair<Boolean, String> = false to
-        "Backend spoofing per proses belum tersedia. Mock location Android biasa bersifat global, bukan per aplikasi."
-}
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,14 +25,19 @@ fun PerAppLocationScreen() {
     var apps by remember { mutableStateOf<List<LocationApp>>(emptyList()) }
     var selected by remember { mutableStateOf<LocationApp?>(null) }
     var profile by remember { mutableStateOf<PerAppLocationProfile?>(null) }
+    var presets by remember { mutableStateOf<List<LocationPreset>>(emptyList()) }
+    var selectedPresetId by remember { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
+    var presetMenuExpanded by remember { mutableStateOf(false) }
     var latText by remember { mutableStateOf("0.0") }
     var lonText by remember { mutableStateOf("0.0") }
     var radiusText by remember { mutableStateOf("1000") }
     var intervalText by remember { mutableStateOf("15") }
+    var presetName by remember { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
     var status by remember { mutableStateOf<String?>(null) }
-    val backend = remember { PerAppLocationBackend.availability() }
+    var backendActive by remember { mutableStateOf(false) }
+    var moduleInstalled by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         apps = runCatching {
@@ -88,39 +47,79 @@ fun PerAppLocationScreen() {
                 .map { LocationApp(it.packageName, context.packageManager.getApplicationLabel(it).toString()) }
                 .sortedBy { it.label.lowercase(Locale.ROOT) }
         }.getOrDefault(emptyList())
+        moduleInstalled = runCatching { context.packageManager.getPackageInfo("com.mora.shield.locationhook", 0) }.isSuccess
+    }
+
+    fun refreshBackend(pkg: String) {
+        val beat = PerAppLocationStore.backendHeartbeat(context, pkg)
+        backendActive = beat > 0L && System.currentTimeMillis() - beat < 120_000L
     }
 
     fun selectApp(app: LocationApp) {
         selected = app
         val p = PerAppLocationStore.load(context, app.packageName)
         profile = p
+        presets = PerAppLocationStore.presets(context, app.packageName)
+        selectedPresetId = null
         latText = p.latitude.toString()
         lonText = p.longitude.toString()
         radiusText = p.radiusMeters.toString()
         intervalText = p.intervalMinutes.toString()
+        presetName = ""
+        refreshBackend(app.packageName)
+        status = null
+    }
+
+    LaunchedEffect(selected?.packageName) {
+        while (selected != null) {
+            selected?.packageName?.let { refreshBackend(it) }
+            delay(5_000L)
+        }
+    }
+
+    fun profileFromFields(): PerAppLocationProfile? {
+        val p = profile ?: return null
+        return p.copy(
+            latitude = latText.toDoubleOrNull() ?: Double.NaN,
+            longitude = lonText.toDoubleOrNull() ?: Double.NaN,
+            radiusMeters = radiusText.toIntOrNull() ?: -1,
+            intervalMinutes = intervalText.toIntOrNull() ?: -1
+        )
     }
 
     Column(Modifier.fillMaxSize()) {
-        PageIntro("Per-App Location Control", "Profil lokasi tersimpan terpisah untuk setiap aplikasi.")
-        Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        PageIntro("Per-App Location Control", "Profil, preset, dan aktivasi lokasi disimpan terpisah untuk setiap aplikasi.")
+        Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("Backend belum tersedia", fontWeight = FontWeight.SemiBold)
-                Text(backend.second, style = MaterialTheme.typography.bodySmall)
-                Text("Profil bisa disiapkan sekarang; tombol aktivasi tetap terkunci sampai backend isolasi per aplikasi teruji.", style = MaterialTheme.typography.bodySmall)
+                Text(if (moduleInstalled) "Mora Location Hook terpasang" else "Companion LSPosed belum terpasang",
+                    fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (moduleInstalled) "Pilih aplikasi target pada Scope LSPosed. Status aktif muncul setelah proses target memuat hook."
+                    else "Backend per-aplikasi memerlukan APK Mora Location Hook dan LSPosed. Tidak ada fallback ke mock location global.",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
         if (selected == null) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = {
+                    PerAppLocationStore.disableAll(context)
+                    status = "Emergency disable: semua profil spoofing dinonaktifkan."
+                }) { Text("Emergency disable all") }
+            }
             OutlinedTextField(search, { search = it }, label = { Text("Cari aplikasi") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(20.dp))
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(apps.filter { it.label.contains(search, true) || it.packageName.contains(search, true) }, key = { it.packageName }) { app ->
+                    val saved = PerAppLocationStore.load(context, app.packageName)
                     Card(Modifier.fillMaxWidth().clickable { selectApp(app) }) {
                         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(app.label, fontWeight = FontWeight.SemiBold)
                                 Text(app.packageName, style = MaterialTheme.typography.labelSmall)
-                                Text(PerAppLocationStore.load(context, app.packageName).mode.title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text(saved.mode.title + " • " + if (saved.enabled) "Aktif diminta" else "Nonaktif",
+                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                             }
                             Text("Atur ›")
                         }
@@ -129,9 +128,38 @@ fun PerAppLocationScreen() {
             }
         } else {
             val app = selected!!
-            Column(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                TextButton(onClick = { selected = null; profile = null }) { Text("‹ Daftar aplikasi") }
+            Column(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { selected = null; profile = null; status = null }) { Text("‹ Daftar aplikasi") }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = {
+                        PerAppLocationStore.disableAll(context)
+                        profile = profile?.copy(enabled = false)
+                        status = "Emergency disable: semua profil spoofing dinonaktifkan."
+                    }) { Text("Disable all") }
+                }
                 Text(app.label, fontWeight = FontWeight.SemiBold)
+                Text(app.packageName, style = MaterialTheme.typography.labelSmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(if (backendActive) "Backend aktif pada proses aplikasi" else "Backend belum terdeteksi")
+                        Text(if (backendActive) "Heartbeat LSPosed terdeteksi" else "Pastikan modul diaktifkan dan package ini dipilih pada Scope LSPosed.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(
+                        checked = profile?.enabled == true,
+                        enabled = backendActive && profile?.mode != LocationMode.REAL,
+                        onCheckedChange = { enabled ->
+                            val next = profileFromFields()?.copy(enabled = enabled) ?: return@Switch
+                            val error = LocationSpoofEngine.validate(next)
+                            if (error != null) status = error else {
+                                PerAppLocationStore.save(context, next)
+                                profile = next
+                                status = if (enabled) "Spoofing diaktifkan untuk " + app.label else "Lokasi asli dipulihkan untuk " + app.label
+                            }
+                        }
+                    )
+                }
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
                     OutlinedTextField(profile?.mode?.title ?: "Lokasi asli", {}, readOnly = true,
                         label = { Text("Mode lokasi") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
@@ -139,54 +167,109 @@ fun PerAppLocationScreen() {
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         LocationMode.values().forEach { mode ->
                             DropdownMenuItem(text = { Text(mode.title) }, onClick = {
-                                profile = profile?.copy(mode = mode); expanded = false
+                                profile = profile?.copy(mode = mode, enabled = false)
+                                expanded = false
+                                status = if (mode == LocationMode.REAL) "Mode lokasi asli dipilih; spoofing dinonaktifkan." else null
                             })
                         }
                     }
                 }
                 if (profile?.mode == LocationMode.STATIC || profile?.mode == LocationMode.RADIUS) {
-                    OutlinedTextField(latText, { latText = it }, label = { Text("Latitude (-90..90)") }, singleLine = true)
-                    OutlinedTextField(lonText, { lonText = it }, label = { Text("Longitude (-180..180)") }, singleLine = true)
+                    OutlinedTextField(latText, { latText = it }, label = { Text("Latitude (-90..90)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(lonText, { lonText = it }, label = { Text("Longitude (-180..180)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                }
+                if (profile?.mode == LocationMode.RADIUS) {
+                    OutlinedTextField(radiusText, { radiusText = it }, label = { Text("Radius meter (1–500000)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
                 if (profile?.mode == LocationMode.RANDOM || profile?.mode == LocationMode.RADIUS) {
-                    OutlinedTextField(radiusText, { radiusText = it }, label = { Text("Radius (meter, 1–500000)") }, singleLine = true)
-                }
-                if (profile?.mode != LocationMode.REAL) {
-                    OutlinedTextField(intervalText, { intervalText = it }, label = { Text("Interval random (menit, 1–1440)") }, singleLine = true)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Spoofing per aplikasi", fontWeight = FontWeight.SemiBold)
-                        Text("Belum dapat diaktifkan: backend belum terpasang", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Switch(checked = false, onCheckedChange = {}, enabled = false)
+                    OutlinedTextField(intervalText, { intervalText = it }, label = { Text("Interval random menit (1–1440)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
                 Button(onClick = {
-                    val p = profile
-                    val lat = latText.toDoubleOrNull()
-                    val lon = lonText.toDoubleOrNull()
-                    val radius = radiusText.toIntOrNull()
-                    val interval = intervalText.toIntOrNull()
-                    val error = when {
-                        p == null -> "Mode lokasi tidak valid."
-                        p.mode in setOf(LocationMode.STATIC, LocationMode.RADIUS) && (lat == null || lat !in -90.0..90.0) -> "Latitude harus -90 sampai 90."
-                        p.mode in setOf(LocationMode.STATIC, LocationMode.RADIUS) && (lon == null || lon !in -180.0..180.0) -> "Longitude harus -180 sampai 180."
-                        p.mode in setOf(LocationMode.RANDOM, LocationMode.RADIUS) && (radius == null || radius !in 1..500000) -> "Radius harus 1–500000 meter."
-                        p.mode != LocationMode.REAL && (interval == null || interval !in 1..1440) -> "Interval harus 1–1440 menit."
-                        else -> null
-                    }
+                    val next = profileFromFields()
+                    val error = next?.let(LocationSpoofEngine::validate) ?: "Profil tidak valid."
                     if (error != null) status = error else {
-                        PerAppLocationStore.save(context, p!!.copy(
-                            latitude = lat ?: p.latitude, longitude = lon ?: p.longitude,
-                            radiusMeters = radius ?: p.radiusMeters, intervalMinutes = interval ?: p.intervalMinutes
-                        ))
-                        profile = PerAppLocationStore.load(context, app.packageName)
-                        status = "Profil tersimpan untuk " + app.label + ". Spoofing belum aktif."
+                        PerAppLocationStore.save(context, next!!)
+                        profile = next
+                        status = "Profil tersimpan untuk " + app.label + ". Status aktivasi tidak berubah."
                     }
                 }, modifier = Modifier.fillMaxWidth()) { Text("Simpan profil") }
-                Text("Mode lokasi asli berarti tidak ada spoofing. Preset dan aktivasi backend per-app akan disambungkan pada tahap lanjutan.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                Divider()
+                Text("Preset lokasi untuk " + app.label, fontWeight = FontWeight.SemiBold)
+                ExposedDropdownMenuBox(expanded = presetMenuExpanded, onExpandedChange = { presetMenuExpanded = it }) {
+                    OutlinedTextField(
+                        presets.firstOrNull { it.id == selectedPresetId }?.name ?: "Pilih preset tersimpan",
+                        {}, readOnly = true, label = { Text("Preset") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(presetMenuExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = presetMenuExpanded, onDismissRequest = { presetMenuExpanded = false }) {
+                        presets.forEach { preset ->
+                            DropdownMenuItem(text = { Text(preset.name) }, onClick = {
+                                selectedPresetId = preset.id
+                                profile = profile?.copy(mode = preset.mode, latitude = preset.latitude, longitude = preset.longitude,
+                                    radiusMeters = preset.radiusMeters, intervalMinutes = preset.intervalMinutes, enabled = false)
+                                latText = preset.latitude.toString()
+                                lonText = preset.longitude.toString()
+                                radiusText = preset.radiusMeters.toString()
+                                intervalText = preset.intervalMinutes.toString()
+                                presetMenuExpanded = false
+                                status = "Preset diterapkan ke editor. Tekan Simpan profil untuk menyimpan."
+                            })
+                        }
+                    }
+                }
+                OutlinedTextField(presetName, { presetName = it }, label = { Text("Nama preset") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        val next = profileFromFields()
+                        val error = next?.let(LocationSpoofEngine::validate) ?: "Profil tidak valid."
+                        when {
+                            error != null -> status = error
+                            presetName.isBlank() -> status = "Nama preset wajib diisi."
+                            else -> {
+                                val item = LocationPreset(UUID.randomUUID().toString(), presetName.trim(), next!!.mode,
+                                    next.latitude, next.longitude, next.radiusMeters, next.intervalMinutes)
+                                PerAppLocationStore.savePreset(context, app.packageName, item)
+                                presets = PerAppLocationStore.presets(context, app.packageName)
+                                selectedPresetId = item.id
+                                status = "Preset " + item.name + " tersimpan untuk aplikasi ini."
+                            }
+                        }
+                    }, modifier = Modifier.weight(1f)) { Text("Simpan preset") }
+                    OutlinedButton(onClick = {
+                        val id = selectedPresetId
+                        val next = profileFromFields()
+                        val error = next?.let(LocationSpoofEngine::validate) ?: "Profil tidak valid."
+                        if (id == null) status = "Pilih preset yang akan diperbarui."
+                        else if (error != null) status = error
+                        else {
+                            val existing = presets.firstOrNull { it.id == id }
+                            val name = presetName.trim().ifBlank { existing?.name.orEmpty() }
+                            if (name.isBlank()) status = "Nama preset wajib diisi."
+                            else {
+                                PerAppLocationStore.savePreset(context, app.packageName,
+                                    LocationPreset(id, name, next!!.mode, next.latitude, next.longitude, next.radiusMeters, next.intervalMinutes))
+                                presets = PerAppLocationStore.presets(context, app.packageName)
+                                status = "Preset diperbarui."
+                            }
+                        }
+                    }, modifier = Modifier.weight(1f)) { Text("Perbarui") }
+                }
+                OutlinedButton(
+                    onClick = {
+                        selectedPresetId?.let { PerAppLocationStore.deletePreset(context, app.packageName, it) }
+                        presets = PerAppLocationStore.presets(context, app.packageName)
+                        selectedPresetId = null
+                        status = "Preset dihapus."
+                    },
+                    enabled = selectedPresetId != null,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Hapus preset terpilih") }
+                Text("Lokasi random menggunakan SecureRandom. Interval dihitung dari elapsed realtime dan konfigurasi tersimpan lintas reboot. Mode REAL selalu menonaktifkan spoofing.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        status?.let { Text(it, Modifier.padding(16.dp), color = MaterialTheme.colorScheme.primary) }
+        status?.let { Text(it, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }
     }
 }
