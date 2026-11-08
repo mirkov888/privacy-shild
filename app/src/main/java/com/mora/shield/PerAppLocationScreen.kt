@@ -186,7 +186,7 @@ fun PerAppLocationScreen() {
                 }
                 Button(onClick = {
                     val next = profileFromFields()
-                    val error = next?.let(LocationSpoofEngine::validate) ?: "Profil tidak valid."
+                    val error = if (next == null) "Profil tidak valid." else LocationSpoofEngine.validate(next)
                     if (error != null) status = error else {
                         PerAppLocationStore.save(context, next!!)
                         profile = next
@@ -223,7 +223,7 @@ fun PerAppLocationScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {
                         val next = profileFromFields()
-                        val error = next?.let(LocationSpoofEngine::validate) ?: "Profil tidak valid."
+                        val error = if (next == null) "Profil tidak valid." else LocationSpoofEngine.validate(next)
                         when {
                             error != null -> status = error
                             presetName.isBlank() -> status = "Nama preset wajib diisi."
@@ -240,7 +240,7 @@ fun PerAppLocationScreen() {
                     OutlinedButton(onClick = {
                         val id = selectedPresetId
                         val next = profileFromFields()
-                        val error = next?.let(LocationSpoofEngine::validate) ?: "Profil tidak valid."
+                        val error = if (next == null) "Profil tidak valid." else LocationSpoofEngine.validate(next)
                         if (id == null) status = "Pilih preset yang akan diperbarui."
                         else if (error != null) status = error
                         else {
