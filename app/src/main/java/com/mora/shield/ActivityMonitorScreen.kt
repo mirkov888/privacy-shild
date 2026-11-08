@@ -65,6 +65,7 @@ private data class MonitorAppRow(
 
 private data class MonitorSnapshot(
     val overview: CoreOverview = CoreOverview(),
+    val device: DeviceHealthSnapshot = DeviceHealthSnapshot(),
     val apps: List<MonitorAppRow> = emptyList(),
     val events: List<ActivityEventEntity> = emptyList(),
     val totalRx: Long = -1,
@@ -158,6 +159,7 @@ fun ActivityMonitorScreen(initialSection: String = "DASHBOARD") {
 
 private suspend fun loadMonitorSnapshot(context: Context): MonitorSnapshot {
     return try {
+        val device = DeviceHealthMonitor.capture(context)
         val pm = context.packageManager
         val events = runCatching { MoraCore.recentEvents(500) }.getOrDefault(emptyList())
         val overview = runCatching { MoraCore.overview() }.getOrDefault(CoreOverview())
@@ -194,6 +196,7 @@ private suspend fun loadMonitorSnapshot(context: Context): MonitorSnapshot {
         runCatching { com.mora.shield.security.TrafficHistory.record(context, totalRx, totalTx, apps.map { Triple(it.packageName, it.rxBytes, it.txBytes) }, todayEvents) }
         MonitorSnapshot(
             overview = overview,
+            device = device,
             apps = apps,
             events = events,
             totalRx = totalRx,
@@ -214,12 +217,30 @@ private fun DashboardMonitor(data: MonitorSnapshot, loading: Boolean) {
     val connected = data.apps.count { it.connectorState == "CONNECTED" }
     val recent = data.events.count { System.currentTimeMillis() - it.occurredAtMs < 24L * 60 * 60 * 1000 }
     val alerts = data.events.count { it.severity.equals("HIGH", true) || it.severity.equals("CRITICAL", true) }
+    val uptimeHours = data.device.uptimeMs / 3_600_000L
+    val uptimeLabel = if (uptimeHours >= 24L) "${uptimeHours / 24} hari ${uptimeHours % 24} jam" else "$uptimeHours jam"
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item { Text("Ringkasan perangkat", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("Kesehatan perangkat", fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MonitorStat("CPU", data.device.cpuPercent?.let { "$it%" } ?: "N/A", Modifier.weight(1f))
+                        MonitorStat("RAM", data.device.ramPercent?.let { "$it%" } ?: "N/A", Modifier.weight(1f))
+                        MonitorStat("Baterai", data.device.batteryPercent?.let { "$it%" } ?: "N/A", Modifier.weight(1f))
+                    }
+                    Text("RAM: ${formatBytes(data.device.ramUsedBytes)} / ${formatBytes(data.device.ramTotalBytes)}", style = MaterialTheme.typography.bodySmall)
+                    Text("Penyimpanan: ${formatBytes(data.device.storageAvailableBytes)} tersedia dari ${formatBytes(data.device.storageTotalBytes)}", style = MaterialTheme.typography.bodySmall)
+                    Text("Suhu baterai: ${data.device.batteryTemperatureC?.let { String.format(java.util.Locale.US, "%.1f °C", it) } ?: "N/A"} · Uptime: $uptimeLabel", style = MaterialTheme.typography.bodySmall)
+                    Text("CPU dari /proc/stat · RAM/penyimpanan dari Android · suhu dari sensor baterai. Nilai N/A berarti sumber tidak tersedia.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         if (loading) item { Text("Mengambil data perangkat…", style = MaterialTheme.typography.bodySmall) }
         if (data.error.isNotEmpty()) item { EmptyHint(data.error) }
         item {
