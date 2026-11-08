@@ -1,6 +1,6 @@
 # Mora Shield Roadmap — Phases 13–16
 
-This roadmap extends the existing Mora Shield app-control screen. It does not replace Phase 13 App Hide & Restore already present on `main`.
+This roadmap defines the location, identity, permission/sensor, and automation phases. Existing App Control features (Freeze/Unfreeze and Hide/Restore launcher icons) are separate pre-existing functionality; they are NOT part of Phase 13 and must remain available independently.
 
 ## Phase 13 — Per-App Location Control
 
