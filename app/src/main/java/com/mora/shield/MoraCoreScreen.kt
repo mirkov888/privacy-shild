@@ -34,6 +34,7 @@ fun MoraCoreScreen() {
         MoraDownloaderControlCard()
         MoraSystemManagerPolicyCard()
         MoraCoreCommandAuditCard()
+        LocalAutomationRulesCard()
     }
 }
 
@@ -206,5 +207,51 @@ private fun MoraCoreCommandAuditCard() {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LocalAutomationRulesCard() {
+    val context = LocalContext.current
+    var config by remember { mutableStateOf(com.mora.shield.security.LocalRulesEngine.Config()) }
+    var saved by remember { mutableStateOf(false) }
+
+    LaunchedEffect(context) {
+        config = com.mora.shield.security.LocalRulesEngine.config(context)
+    }
+
+    fun persist(next: com.mora.shield.security.LocalRulesEngine.Config) {
+        config = next
+        com.mora.shield.security.LocalRulesEngine.save(context, next)
+        saved = true
+    }
+
+    SectionCard("Automation Rules · Local", "Aturan berjalan di perangkat dan hanya mengirim notifikasi. Tidak menjalankan shell, memblokir aplikasi, atau mengubah izin secara otomatis.") {
+        RegistrySwitch(
+            "Peringatan otomatis",
+            "Evaluasi event baru dari Shield dan connector yang terautentikasi",
+            config.enabled,
+            false
+        ) { persist(config.copy(enabled = it)); saved = false }
+
+        Text("Ambang tingkat kejadian", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.FilterChip(
+                selected = config.minimumSeverity == com.mora.shield.security.LocalRulesEngine.MIN_HIGH,
+                onClick = { persist(config.copy(minimumSeverity = com.mora.shield.security.LocalRulesEngine.MIN_HIGH)); saved = false },
+                label = { Text("High + Critical") }
+            )
+            androidx.compose.material3.FilterChip(
+                selected = config.minimumSeverity == com.mora.shield.security.LocalRulesEngine.MIN_MEDIUM,
+                onClick = { persist(config.copy(minimumSeverity = com.mora.shield.security.LocalRulesEngine.MIN_MEDIUM)); saved = false },
+                label = { Text("Medium ke atas") }
+            )
+        }
+        Text("Cooldown 5 menit per sumber, jenis event, dan aplikasi terdampak untuk mencegah spam. Izin notifikasi Android harus aktif.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            if (saved) "Aturan tersimpan di perangkat." else if (config.enabled) "Aturan aktif · lokal" else "Aturan nonaktif sampai kamu mengaktifkannya.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
