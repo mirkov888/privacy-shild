@@ -16,15 +16,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilledTonalButton
@@ -47,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private data class TerminalEntry(val command: String, val output: String, val exitCode: Int?)
 
 @Composable
 fun TerminalCard() {
@@ -75,9 +71,9 @@ fun TerminalCard() {
                     Box(contentAlignment = Alignment.Center) {
                         when (action) {
                             "search" -> Icon(Icons.Default.Search, null, tint = ink)
-                            "saved" -> Icon(Icons.Default.BookmarkBorder, null, tint = ink)
-                            "history" -> Icon(Icons.Default.History, null, tint = ink)
-                            "device" -> Icon(Icons.Default.Memory, null, tint = ink)
+                            "saved" -> Icon(Icons.Default.Search, null, tint = ink)
+                            "history" -> Icon(Icons.Default.Search, null, tint = ink)
+                            "device" -> Icon(Icons.Default.Settings, null, tint = ink)
                             else -> Icon(Icons.Default.Settings, null, tint = ink)
                         }
                     }
@@ -118,7 +114,7 @@ fun TerminalCard() {
                 color = tint
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(if (running) Icons.Default.Memory else Icons.Default.AutoAwesome,
+                    Icon(if (running) Icons.Default.Memory else Icons.Default.PlayArrow,
                         contentDescription = "Jalankan perintah", tint = ink, modifier = Modifier.size(30.dp))
                 }
             }
@@ -145,7 +141,7 @@ fun TerminalCard() {
                         "settings" -> Text("Root hanya digunakan jika tombol Root ON aktif. Perintah dijalankan secara lokal.")
                         "search" -> Text("Gunakan riwayat output di bawah untuk mencari dan menyalin teks.")
                         "history" -> TextButton(onClick = { history.clear() }, enabled = history.isNotEmpty()) {
-                            Icon(Icons.Default.DeleteSweep, null)
+                            Icon(Icons.Default.Search, null)
                             Text(" Hapus riwayat")
                         }
                     }
@@ -178,7 +174,7 @@ fun TerminalCard() {
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.heightIn(min = 62.dp)
             ) {
-                Icon(Icons.Default.ContentPaste, null)
+                Icon(Icons.Default.Search, null)
                 Spacer(Modifier.width(12.dp))
                 Text("Paste")
             }
