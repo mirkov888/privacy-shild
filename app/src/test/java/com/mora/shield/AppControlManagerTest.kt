@@ -10,6 +10,8 @@ class AppControlManagerTest {
         assertFalse(AppControlManager.isSafeThirdPartyPackage("com.mora.shield"))
         assertFalse(AppControlManager.isSafeThirdPartyPackage("android"))
         assertFalse(AppControlManager.isSafeThirdPartyPackage("com.android.settings"))
+        assertFalse(AppControlManager.isSafeThirdPartyPackage("com.google.android.gms"))
+        assertFalse(AppControlManager.isSafeThirdPartyPackage("com.miui.securitycenter"))
     }
 
     @Test fun acceptsValidPackageNames() {
