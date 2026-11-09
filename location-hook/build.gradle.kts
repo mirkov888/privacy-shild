@@ -18,6 +18,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    // This companion APK is sideloaded for LSPosed, not distributed through Google Play.
+    // Keep the legacy target SDK for Xposed compatibility while suppressing only this Play policy lint.
+    lint {
+        disable += "ExpiredTargetSdkVersion"
+    }
     signingConfigs {
         create("moraRelease") {
             val storePath = System.getenv("MORA_KEYSTORE_PATH")
