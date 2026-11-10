@@ -33,7 +33,7 @@ fun PerAppIdentityScreen() {
         if (selected == null) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(filtered, key = { it.packageName }) { app ->
-                    Card(Modifier.fillMaxWidth(), onClick = { selected = app.packageName }) {
+                    Card(onClick = { selected = app.packageName }, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(14.dp)) {
                             Text(pm.getApplicationLabel(app).toString(), style = MaterialTheme.typography.titleMedium)
                             Text(app.packageName, style = MaterialTheme.typography.bodySmall)
