@@ -33,6 +33,7 @@ class LocationHookEntry : IXposedHookLoadPackage {
                         )
                     }
                     installLocationHooks(appContext, targetPackage)
+                    IdentityHook.install(appContext, targetPackage)
                 }
             }
         )
