@@ -28,6 +28,21 @@ class PerAppLocationProvider : ContentProvider() {
                 PerAppLocationStore.recordBackendHeartbeat(ctx, caller)
                 Bundle().apply { putBoolean("ok", true) }
             }
+            "get_identity_profile" -> {
+                val identity = PerAppIdentityStore.load(ctx, caller)
+                Bundle().apply {
+                    putBoolean("enabled", identity.enabled)
+                    putString("manufacturer", identity.manufacturer)
+                    putString("brand", identity.brand)
+                    putString("model", identity.model)
+                    putString("device", identity.device)
+                    putString("product", identity.product)
+                    putString("fingerprint", identity.fingerprint)
+                    putString("release", identity.release)
+                    putInt("sdk", identity.sdk)
+                    putString("securityPatch", identity.securityPatch)
+                }
+            }
             "get_profile" -> {
                 val profile = PerAppLocationStore.load(ctx, caller)
                 Bundle().apply {
