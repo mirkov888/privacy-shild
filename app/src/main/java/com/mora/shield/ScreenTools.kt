@@ -49,6 +49,7 @@ fun ToolsScreen() {
             DiagCard()
             RootCard()
             BackupCard()
+            EncryptedSettingsCard()
             HealthCard()
             HostsCard()
             CompatCard()
