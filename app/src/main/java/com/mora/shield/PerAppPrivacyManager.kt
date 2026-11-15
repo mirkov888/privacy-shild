@@ -163,10 +163,33 @@ object PerAppPrivacyManager {
         }
         val prefs = context.getSharedPreferences("phase15_restore", Context.MODE_PRIVATE)
         val key = "op:$packageName:$op"
-        if (!prefs.contains(key)) prefs.edit().putString(key, appOpMode(packageName, op)).apply()
+        if (!prefs.contains(key)) {
+            val original = appOpMode(packageName, op)
+            if (original == "unsupported") return Root.Result(2, "AppOp $op tidak didukung ROM ini")
+            prefs.edit().putString(key, original).apply()
+        }
         val result = Root.sh("cmd appops set '$packageName' '$op' '$mode'")
         if (!result.ok) prefs.edit().remove(key).apply()
         return result
+    }
+
+    fun restoreAppOps(context: Context, packageName: String, ops: List<String>): Root.Result {
+        if (!isSafePackage(packageName) || packageName in protectedTargets(context) || ops.any { !isAllowedOp(it) }) {
+            return Root.Result(2, "Target AppOps restore tidak diizinkan")
+        }
+        val prefs = context.getSharedPreferences("phase15_restore", Context.MODE_PRIVATE)
+        val errors = mutableListOf<String>()
+        for (op in ops) {
+            val key = "op:$packageName:$op"
+            if (!prefs.contains(key)) continue
+            val mode = prefs.getString(key, "default") ?: "default"
+            val result = if (mode in setOf("ignore", "deny", "allow", "foreground", "default")) {
+                Root.sh("cmd appops set '$packageName' '$op' '$mode'")
+            } else Root.Result(2, "Snapshot AppOps tidak valid")
+            if (result.ok) prefs.edit().remove(key).apply() else errors += result.out
+        }
+        return if (errors.isEmpty()) Root.Result(0, "AppOps dikembalikan ke nilai awal")
+        else Root.Result(1, errors.joinToString("; ").take(180))
     }
 
     fun setPermissionWithSnapshot(context: Context, packageName: String, permission: String, granted: Boolean): Root.Result {
