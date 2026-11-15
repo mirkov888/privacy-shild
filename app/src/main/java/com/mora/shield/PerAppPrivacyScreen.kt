@@ -232,7 +232,7 @@ fun PerAppPrivacyScreen() {
                         }) { Text("Blokir") }
                         TextButton(enabled = !busy && mode == "ignore", onClick = {
                             pending = Phase15Pending("Pulihkan clipboard?", "AppOps akan dikembalikan ke default; nilai awal disimpan untuk Emergency Restore.", "Pulihkan") {
-                                PerAppPrivacyManager.setAppOp(context.applicationContext, current.packageName, "READ_CLIPBOARD", "default")
+                                PerAppPrivacyManager.restoreAppOps(context.applicationContext, current.packageName, listOf("READ_CLIPBOARD"))
                             }
                         }) { Text("Pulihkan") }
                     }
@@ -252,8 +252,7 @@ fun PerAppPrivacyScreen() {
                         }) { Text("Batasi") }
                         TextButton(enabled = !busy && (bg1 == "ignore" || bg2 == "ignore"), onClick = {
                             pending = Phase15Pending("Pulihkan aktivitas latar?", "AppOps background akan dikembalikan ke default. Nilai awal tersimpan untuk Emergency Restore.", "Pulihkan") {
-                                val first = PerAppPrivacyManager.setAppOp(context.applicationContext, current.packageName, "RUN_IN_BACKGROUND", "default")
-                                if (first.ok) PerAppPrivacyManager.setAppOp(context.applicationContext, current.packageName, "RUN_ANY_IN_BACKGROUND", "default") else first
+                                PerAppPrivacyManager.restoreAppOps(context.applicationContext, current.packageName, listOf("RUN_IN_BACKGROUND", "RUN_ANY_IN_BACKGROUND"))
                             }
                         }) { Text("Pulihkan") }
                     }
