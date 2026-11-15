@@ -92,6 +92,7 @@ fun PerAppPrivacyScreen() {
             val result = action.action()
             status = if (result.ok) result.out.ifBlank { "Perubahan diterapkan." }
                 else "Gagal: " + result.out.take(180)
+            if (result.ok) Store.refresh(context.applicationContext)
             selected?.let { loadDetail(it.packageName) }
             busy = false
         }
