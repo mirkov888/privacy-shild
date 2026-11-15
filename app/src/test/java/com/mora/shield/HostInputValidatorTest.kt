@@ -6,11 +6,12 @@ import org.junit.Test
 
 class HostInputValidatorTest {
     @Test fun acceptsDomains() {
+        assertTrue(HostInputValidator.domainOk("a.com"))
         assertTrue(HostInputValidator.domainOk("iklan.contoh.com"))
         assertTrue(HostInputValidator.domainOk("a-b.example.co.id"))
     }
     @Test fun rejectsShellInput() {
-        listOf("a.com;id", "a.com && id", "a b.com", "$(id).com", "a.com`id`", "nodot", "a.com|x", "").forEach {
+        listOf("a.com;id", "a.com && id", "a b.com", "-bad.com", "bad-.com", "a..com", "$(id).com", "a.com`id`", "nodot", "a.com|x", "").forEach {
             assertFalse(it, HostInputValidator.domainOk(it))
         }
     }
