@@ -19,6 +19,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,17 +32,40 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ActivityScreen() {
     var filter by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
+    var appQuery by remember { mutableStateOf("") }
+    var fromDate by remember { mutableStateOf("") }
+    var toDate by remember { mutableStateOf("") }
     var confirmClear by remember { mutableStateOf(false) }
     val labels = HashMap<String, String>()
     for (a in Store.apps) labels[a.pkg] = a.label
     val types = Store.events.map { it.type }.distinct()
-    val list = if (filter.isEmpty()) Store.events else Store.events.filter { it.type == filter }
+    fun dateStart(value: String): Long? = runCatching { java.time.LocalDate.parse(value).atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() }.getOrNull()
+    fun dateEnd(value: String): Long? = runCatching { java.time.LocalDate.parse(value).plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toEpochSecond() - 1 }.getOrNull()
+    val start = dateStart(fromDate)
+    val end = dateEnd(toDate)
+    val list = Store.events.filter { e ->
+        (filter.isEmpty() || e.type == filter) &&
+        (query.isBlank() || listOf(typeName(e.type), e.detail, e.pkg, labels[e.pkg] ?: "").any { it.contains(query, true) }) &&
+        (appQuery.isBlank() || e.pkg.contains(appQuery, true) || (labels[e.pkg] ?: "").contains(appQuery, true)) &&
+        (start == null || e.ts >= start) && (end == null || e.ts <= end)
+    }
     Column(Modifier.fillMaxSize()) {
+        OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), singleLine = true, label = { Text("Cari kejadian, domain, atau detail") })
+        OutlinedTextField(appQuery, { appQuery = it }, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), singleLine = true, label = { Text("Filter aplikasi / package") })
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f)) {
+                OutlinedTextField(fromDate, { fromDate = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Dari (YYYY-MM-DD)") })
+            }
+            Column(Modifier.weight(1f)) {
+                OutlinedTextField(toDate, { toDate = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Sampai (YYYY-MM-DD)") })
+            }
+        }
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterChip(selected = filter.isEmpty(), onClick = { filter = "" }, label = { Text("Semua (${Store.events.size})") })
+            FilterChip(selected = filter.isEmpty(), onClick = { filter = "" }, label = { Text("Semua (${list.size})") })
             for (t in types) {
                 FilterChip(selected = filter == t, onClick = { filter = t }, label = { Text(typeName(t)) })
             }

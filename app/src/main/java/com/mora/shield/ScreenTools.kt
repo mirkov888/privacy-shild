@@ -49,6 +49,9 @@ fun ToolsScreen() {
             DiagCard()
             RootCard()
             BackupCard()
+            HealthCard()
+            HostsCard()
+            CompatCard()
         }
         if (!Store.installed) {
             StatusCard()

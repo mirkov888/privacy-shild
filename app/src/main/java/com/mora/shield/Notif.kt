@@ -103,13 +103,14 @@ object Notif {
             "CONTACTS" -> "membaca kontak"
             "SMS" -> "membaca SMS"
             "CALLLOG" -> "membaca log panggilan"
+            "TRAFSPIKE" -> "lonjakan data keluar (${ev.detail})"
             "NETBIG" -> "mengirim data besar (${ev.detail})"
             "NEWAPP" -> "aplikasi baru diblokir dari internet"
             "ACTION" -> ev.detail
             "BOOTGUARD" -> ev.detail
             else -> ev.type
         }
-        val urgent = ev.type == "NETBIG" || ev.type == "NEWAPP" || ev.type == "ACTION" || ev.type == "BOOTGUARD"
+        val urgent = ev.type == "TRAFSPIKE" || ev.type == "NETBIG" || ev.type == "NEWAPP" || ev.type == "ACTION" || ev.type == "BOOTGUARD"
         val id = (ev.type + ev.pkg).hashCode()
         val b = Notification.Builder(c, if (urgent) CH_ALERT else CH_ACCESS)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
