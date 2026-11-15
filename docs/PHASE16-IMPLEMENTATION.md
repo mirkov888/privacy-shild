@@ -1,25 +1,27 @@
-# Phase 16 — Mora Shield module parity
+# Phase 16 — Mora Shield module parity and usability
 
-This phase integrates the v3.9.4 module-management UI into the existing app without replacing the newer Mora Core, Connector, per-app privacy, or Room-backed architecture.
+Branch: `feat/mora-shield-3.9.4-complete`
 
-## Implemented in this commit
-- Hosts management card: status summary, update action, source add/remove/enable/disable, blacklist and whitelist, and bh_on/bh_days controls.
-- AdAway/bindhosts compatibility card: aw_yield/aw_export, detected status, bindhosts sync, and guidance.
-- Module health card: module version, disabled status, failed boot count, and known hosts conflict indicators.
-- TRAFSPIKE human-readable event label and urgent notification.
-- Activity list search, app/package filter, and date range.
-- Input validation for host domains and HTTPS source URLs; no raw unvalidated values are sent to the root shell.
+Phase 16 integrates the v3.9.4 module UI into the existing app without replacing Mora Core, Connector, Room 2.6.1, the SDK source set, or Phase 15 per-app privacy.
 
-## Existing features retained
-The current ModuleV36Screen already contains nw_act/nw_dry, border/home profiles, traffic/Wi-Fi/all purge controls, and the module test action. The diagnostic screen reads the selftest rows returned by the module dynamically.
+## Implemented
+- Hosts card: `hosts update`, `hosts show` summary, add/remove/enable/disable sources, whitelist/blacklist, `bh_on`, and `bh_days`.
+- AdAway/bindhosts card: `aw_yield`, `aw_export`, `aw_installed`, `bindhosts_on`, bindsync action, and setup/safety notes.
+- Module health: version, enabled/disabled state, boot failure count, and known hosts/bindhosts conflict indicators.
+- Network controls `nw_act` and `nw_dry`, Border/Home profiles, purge traffic/Wi-Fi/all, and dynamic selftest rows were already present in `ModuleV36Screen` and remain intact.
+- `TRAFSPIKE` is labeled as “Lonjakan data”. Network warnings, permission revocations, and traffic spikes are counted in one daily digest after 20:00; those event types no longer emit one notification per event. The digest depends on the foreground event service running.
+- Event list supports type, text/domain, app/package, and date-range filtering. A parseable domain in an event detail gets a one-tap whitelist action.
+- Widget includes vault status and Aktifkan/Buka actions. The displayed state reflects the latest widget action.
+- Quick Settings includes Brankas and Border tiles, alongside existing Lockdown/Panic tiles.
+- Password-encrypted settings backup/restore uses PBKDF2-HMAC-SHA256 and AES-GCM with authenticated decryption and input validation.
+- Timed guest mode activates the configured vault, locks the screen once, and restores the vault after the selected duration. The timer is re-armed after reboot.
+- Persistent signing helper `buat-keystore.sh` matches the four `MORA_*` GitHub secrets used by the release workflow. No keystore or secret is stored in Git.
+- App version metadata is set to 3.9.4 / versionCode 24. CI tests are mandatory.
 
-## Still not implemented by this phase
-- Daily scheduled digest notification (network warnings, permission revocations, traffic spikes).
-- Widget vault status and quick actions.
-- Dedicated Quick Settings tiles for vault and border.
-- One-tap whitelist from a blocked-domain event or app list.
-- Password-encrypted settings export/import (the current encrypted audit export is not yet a reversible settings backup).
-- Temporary guest/borrow-phone mode with app lock and timed vault restore.
+## Important limitation
+Guest mode uses the module vault plus a one-time device screen lockdown. It does not create a separate PIN prompt for every protected app. Verify the selected vault package list and the behavior on the target ROM before lending the phone.
 
 ## Validation
-GitHub Actions must pass on the branch before this phase is considered build-verified. No keystore or secret material belongs in the repository.
+- Android CI passed on commit `e2880a6bcd47f0d43a9f87cf812838742fb5b7f5` (unit tests, Kotlin compilation, debug APK).
+- Release workflow on that commit passed the secret validation and unit-test steps; release APK build/upload was still running when this document was updated.
+- Branch is not merged into `main`. Perform on-device checks for hosts, AdAway helper, tiles, widget, timed restore, and signing upgrade before merging.

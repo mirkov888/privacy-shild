@@ -61,7 +61,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mora-Shield-Phase15-APK
+          name: Mora-Shield-Phase16-APK
           path: |
             app/build/outputs/apk/release/*.apk
             location-hook/build/outputs/apk/release/*.apk
