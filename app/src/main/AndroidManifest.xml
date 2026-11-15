@@ -135,6 +135,17 @@
             </intent-filter>
         </service>
 
+        <service android:name=".VaultTile" android:exported="true"
+            android:icon="@android:drawable/ic_lock_lock" android:label="Brankas"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name=".BorderTile" android:exported="true"
+            android:icon="@android:drawable/ic_lock_lock" android:label="Border"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+
         <service
             android:name=".connector.MoraConnectorService"
             android:exported="true"
