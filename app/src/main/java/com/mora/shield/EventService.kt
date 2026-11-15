@@ -79,8 +79,10 @@ class EventService : Service() {
             while (running) {
                 try {
                     val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
-                    if (prefs.getBoolean("statnotif", true) && Root.available()) {
-                        maybePostDailySummary()\n                        val st = Notif.statsText(this)
+                    val rootAvailable = Root.available()
+                    if (rootAvailable) maybePostDailySummary()
+                    if (prefs.getBoolean("statnotif", true) && rootAvailable) {
+                        val st = Notif.statsText(this)
                         val power = getSystemService(PowerManager::class.java)
                         val screen = ScreenTimeTracker.tick(this, power.isInteractive)
                         val screenLine = "Layar ${ScreenTimeTracker.format(screen.screenOnMs)} · standby ${ScreenTimeTracker.format(screen.standbyMs)}"
