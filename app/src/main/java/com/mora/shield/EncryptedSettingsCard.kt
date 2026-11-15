@@ -66,6 +66,10 @@ fun EncryptedSettingsCard() {
                         return@thread
                     }
                     val plain = EncryptedAuditExport.decrypt(encrypted, secret.toCharArray())
+                    if (plain.size > 20000) {
+                        Store.message = "Isi cadangan terlalu besar; pengaturan tidak diubah"
+                        return@thread
+                    }
                     val text = String(plain, Charsets.UTF_8)
                     val validLine = Regex("^(#.*|[A-Za-z0-9_]+=[A-Za-z0-9._,:/-]*)?$")
                     if (!text.lines().all { validLine.matches(it.trimEnd('\r')) }) {

@@ -30,8 +30,12 @@ fun GuestModeCard() {
                     label = { Text(if (value < 60) "$value menit" else "${value / 60} jam") })
             }
         }
+        if (Store.cfg["vault_pkgs"].isNullOrBlank()) {
+            InfoNote("Atur daftar aplikasi terlebih dahulu di bagian Brankas pada layar modul.", true)
+        }
         ActionRow("Aktifkan mode pinjam", "Vault menyala, layar dikunci sekali, lalu vault dibuka otomatis saat durasi habis.", "Mulai") {
-            askStart = true
+            if (Store.cfg["vault_pkgs"].isNullOrBlank()) Store.message = "Atur daftar aplikasi vault terlebih dahulu"
+            else askStart = true
         }
         ActionRow("Akhiri mode pinjam sekarang", "Batalkan timer dan pulihkan vault lebih awal", "Pulihkan", danger = true) {
             GuestModeScheduler.cancel(context)
