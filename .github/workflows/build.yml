@@ -3,6 +3,8 @@ name: Build Mora Shield APK
 on:
   workflow_dispatch:
   push:
+    branches: [main, master, 'feat/**']
+  pull_request:
     branches: [main, master]
 
 permissions:
@@ -59,7 +61,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Mora-Shield-release
+          name: Mora-Shield-Phase15-APK
           path: |
             app/build/outputs/apk/release/*.apk
             location-hook/build/outputs/apk/release/*.apk
