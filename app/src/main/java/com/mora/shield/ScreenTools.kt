@@ -50,6 +50,7 @@ fun ToolsScreen() {
             RootCard()
             BackupCard()
             EncryptedSettingsCard()
+            GuestModeCard()
             HealthCard()
             HostsCard()
             CompatCard()

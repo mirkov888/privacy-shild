@@ -120,6 +120,8 @@ class EventService : Service() {
         val ignored: Set<String> = prefs.getStringSet("ignored", emptySet<String>()) ?: emptySet<String>()
         val key = ev.type + ":" + ev.pkg
         if (ignored.contains(key)) return
+        // Jenis ini dihitung dalam ringkasan harian agar tidak mengirim satu notifikasi untuk setiap kejadian.
+        if (ev.type in setOf("NETWATCH", "WIFITWIN", "PERMREVOKE", "TRAFSPIKE")) return
         val now = System.currentTimeMillis()
         val last = lastShown[key] ?: 0L
         if (now - last < 120000L) return

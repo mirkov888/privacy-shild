@@ -7,6 +7,7 @@ import android.content.Intent
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+        GuestModeScheduler.reschedule(context)
         val prefs = context.getSharedPreferences("mora", Context.MODE_PRIVATE)
         if (prefs.getBoolean("service", true)) {
             try {

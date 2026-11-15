@@ -89,6 +89,8 @@
             android:name=".ActionReceiver"
             android:exported="false" />
 
+        <receiver android:name=".GuestModeReceiver" android:exported="false" />
+
         <receiver
             android:name=".BootReceiver"
             android:exported="true">
