@@ -80,7 +80,7 @@ class EventService : Service() {
                 try {
                     val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
                     if (prefs.getBoolean("statnotif", true) && Root.available()) {
-                        val st = Notif.statsText(this)
+                        maybePostDailySummary()\n                        val st = Notif.statsText(this)
                         val power = getSystemService(PowerManager::class.java)
                         val screen = ScreenTimeTracker.tick(this, power.isInteractive)
                         val screenLine = "Layar ${ScreenTimeTracker.format(screen.screenOnMs)} · standby ${ScreenTimeTracker.format(screen.standbyMs)}"
@@ -101,6 +101,15 @@ class EventService : Service() {
         }
         t.isDaemon = true
         t.start()
+    }
+
+    private fun maybePostDailySummary() {
+        val now = java.util.Calendar.getInstance()
+        if (now.get(java.util.Calendar.HOUR_OF_DAY) < 20) return
+        val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(now.time)
+        val prefs = getSharedPreferences("mora", Context.MODE_PRIVATE)
+        if (prefs.getString("daily_summary_day", "") == day) return
+        if (Notif.postDailySummary(this)) prefs.edit().putString("daily_summary_day", day).apply()
     }
 
     private fun handle(line: String) {
