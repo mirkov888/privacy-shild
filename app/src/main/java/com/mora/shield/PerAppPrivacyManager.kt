@@ -81,7 +81,8 @@ object PerAppPrivacyManager {
 
     fun isSafePackage(packageName: String): Boolean =
         packagePattern.matches(packageName) && packageName !in protectedPackages &&
-            !packageName.startsWith("android.")
+            listOf("android.", "com.android.", "com.google.android.", "com.miui.", "com.xiaomi.")
+                .none { packageName.startsWith(it) }
 
     fun isAllowedPermission(permission: String): Boolean =
         permissionPattern.matches(permission) && permission in allowedPermissions
@@ -194,7 +195,10 @@ object PerAppPrivacyManager {
 
     fun setPermissionWithSnapshot(context: Context, packageName: String, permission: String, granted: Boolean): Root.Result {
         if (!isSafePackage(packageName) || packageName in protectedTargets(context) ||
-            !isAllowedPermission(permission)) return Root.Result(2, "Target izin tidak diizinkan")
+            !isAllowedPermission(permission) ||
+            permissions(context, packageName).none { it.permission == permission }) {
+            return Root.Result(2, "Target izin tidak diizinkan atau izin tidak diminta aplikasi")
+        }
         val prefs = context.getSharedPreferences("phase15_restore", Context.MODE_PRIVATE)
         val key = "perm:$packageName:$permission"
         if (!prefs.contains(key)) {
