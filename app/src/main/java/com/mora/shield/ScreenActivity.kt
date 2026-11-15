@@ -83,6 +83,13 @@ fun ActivityScreen() {
                             val who = if (e.pkg.isEmpty()) "Sistem" else (labels[e.pkg] ?: e.pkg)
                             Text(who, fontWeight = FontWeight.SemiBold, maxLines = 2, softWrap = true)
                             Text(typeName(e.type) + (if (e.detail.isNotEmpty()) " · " + e.detail else ""), style = MaterialTheme.typography.bodyMedium, softWrap = true)
+                            val domainCandidate = Regex("(?i)(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,63}")
+                                .find(e.detail)?.value?.lowercase()
+                            if (domainCandidate != null && HostInputValidator.domainOk(domainCandidate)) {
+                                TextButton(onClick = {
+                                    Store.run("hosts add white $domainCandidate", "Domain diizinkan: $domainCandidate") { Store.refresh(Store.appCtx) }
+                                }) { Text("Izinkan domain") }
+                            }
                             Text(fmtTime(e.ts), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
