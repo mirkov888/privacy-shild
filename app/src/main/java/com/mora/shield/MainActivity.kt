@@ -167,6 +167,7 @@ fun MoraApp() {
         12 -> "Kontrol aplikasi"
         13 -> "Per-App Location Control"
         14 -> "Per-App Device Identity"
+        15 -> "Per-App Permission & Sensor Control"
         9 -> "Keamanan & Privasi"
         10 -> "Statistik Jaringan"
         else -> "Lainnya"
@@ -285,6 +286,7 @@ fun MoraApp() {
                     12 -> AppControlScreen()
                     13 -> PerAppLocationScreen()
                     14 -> PerAppIdentityScreen()
+                    15 -> PerAppPrivacyScreen()
                     9 -> ActivityMonitorScreen(initialSection = "SECURITY")
                     10 -> ActivityMonitorScreen(initialSection = "NETWORK")
                 }
