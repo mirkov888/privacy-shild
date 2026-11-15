@@ -398,6 +398,7 @@ fun typeName(t: String): String = when (t) {
     "CONTACTS" -> "Kontak"
     "SMS" -> "SMS"
     "CALLLOG" -> "Log panggilan"
+    "TRAFSPIKE" -> "Lonjakan data"
     "NETBIG" -> "Data keluar besar"
     "NEWAPP" -> "Aplikasi baru"
     "ACTION" -> "Aksi"

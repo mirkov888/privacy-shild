@@ -3,7 +3,16 @@ package com.mora.shield
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -63,7 +72,7 @@ fun ModuleV36Screen() {
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {
             Text("Integrasi Mora Privacy Shield",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold)
-            Text("Modul ${Store.version.ifBlank{"tidak terbaca"}} · API v3.6–v3.8",style=MaterialTheme.typography.bodySmall)
+            Text("Modul ${Store.version.ifBlank{"tidak terbaca"}} · API v3.6+",style=MaterialTheme.typography.bodySmall)
             if(!ok) Text("Perlu modul v3.6.0 atau lebih baru dan akses root.",color=MaterialTheme.colorScheme.error)
         }
         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {

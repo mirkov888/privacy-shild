@@ -74,6 +74,32 @@ object Notif {
         return Pair("Mora Shield · skor $score% · ${evs.size} kejadian", sb.toString())
     }
 
+    /** Mengirim satu ringkasan harian setelah pukul 20.00; dipanggil dari thread layanan. */
+    fun postDailySummary(c: Context): Boolean {
+        val startDay = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis / 1000
+        val today = Ps.events(3000).filter { it.ts >= startDay }
+        val network = today.count { it.type == "NETWATCH" || it.type == "WIFITWIN" }
+        val revoked = today.count { it.type == "PERMREVOKE" }
+        val spikes = today.count { it.type == "TRAFSPIKE" }
+        val body = "Peringatan jaringan: $network · izin dicabut: $revoked · lonjakan data: $spikes"
+        val notification = Notification.Builder(c, CH_STATS)
+            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setContentTitle("Ringkasan harian Mora Shield")
+            .setContentText(body)
+            .setStyle(Notification.BigTextStyle().bigText(body))
+            .setAutoCancel(true)
+            .setContentIntent(PendingIntent.getActivity(c, 3, Intent(c, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+            .build()
+        c.getSystemService(NotificationManager::class.java).notify(2, notification)
+        return true
+    }
+
     fun label(c: Context, pkg: String): String = try {
         val pm = c.packageManager
         pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
@@ -103,13 +129,14 @@ object Notif {
             "CONTACTS" -> "membaca kontak"
             "SMS" -> "membaca SMS"
             "CALLLOG" -> "membaca log panggilan"
+            "TRAFSPIKE" -> "lonjakan data keluar (${ev.detail})"
             "NETBIG" -> "mengirim data besar (${ev.detail})"
             "NEWAPP" -> "aplikasi baru diblokir dari internet"
             "ACTION" -> ev.detail
             "BOOTGUARD" -> ev.detail
             else -> ev.type
         }
-        val urgent = ev.type == "NETBIG" || ev.type == "NEWAPP" || ev.type == "ACTION" || ev.type == "BOOTGUARD"
+        val urgent = ev.type == "TRAFSPIKE" || ev.type == "NETBIG" || ev.type == "NEWAPP" || ev.type == "ACTION" || ev.type == "BOOTGUARD"
         val id = (ev.type + ev.pkg).hashCode()
         val b = Notification.Builder(c, if (urgent) CH_ALERT else CH_ACCESS)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
