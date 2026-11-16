@@ -43,7 +43,8 @@ object IdentityProfileCatalog {
         IdentityProfile("linux-desktop-firefox", IdentityPlatform.LINUX, "Linux", "Linux Desktop", "Linux x86_64", "Firefox", "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0", "Linux browser compatibility testing"),
         IdentityProfile("linux-desktop-chrome", IdentityPlatform.LINUX, "Linux", "Linux Desktop", "Linux x86_64", "Chrome", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Linux browser compatibility testing"),
         IdentityProfile("linux-laptop-firefox", IdentityPlatform.LINUX, "Linux", "Linux Laptop", "Linux x86_64", "Firefox", "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0", "Linux laptop Firefox compatibility testing"),
-        IdentityProfile("linux-laptop-chrome", IdentityPlatform.LINUX, "Linux", "Linux Laptop", "Linux x86_64", "Chrome", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Linux laptop Chrome compatibility testing"),    )
+        IdentityProfile("linux-laptop-chrome", IdentityPlatform.LINUX, "Linux", "Linux Laptop", "Linux x86_64", "Chrome", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Linux laptop Chrome compatibility testing"),
+    )
 
     /**
      * Reuse the curated non-security Android device catalogue in the browser picker.
