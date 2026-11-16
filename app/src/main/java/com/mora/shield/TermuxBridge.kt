@@ -88,8 +88,6 @@ object TermuxBridge {
             putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
             putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
             putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
-            putExtra("com.termux.RUN_COMMAND_LABEL", "Mora Shield: $operation")
-            putExtra("com.termux.RUN_COMMAND_DESCRIPTION", "Perintah terbatas untuk pengelolaan distro dan sesi XFCE.")
             putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
         }
         context.startService(intent)
