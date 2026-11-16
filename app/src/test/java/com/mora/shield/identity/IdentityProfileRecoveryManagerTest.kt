@@ -39,6 +39,91 @@ class IdentityProfileRecoveryManagerTest {
     }
 
     @Test
+    fun acceptsSchemaTwoRandomizationSettings() {
+        val raw = """
+            {
+              "format":"mora-identity-studio",
+              "schema":2,
+              "profileCatalog":{"schema":1,"profiles":[],"favorites":[]},
+              "selectedProfile":null,
+              "protection":{
+                "canvasProtection":true,
+                "webGlProtection":true,
+                "syncClientHints":true,
+                "randomizePerSession":true,
+                "webRtcProtection":true
+              },
+              "randomization":{
+                "enabled":true,
+                "intervalHours":24,
+                "seed":"reusable-seed",
+                "platform":"ANDROID",
+                "randomizeEnabledApps":false
+              },
+              "perAppProfiles":[]
+            }
+        """.trimIndent()
+        val validation = IdentityProfileRecoveryManager.validateBackupJson(raw)
+        assertNull("Unexpected validation error: $validation", validation)
+    }
+
+    @Test
+    fun rejectsOutOfRangeRandomizationInterval() {
+        val raw = """
+            {
+              "format":"mora-identity-studio",
+              "schema":2,
+              "profileCatalog":{"schema":1,"profiles":[],"favorites":[]},
+              "selectedProfile":null,
+              "protection":{
+                "canvasProtection":true,
+                "webGlProtection":true,
+                "syncClientHints":true,
+                "randomizePerSession":true,
+                "webRtcProtection":true
+              },
+              "randomization":{
+                "enabled":true,
+                "intervalHours":1,
+                "seed":"reusable-seed",
+                "platform":"ANDROID",
+                "randomizeEnabledApps":false
+              },
+              "perAppProfiles":[]
+            }
+        """.trimIndent()
+        assertNotNull(IdentityProfileRecoveryManager.validateBackupJson(raw))
+    }
+
+    @Test
+    fun rejectsInvalidRandomizationSeed() {
+        val raw = """
+            {
+              "format":"mora-identity-studio",
+              "schema":2,
+              "profileCatalog":{"schema":1,"profiles":[],"favorites":[]},
+              "selectedProfile":null,
+              "protection":{
+                "canvasProtection":true,
+                "webGlProtection":true,
+                "syncClientHints":true,
+                "randomizePerSession":true,
+                "webRtcProtection":true
+              },
+              "randomization":{
+                "enabled":true,
+                "intervalHours":24,
+                "seed":"bad\\nseed",
+                "platform":"ANDROID",
+                "randomizeEnabledApps":false
+              },
+              "perAppProfiles":[]
+            }
+        """.trimIndent()
+        assertNotNull(IdentityProfileRecoveryManager.validateBackupJson(raw))
+    }
+
+    @Test
     fun rejectsSystemPackageTargets() {
         val raw = """
             {
