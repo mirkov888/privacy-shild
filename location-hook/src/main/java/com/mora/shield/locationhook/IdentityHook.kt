@@ -43,7 +43,9 @@ internal object IdentityHook {
         }
 
         values.forEach { (field, value) ->
-            if (!value.isNullOrBlank() && value.length <= 180 && value.none { it == '\\n' || it == '\\r' || it == '\\u0000' }) {
+            if (!value.isNullOrBlank() && value.length <= 180 &&
+                value.none { it == '\n' || it == '\r' || it == '\u0000' }
+            ) {
                 runCatching {
                     XposedHelpers.setStaticObjectField(Build::class.java, field, value)
                 }.onFailure {
