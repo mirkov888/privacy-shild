@@ -36,7 +36,8 @@ The dashboard can create, search via the profile list, launch, backup, rollback,
 Optional controls:
 - Firefox Canvas reduction: `privacy.resistFingerprinting`.
 - Firefox WebGL reduction: disable WebGL.
-- Chromium WebGL reduction: `--disable-webgl`; Canvas protection is marked unsupported by this launcher.
+- Chromium Canvas reduction: opt-in Mora Manifest V3 extension blocks common page Canvas readback APIs; worker contexts remain outside its scope.
+- Chromium WebGL reduction: `--disable-webgl`.
 - WebRTC restriction remains browser-specific and best-effort, not a VPN.
 
-This dashboard is a Linux companion interface. Android remains the primary Mora Shield app; profiles are exchanged through explicit JSON import/export rather than live sync.
+This dashboard is a Linux companion interface. Android remains the primary Mora Shield app. A user-initiated, short-lived HTTPS LAN endpoint now synchronizes custom browser profiles in both directions; it is not an always-on shared database.
