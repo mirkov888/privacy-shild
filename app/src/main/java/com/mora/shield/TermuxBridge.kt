@@ -45,7 +45,447 @@ object TermuxBridge {
                 exit 0
             fi
             echo MORA_DISTRO_INSTALLED
-            if [ -x "$ROOT/bin/sh" ] && [ -f "$ROOT/etc/os-release" ]; then
+            if [ -x "${'ROOT/bin/sh" ] && [ -f "${'
+                echo MORA_ROOTFS_OK
+                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
+            else
+                echo MORA_ROOTFS_BROKEN
+            fi
+        """.trimIndent()
+        run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
+
+    fun installDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "install:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = false)), true)
+    }
+
+    fun repairDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "repair:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = true)), true)
+    }
+
+    private fun installScript(distro: String, removeFirst: Boolean): String {
+        val prefix = if (removeFirst) "\"$PREFIX/bin/proot-distro\" remove $distro >/dev/null 2>&1 || true; " else ""
+        return """
+            set +e
+            $prefix
+            for attempt in 1 2 3; do
+                "$PREFIX/bin/proot-distro" install "$distro" && exit 0
+                code=$?
+                echo "MORA_INSTALL_RETRY attempt=${'attempt exit=${'
+                "$PREFIX/bin/proot-distro" remove "$distro" >/dev/null 2>&1 || true
+                [ "$attempt" -lt 3 ] && sleep 5
+            done
+            echo MORA_INSTALL_FAILED
+            exit 1
+        """.trimIndent()
+    }
+
+    fun installDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = if (distro == "archlinux") {
+            "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
+        } else {
+            "apt-get update && apt-get install -y xfce4 dbus-x11 tigervnc-standalone-server"
+        }
+        run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun setupVncPassword(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "vncpasswd"), false)
+    }
+
+    fun startDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+ }ROOT/etc/os-release" ]; then}ROOT/bin/sh" ] && [ -f "${'
+                echo MORA_ROOTFS_OK
+                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
+            else
+                echo MORA_ROOTFS_BROKEN
+            fi
+        """.trimIndent()
+        run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
+
+    fun installDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "install:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = false)), true)
+    }
+
+    fun repairDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "repair:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = true)), true)
+    }
+
+    private fun installScript(distro: String, removeFirst: Boolean): String {
+        val prefix = if (removeFirst) "\"$PREFIX/bin/proot-distro\" remove $distro >/dev/null 2>&1 || true; " else ""
+        return """
+            set +e
+            $prefix
+            for attempt in 1 2 3; do
+                "$PREFIX/bin/proot-distro" install "$distro" && exit 0
+                code=$?
+                echo "MORA_INSTALL_RETRY attempt=$attempt exit=$code"
+                "$PREFIX/bin/proot-distro" remove "$distro" >/dev/null 2>&1 || true
+                [ "$attempt" -lt 3 ] && sleep 5
+            done
+            echo MORA_INSTALL_FAILED
+            exit 1
+        """.trimIndent()
+    }
+
+    fun installDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = if (distro == "archlinux") {
+            "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
+        } else {
+            "apt-get update && apt-get install -y xfce4 dbus-x11 tigervnc-standalone-server"
+        }
+        run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun setupVncPassword(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "vncpasswd"), false)
+    }
+
+    fun startDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+ }ROOT/etc/os-release" ]; then
+                echo MORA_ROOTFS_OK
+                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
+            else
+                echo MORA_ROOTFS_BROKEN
+            fi
+        """.trimIndent()
+        run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
+
+    fun installDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "install:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = false)), true)
+    }
+
+    fun repairDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "repair:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = true)), true)
+    }
+
+    private fun installScript(distro: String, removeFirst: Boolean): String {
+        val prefix = if (removeFirst) "\"$PREFIX/bin/proot-distro\" remove $distro >/dev/null 2>&1 || true; " else ""
+        return """
+            set +e
+            $prefix
+            for attempt in 1 2 3; do
+                "$PREFIX/bin/proot-distro" install "$distro" && exit 0
+                code=$?
+                echo "MORA_INSTALL_RETRY attempt=$attempt exit=$code"
+                "$PREFIX/bin/proot-distro" remove "$distro" >/dev/null 2>&1 || true
+                [ "$attempt" -lt 3 ] && sleep 5
+            done
+            echo MORA_INSTALL_FAILED
+            exit 1
+        """.trimIndent()
+    }
+
+    fun installDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = if (distro == "archlinux") {
+            "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
+        } else {
+            "apt-get update && apt-get install -y xfce4 dbus-x11 tigervnc-standalone-server"
+        }
+        run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun setupVncPassword(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "vncpasswd"), false)
+    }
+
+    fun startDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+ }code"}attempt exit=${'code"}code"
+                "$PREFIX/bin/proot-distro" remove "$distro" >/dev/null 2>&1 || true
+                [ "$attempt" -lt 3 ] && sleep 5
+            done
+            echo MORA_INSTALL_FAILED
+            exit 1
+        """.trimIndent()
+    }
+
+    fun installDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = if (distro == "archlinux") {
+            "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
+        } else {
+            "apt-get update && apt-get install -y xfce4 dbus-x11 tigervnc-standalone-server"
+        }
+        run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun setupVncPassword(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "vncpasswd"), false)
+    }
+
+    fun startDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+ }ROOT/etc/os-release" ]; then}ROOT/bin/sh" ] && [ -f "${'
+                echo MORA_ROOTFS_OK
+                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
+            else
+                echo MORA_ROOTFS_BROKEN
+            fi
+        """.trimIndent()
+        run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
+
+    fun installDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "install:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = false)), true)
+    }
+
+    fun repairDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "repair:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = true)), true)
+    }
+
+    private fun installScript(distro: String, removeFirst: Boolean): String {
+        val prefix = if (removeFirst) "\"$PREFIX/bin/proot-distro\" remove $distro >/dev/null 2>&1 || true; " else ""
+        return """
+            set +e
+            $prefix
+            for attempt in 1 2 3; do
+                "$PREFIX/bin/proot-distro" install "$distro" && exit 0
+                code=$?
+                echo "MORA_INSTALL_RETRY attempt=$attempt exit=$code"
+                "$PREFIX/bin/proot-distro" remove "$distro" >/dev/null 2>&1 || true
+                [ "$attempt" -lt 3 ] && sleep 5
+            done
+            echo MORA_INSTALL_FAILED
+            exit 1
+        """.trimIndent()
+    }
+
+    fun installDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = if (distro == "archlinux") {
+            "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
+        } else {
+            "apt-get update && apt-get install -y xfce4 dbus-x11 tigervnc-standalone-server"
+        }
+        run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun setupVncPassword(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "vncpasswd"), false)
+    }
+
+    fun startDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+ }ROOT/etc/os-release" ]; then
                 echo MORA_ROOTFS_OK
                 "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
             else
