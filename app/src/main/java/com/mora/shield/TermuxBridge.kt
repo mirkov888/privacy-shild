@@ -52,15 +52,7 @@ object TermuxBridge {
             echo MORA_DISTRO_INSTALLED
             if [ -x "$rootfs/bin/sh" ] && [ -f "$rootfs/etc/os-release" ]; then
                 echo MORA_ROOTFS_OK
-                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc '
-                    pid="${' -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
-                    if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
-                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
-                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
-                    else
-                        echo MORA_XFCE_STOPPED
-                    fi
-                '
+                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -Eq '^[[:space:]]*1[[:space:]]+5901[[:space:]]+[0-9]+[[:space:]]+Xtigervnc' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
             else
                 echo MORA_ROOTFS_BROKEN
             fi
