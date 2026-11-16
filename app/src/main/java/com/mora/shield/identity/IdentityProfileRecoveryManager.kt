@@ -21,6 +21,7 @@ class IdentityProfileRecoveryManager(context: Context) {
     private val appContext = context.applicationContext
     private val identityEngine = IdentityEngine(appContext)
     private val protectionStore = IdentityProtectionStore(appContext)
+    private val randomizationStore = IdentityRandomizationStore(appContext)
     private val rollbackPreferences = appContext.getSharedPreferences(
         "mora_identity_recovery", Context.MODE_PRIVATE
     )
@@ -30,6 +31,7 @@ class IdentityProfileRecoveryManager(context: Context) {
     fun exportBackupJson(): String {
         val selected = identityEngine.selectedProfile()
         val protection = protectionStore.load()
+        val randomization = randomizationStore.load()
         val root = JSONObject()
             .put("format", BACKUP_FORMAT)
             .put("schema", BACKUP_SCHEMA)
@@ -46,6 +48,12 @@ class IdentityProfileRecoveryManager(context: Context) {
                 .put("syncClientHints", protection.syncClientHints)
                 .put("randomizePerSession", protection.randomizePerSession)
                 .put("webRtcProtection", protection.webRtcProtection))
+            .put("randomization", JSONObject()
+                .put("enabled", randomization.enabled)
+                .put("intervalHours", randomization.intervalHours)
+                .put("seed", randomization.seed)
+                .put("platform", randomization.platform.name)
+                .put("randomizeEnabledApps", randomization.randomizeEnabledApps))
             .put("perAppProfiles", PerAppIdentityStore.exportCompatibilityProfilesJson(appContext))
         return root.toString(2)
     }
@@ -55,7 +63,14 @@ class IdentityProfileRecoveryManager(context: Context) {
         if (validation != null) return IdentityRecoveryResult(false, validation)
         val previous = exportBackupJson()
         rollbackPreferences.edit().putString(KEY_LAST_ROLLBACK, previous).apply()
-        return applyValidatedBackup(JSONObject(raw))
+        val result = applyValidatedBackup(JSONObject(raw))
+        if (!result.success) {
+            val rollback = runCatching { applyValidatedBackup(JSONObject(previous)) }.getOrNull()
+            if (rollback?.success != true) {
+                return IdentityRecoveryResult(false, result.message + "; pemulihan keadaan sebelumnya juga gagal")
+            }
+        }
+        return result
     }
 
     /** Rollback toggles the last two states, making an accidental restore reversible. */
@@ -100,6 +115,20 @@ class IdentityProfileRecoveryManager(context: Context) {
                 webRtcProtection = p.getBoolean("webRtcProtection")
             )
         )
+        val random = root.optJSONObject("randomization")
+        val restoredRandomization = if (random == null) {
+            IdentityRandomizationSettings(enabled = false, seed = randomizationStore.load().seed)
+        } else {
+            IdentityRandomizationSettings(
+                enabled = random.getBoolean("enabled"),
+                intervalHours = random.getInt("intervalHours"),
+                seed = random.getString("seed"),
+                platform = IdentityPlatform.valueOf(random.getString("platform")),
+                randomizeEnabledApps = random.getBoolean("randomizeEnabledApps")
+            )
+        }
+        randomizationStore.save(restoredRandomization)
+        IdentityRandomizationScheduler.sync(appContext, restoredRandomization)
         val restored = PerAppIdentityStore.replaceCompatibilityProfilesJson(
             appContext, root.getJSONArray("perAppProfiles")
         )
@@ -110,14 +139,14 @@ class IdentityProfileRecoveryManager(context: Context) {
 
     companion object {
         private const val BACKUP_FORMAT = "mora-identity-studio"
-        private const val BACKUP_SCHEMA = 1
+        private const val BACKUP_SCHEMA = 2
         private const val KEY_LAST_ROLLBACK = "last_identity_backup"
 
         /** Returns null when valid, otherwise a user-readable reason. Safe for unit tests. */
         fun validateBackupJson(raw: String): String? {
             if (raw.isBlank() || raw.length > MAX_BACKUP_CHARS) return "Ukuran backup harus 1 byte–1 MB"
             val root = runCatching { JSONObject(raw) }.getOrNull() ?: return "JSON backup tidak valid"
-            if (root.optString("format") != BACKUP_FORMAT || root.optInt("schema") != BACKUP_SCHEMA) {
+            if (root.optString("format") != BACKUP_FORMAT || root.optInt("schema") !in 1..BACKUP_SCHEMA) {
                 return "Format atau versi backup Mora tidak didukung"
             }
 
@@ -154,6 +183,21 @@ class IdentityProfileRecoveryManager(context: Context) {
                 .forEach { key ->
                     if (protection.opt(key) !is Boolean) return "Pengaturan $key tidak valid"
                 }
+
+            val randomization = root.optJSONObject("randomization")
+            if (randomization != null) {
+                if (randomization.opt("enabled") !is Boolean ||
+                    randomization.opt("randomizeEnabledApps") !is Boolean
+                ) return "Pengaturan randomisasi tidak valid"
+                val interval = randomization.optInt("intervalHours", -1)
+                if (interval !in 6..168) return "Interval randomisasi harus 6–168 jam"
+                val seed = randomization.optString("seed")
+                if (seed.isBlank() || seed.length > 128 || seed.any(Char::isISOControl)) {
+                    return "Seed randomisasi tidak valid"
+                }
+                runCatching { IdentityPlatform.valueOf(randomization.optString("platform")) }
+                    .getOrNull() ?: return "Platform randomisasi tidak valid"
+            }
 
             val appProfiles = root.optJSONArray("perAppProfiles") ?: return "Profil per-app tidak ditemukan"
             if (appProfiles.length() > MAX_APP_PROFILES) return "Terlalu banyak profil per-app"
