@@ -60,6 +60,12 @@ object TermuxBridge {
             arrayOf("login", distro, "--", "bash", "-lc", script), true)
     }
 
+    fun setupVncPassword(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "vncpasswd"), false)
+    }
+
     fun startDesktop(context: Context, distro: String) {
         requireDistro(distro)
         val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
