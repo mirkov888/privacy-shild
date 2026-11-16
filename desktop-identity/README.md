@@ -8,6 +8,12 @@ Compatibility labels: Android, iPhone, iPad, Windows, macOS and Linux. Labels se
 
 ## Commands
 
+Start the lightweight Linux dashboard (Tkinter):
+
+    python3 mora_identity.py gui
+
+The dashboard contains profile search/create, browser launch and local diagnostics, protection capability status, backup/restore/rollback, JSON import/export, report comparison and audit. It uses the same profile store and helper functions as the CLI. On Debian/Ubuntu, install the optional UI runtime with `sudo apt install python3-tk` when Tkinter is missing.
+
     python3 mora_identity.py doctor
     python3 mora_identity.py list
     python3 mora_identity.py create --id android-test --browser firefox --platform android
@@ -39,6 +45,7 @@ Every profile contains diagnostics.html. Open it locally to inspect User-Agent, 
 - A browser may use a different binary name or install path; specify the browser manually and check its launch behavior.
 - User-Agent overrides do not provide true device emulation or guarantee consistent Client Hints across browsers.
 - Android external browsers are not modified by this helper.
+- The Linux dashboard is an optional Tkinter front-end to this existing companion bridge; it is not a second Android app or a shared always-live Android/Linux profile database. Use explicit JSON import/export to move profiles between platforms.
 - No IMEI, serial, Android ID, MAC, build fingerprint, security attestation or Play Integrity values are read or changed.
 
 ## Desktop dashboard
