@@ -122,16 +122,14 @@ object TermuxBridge {
             EOF
                 chmod 700 "${'$'}startup"
             done
-            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
-                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
-                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if vncserver -list 2>/dev/null | grep -Eq '^[[:space:]]*1[[:space:]]+5901[[:space:]]+[0-9]+[[:space:]]+Xtigervnc'; then
+                live=true
             fi
             if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    oldpid="$(cat /tmp/.X1-lock 2>/dev/null | tr -dc '0-9')"
+                    oldstate="$(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d ' ')"
                     case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
