@@ -536,6 +536,55 @@ def open_desktop_dashboard(root):
     except tk.TclError:
         pass
 
+    # Compact dark dashboard styling that remains native Tk/ttk (no extra UI dependency).
+    palette = {
+        "background": "#11131a",
+        "surface": "#191d27",
+        "surface_alt": "#242a38",
+        "text": "#e8eaf2",
+        "muted": "#a5adbf",
+        "accent": "#7662d8",
+        "accent_hover": "#8875ed",
+    }
+    window.configure(background=palette["background"])
+    style.configure(".", font=("Sans", 10))
+    style.configure("TFrame", background=palette["background"])
+    style.configure("TLabel", background=palette["background"], foreground=palette["text"])
+    style.configure("TLabelframe", background=palette["background"], foreground=palette["text"])
+    style.configure("TLabelframe.Label", background=palette["background"], foreground=palette["muted"])
+    style.configure(
+        "TButton", padding=(10, 7), background=palette["surface_alt"],
+        foreground=palette["text"], borderwidth=0,
+    )
+    style.map(
+        "TButton",
+        background=[("disabled", palette["surface"]), ("active", palette["accent_hover"])],
+        foreground=[("disabled", palette["muted"]), ("active", "#ffffff")],
+    )
+    style.configure(
+        "TEntry", fieldbackground=palette["surface"], foreground=palette["text"],
+        insertcolor=palette["text"], padding=6,
+    )
+    style.configure(
+        "TCombobox", fieldbackground=palette["surface"], foreground=palette["text"],
+        arrowcolor=palette["text"], padding=6,
+    )
+    style.configure(
+        "Treeview", background=palette["surface"], fieldbackground=palette["surface"],
+        foreground=palette["text"], rowheight=29, borderwidth=0,
+    )
+    style.configure(
+        "Treeview.Heading", background=palette["surface_alt"],
+        foreground=palette["text"], padding=(8, 7), relief="flat",
+    )
+    style.map(
+        "Treeview",
+        background=[("selected", palette["accent"])],
+        foreground=[("selected", "#ffffff")],
+    )
+    style.configure("TCheckbutton", background=palette["background"], foreground=palette["text"])
+    style.map("TCheckbutton", foreground=[("active", palette["text"])])
+
     selected_id = tk.StringVar()
     search_text = tk.StringVar()
     profile_id = tk.StringVar()
@@ -550,11 +599,11 @@ def open_desktop_dashboard(root):
 
     outer = ttk.Frame(window, padding=14)
     outer.pack(fill="both", expand=True)
-    ttk.Label(outer, text="Mora Shield Identity Desk", font=("TkDefaultFont", 18, "bold")).pack(anchor="w")
+    ttk.Label(outer, text="Mora Shield Identity Desk", font=("Sans", 19, "bold"), foreground=palette["text"]).pack(anchor="w")
     ttk.Label(
         outer,
         text="Kelola profil browser Linux yang terisolasi. Profil browser utama tidak disentuh.",
-        foreground="#666666",
+        foreground=palette["muted"],
     ).pack(anchor="w", pady=(2, 10))
 
     create_box = ttk.LabelFrame(outer, text="Buat profil baru", padding=10)
@@ -599,7 +648,7 @@ def open_desktop_dashboard(root):
 
     detail_box = ttk.LabelFrame(outer, text="Detail profil terpilih", padding=8)
     detail_box.pack(fill="x", pady=8)
-    details = tk.Text(detail_box, height=5, wrap="word", state="disabled")
+    details = tk.Text(detail_box, height=5, wrap="word", state="disabled", bg=palette["surface"], fg=palette["text"], insertbackground=palette["text"], relief="flat", padx=8, pady=8)
     details.pack(fill="x")
 
     def set_status(message):
