@@ -1,35 +1,122 @@
 package com.mora.shield.identity
-
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
 
-/**
- * Local compatibility-profile controller.
- * Does not mutate Build properties, system identity, hardware identifiers,
- * attestation, Play Integrity, or third-party applications.
- */
+/** Local compatibility-profile controller; all changes are scoped to Mora-owned preview WebViews. */
 class IdentityEngine(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("mora_identity_studio", Context.MODE_PRIVATE)
-
-    fun selectedProfile(): IdentityProfile? = IdentityProfileCatalog.byId(prefs.getString(KEY_SELECTED_PROFILE, null))
-
+    fun selectedProfile(): IdentityProfile? = profileById(prefs.getString(KEY_SELECTED_PROFILE, null))
+    fun profileById(id: String?): IdentityProfile? {
+        if (id.isNullOrBlank()) return null
+        return IdentityProfileCatalog.byId(id) ?: customProfiles().firstOrNull { it.id == id }
+    }
+    fun profilesForPlatform(platform: IdentityPlatform): List<IdentityProfile> =
+        (IdentityProfileCatalog.forPlatform(platform) + customProfiles().filter { it.platform == platform })
+            .sortedWith(compareByDescending<IdentityProfile> { isFavorite(it.id) }.thenBy { it.model.lowercase() })
+    fun customProfiles(): List<IdentityProfile> {
+        val raw = prefs.getString(KEY_CUSTOM_PROFILES, "[]") ?: "[]"
+        return runCatching {
+            val array = JSONArray(raw)
+            (0 until array.length()).mapNotNull { profileFromJson(array.optJSONObject(it)) }
+        }.getOrDefault(emptyList())
+    }
     fun select(profileId: String): Boolean {
-        val profile = IdentityProfileCatalog.byId(profileId) ?: return false
-        prefs.edit().putString(KEY_SELECTED_PROFILE, profile.id).apply()
+        if (profileById(profileId) == null) return false
+        prefs.edit().putString(KEY_SELECTED_PROFILE, profileId).apply()
         return true
     }
-
     fun clearSelection() { prefs.edit().remove(KEY_SELECTED_PROFILE).apply() }
-
     fun randomProfile(platform: IdentityPlatform): IdentityProfile? {
-        val candidates = IdentityProfileCatalog.forPlatform(platform)
+        val candidates = profilesForPlatform(platform)
         if (candidates.isEmpty()) return null
-        val pool = candidates.filterNot { it.id == selectedProfile()?.id }.ifEmpty { candidates }
-        return pool.random()
+        return candidates.filterNot { it.id == selectedProfile()?.id }.ifEmpty { candidates }.random()
     }
-
-    /** UA from the user's selected bundled profile, for opt-in Mora-owned WebViews only. */
+    fun isCustomProfile(profileId: String): Boolean = customProfiles().any { it.id == profileId }
+    fun saveCustomProfile(platform: IdentityPlatform, label: String, userAgent: String): IdentityProfile? {
+        if (IdentityProfileValidator.validate(label, userAgent) != null) return null
+        val profile = IdentityProfile(
+            id = "custom-${UUID.randomUUID()}", platform = platform, manufacturer = "Custom",
+            model = label.trim(), osVersion = "Custom", browser = "Custom UA",
+            userAgent = userAgent.trim(), purpose = "User-defined browser compatibility profile"
+        )
+        persistCustomProfiles(customProfiles() + profile)
+        return profile
+    }
+    fun deleteCustomProfile(profileId: String): Boolean {
+        val current = customProfiles()
+        if (current.none { it.id == profileId }) return false
+        persistCustomProfiles(current.filterNot { it.id == profileId })
+        prefs.edit().putStringSet(KEY_FAVORITES, favoriteIds().toMutableSet().apply { remove(profileId) }).apply()
+        if (prefs.getString(KEY_SELECTED_PROFILE, null) == profileId) clearSelection()
+        return true
+    }
+    fun favoriteIds(): Set<String> = prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
+    fun isFavorite(profileId: String): Boolean = profileId in favoriteIds()
+    fun toggleFavorite(profileId: String): Boolean {
+        if (profileById(profileId) == null) return false
+        val favorites = favoriteIds().toMutableSet()
+        if (!favorites.add(profileId)) favorites.remove(profileId)
+        prefs.edit().putStringSet(KEY_FAVORITES, favorites).apply()
+        return true
+    }
+    fun exportCustomProfilesJson(): String {
+        val root = JSONObject().put("schema", 1)
+        val array = JSONArray()
+        customProfiles().forEach { array.put(profileToJson(it)) }
+        root.put("profiles", array).put("favorites", JSONArray(favoriteIds().toList()))
+        return root.toString(2)
+    }
+    fun importCustomProfilesJson(raw: String): Int {
+        if (raw.length > MAX_IMPORT_CHARS) return 0
+        return runCatching {
+            val source = JSONObject(raw).optJSONArray("profiles") ?: JSONArray()
+            val existing = customProfiles().toMutableList()
+            val keys = existing.map { it.platform.name + "|" + it.model.lowercase() + "|" + it.userAgent }.toMutableSet()
+            var added = 0
+            for (index in 0 until minOf(source.length(), MAX_IMPORTED_PROFILES)) {
+                val item = source.optJSONObject(index) ?: continue
+                val platform = runCatching { IdentityPlatform.valueOf(item.optString("platform")) }.getOrNull() ?: continue
+                val label = item.optString("model").trim()
+                val ua = item.optString("userAgent").trim()
+                if (IdentityProfileValidator.validate(label, ua) != null) continue
+                if (!keys.add(platform.name + "|" + label.lowercase() + "|" + ua)) continue
+                existing += IdentityProfile(
+                    id = "custom-${UUID.randomUUID()}", platform = platform, manufacturer = "Custom",
+                    model = label, osVersion = "Imported", browser = "Custom UA", userAgent = ua,
+                    purpose = "Imported browser compatibility profile"
+                )
+                added++
+            }
+            if (added > 0) persistCustomProfiles(existing)
+            added
+        }.getOrDefault(0)
+    }
+    private fun persistCustomProfiles(profiles: List<IdentityProfile>) {
+        val array = JSONArray()
+        profiles.forEach { array.put(profileToJson(it)) }
+        prefs.edit().putString(KEY_CUSTOM_PROFILES, array.toString()).apply()
+    }
+    private fun profileToJson(profile: IdentityProfile) = JSONObject().apply {
+        put("id", profile.id); put("platform", profile.platform.name); put("model", profile.model); put("userAgent", profile.userAgent)
+    }
+    private fun profileFromJson(item: JSONObject?): IdentityProfile? {
+        if (item == null) return null
+        val platform = runCatching { IdentityPlatform.valueOf(item.optString("platform")) }.getOrNull() ?: return null
+        val model = item.optString("model").trim()
+        val ua = item.optString("userAgent").trim()
+        if (IdentityProfileValidator.validate(model, ua) != null) return null
+        val id = item.optString("id").takeIf { it.startsWith("custom-") } ?: "custom-${UUID.randomUUID()}"
+        return IdentityProfile(id, platform, "Custom", model, "Custom", "Custom UA", ua, "User-defined browser compatibility profile")
+    }
     fun selectedUserAgent(): String? = selectedProfile()?.userAgent
     fun currentDevice(): DeviceSnapshot = DeviceSnapshot.capture()
-
-    companion object { private const val KEY_SELECTED_PROFILE = "selected_profile_id" }
+    companion object {
+        private const val KEY_SELECTED_PROFILE = "selected_profile_id"
+        private const val KEY_CUSTOM_PROFILES = "custom_profiles_json"
+        private const val KEY_FAVORITES = "favorite_profile_ids"
+        private const val MAX_IMPORT_CHARS = 256_000
+        private const val MAX_IMPORTED_PROFILES = 100
+    }
 }
