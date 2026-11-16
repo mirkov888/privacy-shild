@@ -122,10 +122,16 @@ private class VncSurface(context: android.content.Context) : View(context) {
         onStatus?.invoke("Menghubungkan ke $host:$port…", false)
         worker.execute {
             try {
-                val newClient = RfbClient(host, port, password) { bitmap ->
-                    frame = bitmap
-                    postInvalidate()
-                } { message, ready -> post { onStatus?.invoke(message, ready) } }
+                val newClient = RfbClient(
+                    host = host,
+                    port = port,
+                    password = password,
+                    onFrame = { bitmap ->
+                        frame = bitmap
+                        postInvalidate()
+                    },
+                    onStatus = { message, ready -> post { onStatus?.invoke(message, ready) } }
+                )
                 client = newClient
                 newClient.run()
             } catch (error: Exception) {
@@ -144,6 +150,11 @@ private class VncSurface(context: android.content.Context) : View(context) {
 
     fun sendText(value: String) {
         client?.sendText(value)
+    }
+
+    fun sendKey(keysym: Int) {
+        client?.sendKey(keysym, true)
+        client?.sendKey(keysym, false)
     }
 
     override fun onDraw(canvas: Canvas) {
