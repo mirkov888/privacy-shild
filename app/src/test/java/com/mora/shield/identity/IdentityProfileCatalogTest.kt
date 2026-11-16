@@ -26,6 +26,24 @@ class IdentityProfileCatalogTest {
         iphoneProfiles.forEach { assertTrue(it.id, it.userAgent.contains("(iPhone; CPU iPhone OS")) }
     }
 
+    @Test fun includesCurrentOfficiallyAnnounced2026DeviceFamilies() {
+        val latest = IdentityProfileCatalog.profiles.associateBy { it.id }
+        listOf(
+            "android-pixel11-chrome",
+            "android-pixel11-pro-chrome",
+            "android-pixel11-pro-xl-chrome",
+            "android-pixel11-pro-fold-chrome",
+            "android-samsung-s26-chrome",
+            "android-samsung-s26-plus-chrome",
+            "android-samsung-s26-ultra-chrome",
+            "ios-iphone18-pro-safari",
+            "ios-iphone18-pro-max-safari"
+        ).forEach { id -> assertTrue("Missing current device profile: $id", id in latest) }
+        assertEquals("Android 17", latest.getValue("android-pixel11-chrome").osVersion)
+        assertEquals("Android 16", latest.getValue("android-samsung-s26-chrome").osVersion)
+        assertEquals("iOS 27", latest.getValue("ios-iphone18-pro-safari").osVersion)
+    }
+
     @Test fun androidBrowserPickerIncludesCuratedPerAppDeviceModels() {
         val androidProfiles = IdentityProfileCatalog.forPlatform(IdentityPlatform.ANDROID)
         assertTrue("Expected Android device preset coverage in the browser picker", androidProfiles.size >= 30)
