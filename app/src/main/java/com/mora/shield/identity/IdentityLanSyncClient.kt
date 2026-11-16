@@ -16,11 +16,12 @@ import org.json.JSONObject
 data class IdentityLanSyncResult(
     val sentCreated: Int,
     val sentUnchanged: Int,
-    val receivedCreated: Int
+    val receivedCreated: Int,
+    val receivedTotal: Int
 ) {
     fun summary(): String =
         "Kirim ke Linux: $sentCreated profil baru, $sentUnchanged sudah ada. " +
-            "Ambil dari Linux: $receivedCreated profil baru."
+            "Ambil dari Linux: $receivedCreated profil baru dari $receivedTotal; sisanya sudah ada atau tidak valid."
 }
 
 /**
