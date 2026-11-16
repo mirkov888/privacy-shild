@@ -107,7 +107,7 @@ object IdentityLanSyncClient {
 
     internal fun parseFingerprint(value: String): ByteArray {
         val normalized = value.filterNot { it == ':' || it.isWhitespace() }
-        require(normalized.length == 64 && normalized.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) {
+        require(normalized.length == 64 && normalized.all { it in '0'..'9' || it.lowercaseChar() in 'a'..'f' }) {
             "SHA-256 certificate pin harus berisi 64 digit hexadecimal."
         }
         return ByteArray(32) { index ->
