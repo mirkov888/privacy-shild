@@ -89,6 +89,38 @@ object PerAppIdentityStore {
     }
 
     /**
+     * Re-picks non-security compatibility labels for explicitly enabled per-app profiles.
+     * Security identifiers, build fingerprint, Android release/SDK and patch level stay untouched.
+     */
+    fun randomizeEnabledCompatibilityProfiles(context: Context, seed: String, runIndex: Int): Int {
+        val preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val packages = preferences.all.keys.mapNotNull { rawKey ->
+            rawKey.substringBeforeLast(':', "").takeIf {
+                it.isNotBlank() && PerAppPrivacyManager.isSafePackage(it)
+            }
+        }.toSet()
+        var changed = 0
+        packages.sorted().forEach { pkg ->
+            val current = load(context, pkg)
+            if (!current.enabled) return@forEach
+            val presets = DeviceIdentityPresetCatalog.presets
+            if (presets.isEmpty()) return@forEach
+            val selected = presets[com.mora.shield.identity.IdentityRandomizationStore.stableIndex(
+                seed, "app:" + pkg, runIndex, presets.size
+            )]
+            val next = current.copy(
+                manufacturer = selected.manufacturer,
+                brand = selected.brand,
+                model = selected.model,
+                device = selected.device,
+                product = selected.product
+            )
+            if (runCatching { save(context, next) }.isSuccess) changed++
+        }
+        return changed
+    }
+
+    /**
      * Export only compatibility labels. Security/build identifiers (fingerprint, SDK,
      * release, patch level, IMEI, serial, Android ID and attestation) are deliberately omitted.
      */
