@@ -137,6 +137,10 @@ fun IdentityStudioScreen() {
             refreshKey++
             sessionSeed = FingerprintProtectionEngine.newSessionSeed()
         }) }
+        item { IdentityLanSyncCard(onSynced = {
+            refreshKey++
+            selected = engine.selectedProfile()
+        }) }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
