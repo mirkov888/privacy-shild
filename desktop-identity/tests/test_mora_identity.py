@@ -2,6 +2,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location(
@@ -150,6 +151,24 @@ class DesktopIdentityTests(unittest.TestCase):
         mismatch = next(item for item in result["checks"] if item["surface"] == "clientHints")
         self.assertEqual(mismatch["status"], "mismatch")
         self.assertIn("tidak menguji IP publik", result["note"])
+
+    def test_linux_gui_command_opens_dashboard_without_running_a_browser(self):
+        with tempfile.TemporaryDirectory() as root:
+            with patch.object(m, "open_desktop_dashboard") as dashboard:
+                self.assertEqual(m.main(["--root", root, "gui"]), 0)
+                dashboard.assert_called_once()
+
+    def test_profile_launch_uses_mora_isolated_firefox_directory(self):
+        with tempfile.TemporaryDirectory() as root:
+            profile = m.create_profile(Path(root), "launch-check", "firefox", "linux")
+            with patch.object(m.shutil, "which", return_value="/usr/bin/firefox"), \
+                 patch.object(m.subprocess, "Popen") as popen:
+                m.launch_profile(Path(root), "launch-check", diagnostics=True)
+                command = popen.call_args.args[0]
+                self.assertIn("-no-remote", command)
+                self.assertIn("-profile", command)
+                self.assertIn(str(profile), command)
+                self.assertTrue(command[-1].startswith("file://"))
 
     def test_doctor_reports_supported_browser_families(self):
         result = m.doctor()
