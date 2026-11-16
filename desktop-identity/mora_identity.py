@@ -93,6 +93,7 @@ def _write_chromium_privacy_extension(profile_dir):
         "manifest_version": 3,
         "name": "Mora Shield Privacy Guard",
         "version": "1.0.0",
+        "minimum_chrome_version": "111",
         "description": "Blocks common Canvas readback surfaces in this isolated Mora profile.",
         "content_scripts": [{
             "matches": ["<all_urls>"],
