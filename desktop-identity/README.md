@@ -25,7 +25,8 @@ The dashboard contains profile search/create, browser launch and local diagnosti
     python3 mora_identity.py export --output ~/mora-identity-profiles.json
     python3 mora_identity.py import --input ~/mora-identity-profiles.json
     python3 mora_identity.py compare --before ~/before.json --after ~/after.json
-    python3 mora_identity.py sync-serve --minutes 15
+    # Pilih satu IPv4 private milik interface Wi-Fi/LAN; jangan gunakan 0.0.0.0
+    python3 mora_identity.py sync-serve --host 192.168.1.20 --minutes 15
 
 Default storage: ~/.config/mora-shield/identity-profiles. Supply --root PATH before the subcommand for portable storage or tests.
 
@@ -67,7 +68,7 @@ python mora_identity.py audit --input mora-diagnostic.json
 
 ## Direct Android ↔ Linux LAN sync
 
-The desktop sync server requires Python 3 and OpenSSL (`sudo apt install openssl`). Run it from this directory:
+The desktop sync server requires Python 3 and OpenSSL (`sudo apt install openssl`). Identify the Wi-Fi/LAN IPv4 with `ip -4 addr`, then bind only to that one private interface (replace the example address):
 
     python3 mora_identity.py sync-serve --minutes 15
 
@@ -75,8 +76,8 @@ Keep Android and Linux on the same trusted private Wi-Fi/LAN. The terminal print
 
 - The server uses a temporary self-signed TLS certificate; Android accepts it only when its SHA-256 pin matches the value shown in the Linux terminal.
 - The bearer token is generated per run, is not written to disk and expires with the server session (1–60 minutes; default 15).
-- The server binds only to private IPv4 interfaces, limits payloads to 256 KB / 100 profiles, and never logs authorization headers or profile contents.
+- The server binds only to one specifically selected private IPv4 interface (it refuses `0.0.0.0`, public IPs and loopback), limits payloads to 256 KB / 100 profiles, and never logs authorization headers or profile contents.
 - Repeated sync is idempotent. Identical profile IDs are treated as unchanged; conflicting IDs are rejected and local profile data is never overwritten.
-- The sync endpoint is not exposed to the public internet by the tool. A host firewall may still need a temporary LAN-only allow rule for the selected TCP port.
+- The server does not bind to all interfaces. A host firewall may still need a temporary LAN-only allow rule for the selected TCP port; do not configure router port-forwarding for this session.
 - This is manual, direct profile sync, not continuous background sync. Built-in device catalogue presets, favorites, schedules, app settings and browser history are not synced.
 - Stop it with Ctrl+C when finished. Do not share the token or certificate pin with anyone else.
