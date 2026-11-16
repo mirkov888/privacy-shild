@@ -56,6 +56,7 @@ fun LinuxEnvironmentScreen() {
     val distro = moraDistros.first { it.id == selected }
     val managerReady = prefs.getBoolean("manager_ready", false)
     val installed = prefs.getBoolean("installed_$selected", false)
+    val rootfsBroken = prefs.getBoolean("rootfs_broken_$selected", false)
     val desktopReady = prefs.getBoolean("desktop_ready_$selected", false)
     val session = prefs.getString("session_$selected", "unknown") ?: "unknown"
     val lastOutput = prefs.getString("last_output", "").orEmpty()
@@ -87,6 +88,7 @@ fun LinuxEnvironmentScreen() {
         val title = when (action) {
             "bootstrap" -> "Siapkan proot-distro di Termux?"
             "install" -> "Instal distro ${distro.name}?"
+            "repair" -> "Perbaiki instalasi ${distro.name}?"
             "desktop" -> "Instal XFCE di ${distro.name}?"
             "password" -> "Atur password VNC?"
             "start" -> "Mulai sesi XFCE?"
@@ -95,7 +97,13 @@ fun LinuxEnvironmentScreen() {
         AlertDialog(
             onDismissRequest = { confirm = null },
             title = { Text(title) },
-            text = { Text("Perintah akan dikirim ke Termux setelah persetujuan ini. Instalasi desktop dapat memakai beberapa GB penyimpanan.") },
+            text = {
+                Text(when (action) {
+                    "repair" -> "Pemulihan akan menghapus seluruh data di dalam distro ${distro.name}, lalu mengunduh ulang rootfs. File di luar distro tidak dihapus. Pastikan data penting sudah dicadangkan."
+                    "install" -> "Mora Shield akan mengunduh dan memasang rootfs ${distro.name}. Jika koneksi terputus, aplikasi akan mencoba ulang hingga 3 kali."
+                    else -> "Perintah akan dikirim ke Termux setelah persetujuan ini. Instalasi desktop dapat memakai beberapa GB penyimpanan."
+                })
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirm = null
@@ -103,6 +111,7 @@ fun LinuxEnvironmentScreen() {
                         when (action) {
                             "bootstrap" -> TermuxBridge.installManager(context)
                             "install" -> TermuxBridge.installDistro(context, selected)
+                            "repair" -> TermuxBridge.repairDistro(context, selected)
                             "desktop" -> TermuxBridge.installDesktop(context, selected)
                             "password" -> TermuxBridge.setupVncPassword(context, selected)
                             "start" -> TermuxBridge.startDesktop(context, selected)
@@ -171,7 +180,12 @@ fun LinuxEnvironmentScreen() {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Status ${distro.name}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text(if (installed) "● Terpasang" else "○ Belum terdeteksi terpasang", color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (installed) "● Terdaftar" else "○ Belum terpasang", color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(when {
+                        rootfsBroken -> "Rootfs rusak / tidak lengkap · perlu pemulihan"
+                        installed -> "Rootfs valid · shell dan os-release ditemukan"
+                        else -> "Rootfs belum tersedia"
+                    }, color = if (rootfsBroken) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(if (desktopReady) "Paket XFCE/VNC: siap" else "Paket XFCE/VNC: belum dipasang")
                     Text("Sesi XFCE: " + when (session) {
                         "running" -> "Berjalan"
@@ -193,7 +207,12 @@ fun LinuxEnvironmentScreen() {
             ) { confirm = "bootstrap" }
         }
         item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-        item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}.", "Install ${distro.name}", termuxPresent && runPermission && managerReady && !installed) { confirm = "install" } }
+        item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}. Mora Shield akan mencoba ulang unduhan yang gagal.", "Install ${distro.name}", termuxPresent && runPermission && managerReady && !installed) { confirm = "install" } }
+        item {
+            if (rootfsBroken) {
+                LinuxActionCard("Pulihkan rootfs", "Rootfs terdaftar tetapi file sistem penting tidak ditemukan. Instalasi ulang otomatis akan memperbaikinya.", "Perbaiki ${distro.name}", termuxPresent && runPermission && managerReady) { confirm = "repair" }
+            }
+        }
         item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && managerReady && installed && !desktopReady) { confirm = "desktop" } }
         item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && desktopReady) { confirm = "password" } }
         item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && desktopReady) { confirm = "start" } }
