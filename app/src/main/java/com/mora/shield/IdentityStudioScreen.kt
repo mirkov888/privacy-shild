@@ -98,6 +98,12 @@ fun IdentityStudioScreen() {
             sessionSeed = FingerprintProtectionEngine.newSessionSeed()
         }) }
         item { IdentityPrivacyAuditCard() }
+        item { IdentityFileTransferCard(onUpdated = {
+            selected = engine.selectedProfile()
+            protection = protectionStore.load()
+            refreshKey++
+            sessionSeed = FingerprintProtectionEngine.newSessionSeed()
+        }) }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -132,7 +138,11 @@ fun IdentityStudioScreen() {
                 }
             }
         }
-        item { IdentityRandomizationCard(platform) }
+        item { IdentityRandomizationCard(platform, onRandomized = {
+            selected = engine.selectedProfile()
+            refreshKey++
+            sessionSeed = FingerprintProtectionEngine.newSessionSeed()
+        }) }
         item {
             Text("Platform profil browser", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
