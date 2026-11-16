@@ -248,7 +248,7 @@ def _browser_for_import(browser, user_agent):
         return "firefox"
     raise ValueError("Browser asal tidak dikenali; pilih --browser secara eksplisit.")
 
-def export_exchange(root, output):
+def export_exchange_payload(root):
     records = []
     for item in profiles(root):
         platform = item.get("platform_test_label")
@@ -259,33 +259,45 @@ def export_exchange(root, output):
             "platform": PLATFORM_CODES[platform],
             "model": item.get("model") or item["id"],
             "userAgent": item["user_agent"],
+            "browser": item.get("browser"),
         })
-    payload = {"schema": 1, "profiles": records, "favorites": []}
+    return {"schema": 1, "profiles": records, "favorites": []}
+
+
+def export_exchange(root, output):
+    payload = export_exchange_payload(root)
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name(output.name + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    temporary.write_text(json.dumps(payload, indent=2) + "\\n", encoding="utf-8")
     os.replace(temporary, output)
-    return len(records)
+    return len(payload["profiles"])
 
-def import_exchange(root, source, browser_override=None):
-    payload = json.loads(Path(source).read_text(encoding="utf-8"))
+
+def merge_exchange_payload(root, payload, browser_override=None):
     if not isinstance(payload, dict) or payload.get("schema") != 1 or not isinstance(payload.get("profiles"), list):
         raise ValueError("Format pertukaran Mora tidak didukung (schema 1 diperlukan).")
     entries = payload["profiles"]
     if len(entries) > 100:
-        raise ValueError("Maksimal 100 profil per impor.")
+        raise ValueError("Maksimal 100 profil per sinkronisasi.")
+    if browser_override is not None and browser_override not in BROWSERS:
+        raise ValueError("Browser override tidak didukung.")
+
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
     prepared = []
     ids = set()
     for item in entries:
         if not isinstance(item, dict):
             raise ValueError("Entri profil tidak valid.")
         profile_id = safe_id(item.get("id", ""))
-        if profile_id in ids or profile_dir(root, profile_id).exists():
-            raise FileExistsError("ID profil duplikat atau sudah ada: " + profile_id)
+        if profile_id in ids:
+            raise ValueError("ID profil duplikat dalam payload: " + profile_id)
         ids.add(profile_id)
         ua = _validate_user_agent(item.get("userAgent"))
-        model = str(item.get("model") or profile_id)[:120]
+        model = str(item.get("model") or profile_id).strip()[:120]
+        if not model:
+            raise ValueError("Nama model/profil kosong: " + profile_id)
         platform = _platform_for_import(item.get("platform"), model, ua)
         if not platform:
             raise ValueError("Platform tidak didukung untuk profil " + profile_id)
@@ -293,16 +305,45 @@ def import_exchange(root, source, browser_override=None):
         if browser not in BROWSERS:
             raise ValueError("Browser tidak didukung: " + str(browser))
         prepared.append((profile_id, browser, platform, ua, model))
+
     created = []
-    try:
-        for profile_id, browser, platform, ua, model in prepared:
+    unchanged = 0
+    for profile_id, browser, platform, ua, model in prepared:
+        destination = profile_dir(root, profile_id)
+        if destination.is_symlink():
+            raise ValueError("Target profil berupa symbolic link: " + profile_id)
+        if destination.exists():
+            metadata_path = destination / "profile.json"
+            try:
+                existing = json.loads(metadata_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, json.JSONDecodeError) as error:
+                raise FileExistsError("Profil lokal tidak dapat diverifikasi: " + profile_id) from error
+            matches = (
+                existing.get("user_agent") == ua
+                and existing.get("platform_test_label") == platform
+                and existing.get("model") == model
+                and existing.get("browser") == browser
+            )
+            if matches:
+                unchanged += 1
+                continue
+            raise FileExistsError("Konflik ID profil; data lokal tidak ditimpa: " + profile_id)
+
+        try:
             create_profile(root, profile_id, browser, platform, ua, model=model)
             created.append(profile_id)
-    except Exception:
-        for profile_id in created:
-            shutil.rmtree(profile_dir(root, profile_id), ignore_errors=True)
-        raise
-    return created
+        except Exception:
+            shutil.rmtree(destination, ignore_errors=True)
+            for rollback_id in created:
+                shutil.rmtree(profile_dir(root, rollback_id), ignore_errors=True)
+            raise
+    return {"created": created, "unchanged": unchanged}
+
+
+def import_exchange(root, source, browser_override=None):
+    payload = json.loads(Path(source).read_text(encoding="utf-8"))
+    return merge_exchange_payload(root, payload, browser_override)["created"]
+
 
 def compare_reports(before_path, after_path):
     before = json.loads(Path(before_path).read_text(encoding="utf-8"))
@@ -318,6 +359,165 @@ def compare_reports(before_path, after_path):
         if old != new:
             changes.append({"field": field, "before": old, "after": new})
     return {"changed": len(changes), "changes": changes}
+
+
+MAX_SYNC_BYTES = 256 * 1024
+
+
+def make_sync_request_handler(root, token, expires_at):
+    """Build an authenticated handler. Production serves it only inside a pinned TLS session."""
+    root = Path(root)
+
+    class MoraSyncHandler(BaseHTTPRequestHandler):
+        server_version = "MoraShieldSync/1"
+
+        def log_message(self, _format, *_args):
+            # Do not log tokens, profile payloads, or request headers.
+            return
+
+        def _json(self, status, payload):
+            raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(raw)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def _authorized(self):
+            if time.monotonic() >= expires_at:
+                self._json(410, {"ok": False, "error": "Sesi sinkronisasi telah kedaluwarsa."})
+                return False
+            supplied = self.headers.get("Authorization", "")
+            expected = "Bearer " + token
+            if not hmac.compare_digest(supplied, expected):
+                self._json(401, {"ok": False, "error": "Token sinkronisasi tidak valid."})
+                return False
+            return True
+
+        def do_GET(self):
+            if self.path != "/v1/profiles":
+                self._json(404, {"ok": False, "error": "Endpoint tidak ditemukan."})
+                return
+            if not self._authorized():
+                return
+            self._json(200, export_exchange_payload(root))
+
+        def do_POST(self):
+            if self.path != "/v1/profiles":
+                self._json(404, {"ok": False, "error": "Endpoint tidak ditemukan."})
+                return
+            if not self._authorized():
+                return
+            if self.headers.get_content_type() != "application/json":
+                self._json(415, {"ok": False, "error": "Content-Type harus application/json."})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            if length < 2 or length > MAX_SYNC_BYTES:
+                self._json(413, {"ok": False, "error": "Ukuran payload tidak valid atau melebihi 256 KB."})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                result = merge_exchange_payload(root, payload)
+            except (UnicodeDecodeError, ValueError, OSError, json.JSONDecodeError) as error:
+                self._json(400, {"ok": False, "error": str(error)[:240]})
+                return
+            self._json(200, {
+                "ok": True,
+                "created": len(result["created"]),
+                "unchanged": result["unchanged"],
+                "message": "Profil berhasil disinkronkan tanpa menimpa konflik lokal.",
+            })
+
+    return MoraSyncHandler
+
+
+def _local_private_ipv4_addresses():
+    addresses = set()
+    try:
+        for result in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            address = result[4][0]
+            parsed = ipaddress.ip_address(address)
+            if parsed.is_private and not parsed.is_loopback and not parsed.is_link_local:
+                addresses.add(address)
+    except OSError:
+        pass
+    return sorted(addresses)
+
+
+def serve_lan_sync(root, host="0.0.0.0", port=8765, minutes=15):
+    """Start an opt-in, short-lived HTTPS profile sync endpoint for a trusted LAN."""
+    try:
+        bind_address = ipaddress.ip_address(host)
+    except ValueError as error:
+        raise ValueError("Host harus berupa IPv4 literal; gunakan 0.0.0.0 untuk semua interface LAN.") from error
+    if bind_address.version != 4:
+        raise ValueError("Sinkronisasi LAN saat ini menggunakan IPv4.")
+    if not (bind_address.is_unspecified or bind_address.is_private):
+        raise ValueError("Server hanya boleh bind ke interface private LAN.")
+    if not 1 <= int(port) <= 65535:
+        raise ValueError("Port harus 1–65535.")
+    if not 1 <= int(minutes) <= 60:
+        raise ValueError("Durasi sesi harus 1–60 menit.")
+    openssl = shutil.which("openssl")
+    if not openssl:
+        raise RuntimeError("OpenSSL diperlukan untuk sertifikat TLS sementara. Debian: sudo apt install openssl")
+
+    token = secrets.token_urlsafe(32)
+    expires_at = time.monotonic() + (int(minutes) * 60)
+    with tempfile.TemporaryDirectory(prefix="mora-lan-sync-") as temporary:
+        cert_path = Path(temporary) / "server.crt"
+        key_path = Path(temporary) / "server.key"
+        subprocess.run(
+            [
+                openssl, "req", "-x509", "-newkey", "rsa:2048", "-sha256",
+                "-nodes", "-days", "1", "-subj", "/CN=MoraShield-LAN-Sync",
+                "-keyout", str(key_path), "-out", str(cert_path),
+            ],
+            check=True, capture_output=True, text=True, timeout=25,
+        )
+        os.chmod(key_path, 0o600)
+        der = ssl.PEM_cert_to_DER_cert(cert_path.read_text(encoding="ascii"))
+        fingerprint = hashlib.sha256(der).hexdigest()
+        tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        tls.minimum_version = ssl.TLSVersion.TLSv1_2
+        tls.load_cert_chain(certfile=str(cert_path), keyfile=str(key_path))
+
+        handler = make_sync_request_handler(root, token, expires_at)
+        server = ThreadingHTTPServer((host, int(port)), handler)
+        server.daemon_threads = True
+        server.timeout = 0.75
+        server.socket = tls.wrap_socket(server.socket, server_side=True)
+
+        addresses = _local_private_ipv4_addresses()
+        print("\\nMORA SHIELD — LOCAL LAN SYNC", flush=True)
+        print("HTTPS aktif untuk maksimum " + str(minutes) + " menit.", flush=True)
+        print("Port: " + str(port), flush=True)
+        if bind_address.is_unspecified:
+            if addresses:
+                for address in addresses:
+                    print("Alamat Android: https://" + address + ":" + str(port) + "/v1/profiles", flush=True)
+            else:
+                print("Gunakan alamat IPv4 private komputer ini.", flush=True)
+        else:
+            print("Alamat Android: https://" + host + ":" + str(port) + "/v1/profiles", flush=True)
+        print("TOKEN (rahasia; masukkan hanya di Mora Shield): " + token, flush=True)
+        print("SHA-256 CERTIFICATE PIN: " + ":".join(
+            fingerprint[index:index + 2] for index in range(0, len(fingerprint), 2)
+        ), flush=True)
+        print("Jangan bagikan token atau pin. Hentikan server dengan Ctrl+C.", flush=True)
+        try:
+            while time.monotonic() < expires_at:
+                server.handle_request()
+        except KeyboardInterrupt:
+            print("\\nSesi sinkronisasi dihentikan.", flush=True)
+        finally:
+            server.server_close()
+    return 0
 
 def protection_capabilities(browser):
     if browser not in BROWSERS:
