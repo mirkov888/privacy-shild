@@ -69,6 +69,10 @@ git push
 Connector commands remain deny-by-default and require user approval. Terminal is local to Shield, not exposed through Connector IPC. Network/background policies are not OS-enforced unless the worker implements the corresponding handler.
 
 
+## Mora Linux Environment — Android userspace
+
+Mora Shield now includes an in-app setup guide for Debian, Ubuntu, and Arch Linux userspaces through Termux + proot-distro, with XFCE over localhost-only VNC. The guide copies commands for the user; it does not silently install packages or execute shell commands. This is a PRoot userspace, not a full VM or separate kernel. See [docs/MORA-LINUX-ENVIRONMENT.md](docs/MORA-LINUX-ENVIRONMENT.md).
+
 ## Mora Identity Studio — Phase 1 & 2
 
 The additive Identity Studio introduces a local profile engine and a starter browser compatibility catalogue for Android, iOS/iPadOS, Windows, macOS, and Linux. It preserves the existing Per-App Device Identity feature. See [docs/IDENTITY-STUDIO-PHASE1-2.md](docs/IDENTITY-STUDIO-PHASE1-2.md) for scope and limitations. The selected User-Agent is exposed for opt-in use by Mora-owned WebViews; external browsers and Android system identity are not modified.
