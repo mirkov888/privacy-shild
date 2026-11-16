@@ -80,15 +80,20 @@ class DesktopIdentityTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 m.restore_profile(root_path, "backup", archive)
 
-    def test_rollback_requires_explicit_backup(self):
+    def test_rollback_restores_last_backup_without_losing_current_state(self):
         with tempfile.TemporaryDirectory() as root:
             root_path = Path(root)
-            m.create_profile(root_path, "restore", "firefox", "linux")
+            profile = m.create_profile(root_path, "restore", "firefox", "linux")
+            original = json.loads((profile / "profile.json").read_text())
             m.backup_profile(root_path, "restore", root_path / "manual.zip")
-            import shutil
-            shutil.rmtree(root_path / "restore")
+            changed = dict(original)
+            changed["model"] = "manually changed"
+            (profile / "profile.json").write_text(json.dumps(changed))
             restored = m.rollback_profile(root_path, "restore")
-            self.assertTrue((restored / "profile.json").is_file())
+            current = json.loads((restored / "profile.json").read_text())
+            self.assertEqual(current["model"], original["model"])
+            self.assertTrue((root_path / ".rollback" / "restore.pre-rollback.zip").is_file())
+            self.assertTrue((root_path / ".rollback" / "restore.pre-rollback").is_dir())
 
     def test_rejects_zip_slip(self):
         import zipfile
