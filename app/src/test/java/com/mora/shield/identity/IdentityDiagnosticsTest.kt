@@ -21,6 +21,22 @@ class IdentityDiagnosticsTest {
         assertTrue(changes.any { it.startsWith("canvas:") })
     }
 
+    @Test fun leakageSummaryFlagsUserAgentClientHintsPlatformMismatch() {
+        val report = """{"collectedAt":"2026-11-16T00:00:00Z","userAgent":"Mozilla/5.0 (Linux; Android 15) Chrome/131.0.0.0","platform":"Linux armv8l","clientHints":{"platform":"Windows","mobile":false},"canvas":{"available":true,"hash":"abcd"},"webgl":{"available":true,"debugExtension":false},"webRtc":{"peerConnection":false,"mediaDevices":true},"locale":{"language":"id-ID"},"timezone":"Asia/Jakarta","screen":{"width":1080,"height":2400,"innerWidth":412,"innerHeight":915}}"""
+        val summary = IdentityDiagnostics.leakageSummary(report)
+        assertTrue(summary.contains("PERLU DICEK"))
+        assertTrue(summary.contains("Canvas: readback tersedia"))
+        assertTrue(summary.contains("RTCPeerConnection tidak tersedia"))
+        assertTrue(summary.contains("bukan jaminan anonimitas"))
+    }
+
+    @Test fun leakageSummaryDoesNotTreatMissingClientHintsAsFailure() {
+        val report = """{"collectedAt":"2026-11-16T00:00:00Z","userAgent":"Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)","platform":"iPhone","canvas":{"available":false},"webgl":{"available":false},"webRtc":{"peerConnection":false},"timezone":"Asia/Jakarta"}"""
+        val summary = IdentityDiagnostics.leakageSummary(report)
+        assertTrue(summary.contains("Client Hints: tidak tersedia"))
+        assertTrue(summary.contains("WebGL: API tidak tersedia"))
+    }
+
     @Test fun unchangedReportsHaveNoDiff() {
         val report = """{"userAgent":"A","platform":"Linux","timezone":"UTC"}"""
         assertTrue(IdentityDiagnostics.compare(report, report).isEmpty())
