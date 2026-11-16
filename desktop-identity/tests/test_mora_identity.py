@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -121,15 +122,24 @@ class DesktopIdentityTests(unittest.TestCase):
             self.assertTrue(metadata["protection"]["canvas"]["applied"])
             self.assertTrue(metadata["protection"]["webgl"]["applied"])
 
-    def test_chromium_marks_canvas_unsupported_and_webgl_opt_in(self):
+    def test_chromium_canvas_extension_and_webgl_are_opt_in(self):
         with tempfile.TemporaryDirectory() as root:
             profile = m.create_profile(Path(root), "chromium-guard", "chromium", "linux",
                                        protect_canvas=True, protect_webgl=True)
             launcher = (profile / "launch.sh").read_text()
             metadata = json.loads((profile / "profile.json").read_text())
+            extension = profile / "mora-privacy-extension"
+            manifest = json.loads((extension / "manifest.json").read_text())
+            script = (extension / "privacy.js").read_text()
             self.assertIn("--disable-webgl", launcher)
-            self.assertFalse(metadata["protection"]["canvas"]["applied"])
-            self.assertIn("not available", metadata["protection"]["canvas"]["method"])
+            self.assertIn("--load-extension=", launcher)
+            self.assertTrue(metadata["protection"]["canvas"]["applied"])
+            self.assertIn("page Canvas readback", metadata["protection"]["canvas"]["method"])
+            self.assertEqual(manifest["manifest_version"], 3)
+            self.assertIn("document_start", manifest["content_scripts"][0]["run_at"])
+            self.assertIn("getImageData", script)
+            self.assertIn("toDataURL", script)
+            self.assertIn("OffscreenCanvas", script)
 
     def test_diagnostics_uri_is_local_file(self):
         with tempfile.TemporaryDirectory() as root:
@@ -189,6 +199,96 @@ class DesktopIdentityTests(unittest.TestCase):
             result = m.browser_installation("zen", {"app.zen_browser.zen"})
         self.assertEqual(result["kind"], "flatpak")
         self.assertEqual(result["app_id"], "app.zen_browser.zen")
+
+    def test_lan_sync_requires_bearer_token_and_exports_profiles(self):
+        from http.server import ThreadingHTTPServer
+        import threading
+        import urllib.error
+        import urllib.request
+
+        with tempfile.TemporaryDirectory() as root:
+            m.create_profile(Path(root), "linux-profile", "firefox", "linux")
+            server = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                m.make_sync_request_handler(Path(root), "test-session-token", time.monotonic() + 30),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_port) + "/v1/profiles"
+            try:
+                request = urllib.request.Request(url)
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(request, timeout=3)
+                self.assertEqual(error.exception.code, 401)
+
+                request = urllib.request.Request(
+                    url, headers={"Authorization": "Bearer test-session-token"}
+                )
+                with urllib.request.urlopen(request, timeout=3) as response:
+                    payload = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(payload["schema"], 1)
+                self.assertEqual(payload["profiles"][0]["id"], "linux-profile")
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=2)
+
+    def test_lan_sync_import_is_idempotent_and_does_not_overwrite_conflicts(self):
+        from http.server import ThreadingHTTPServer
+        import threading
+        import urllib.error
+        import urllib.request
+
+        with tempfile.TemporaryDirectory() as root:
+            server = ThreadingHTTPServer(
+                ("127.0.0.1", 0),
+                m.make_sync_request_handler(Path(root), "test-session-token", time.monotonic() + 30),
+            )
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            url = "http://127.0.0.1:" + str(server.server_port) + "/v1/profiles"
+            token = {"Authorization": "Bearer test-session-token"}
+            payload = {
+                "schema": 1,
+                "profiles": [{
+                    "id": "custom-sync-demo", "platform": "ANDROID",
+                    "model": "Android browser test",
+                    "userAgent": m.PLATFORMS["android"],
+                }],
+                "favorites": [],
+            }
+            try:
+                body = json.dumps(payload).encode("utf-8")
+                request = urllib.request.Request(
+                    url, data=body, headers={**token, "Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=3) as response:
+                    first = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(first["created"], 1)
+
+                request = urllib.request.Request(
+                    url, data=body, headers={**token, "Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(request, timeout=3) as response:
+                    second = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(second["created"], 0)
+                self.assertEqual(second["unchanged"], 1)
+
+                conflicting = dict(payload)
+                conflicting["profiles"] = [dict(payload["profiles"][0], userAgent="invalid but syntactically valid")]
+                request = urllib.request.Request(
+                    url, data=json.dumps(conflicting).encode("utf-8"),
+                    headers={**token, "Content-Type": "application/json"}, method="POST",
+                )
+                with self.assertRaises(urllib.error.HTTPError) as error:
+                    urllib.request.urlopen(request, timeout=3)
+                self.assertEqual(error.exception.code, 400)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=2)
 
     def test_flatpak_firefox_launch_uses_isolated_profile_permission(self):
         with tempfile.TemporaryDirectory() as root:
