@@ -612,16 +612,9 @@ def open_desktop_dashboard(root):
         if not selected:
             return
         destination, metadata = selected
-        if metadata.get("engine") == "firefox":
-            command = [BROWSERS[metadata["browser"]][0], "-no-remote", "-profile", str(destination)]
-        else:
-            command = [str(destination / "launch.sh")]
-        if with_diagnostics:
-            command.append(diagnostics_uri(base, metadata["id"]))
         try:
-            import subprocess
-            subprocess.Popen(command, start_new_session=True)
-            set_status("Membuka profil terisolasi: " + metadata["id"])
+            process = launch_profile(base, metadata["id"], diagnostics=with_diagnostics)
+            set_status("Membuka profil terisolasi: " + metadata["id"] + " (PID " + str(process.pid) + ")")
         except (OSError, ValueError) as error:
             messagebox.showerror("Gagal membuka browser", str(error), parent=window)
 
