@@ -277,7 +277,7 @@ class DesktopIdentityTests(unittest.TestCase):
                 self.assertEqual(second["unchanged"], 1)
 
                 conflicting = dict(payload)
-                conflicting["profiles"] = [dict(payload["profiles"][0], userAgent="invalid but syntactically valid")]
+                conflicting["profiles"] = [dict(payload["profiles"][0], userAgent=m.PLATFORMS["windows"])]
                 request = urllib.request.Request(
                     url, data=json.dumps(conflicting).encode("utf-8"),
                     headers={**token, "Content-Type": "application/json"}, method="POST",
