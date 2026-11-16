@@ -85,4 +85,6 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     testImplementation("junit:junit:4.13.2")
+    // Use the real JSON-java implementation in JVM tests instead of Android SDK JSON stubs.
+    testImplementation("org.json:json:20260814")
 }
