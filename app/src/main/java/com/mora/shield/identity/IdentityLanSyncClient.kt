@@ -76,7 +76,7 @@ object IdentityLanSyncClient {
         )
     }
 
-    private fun validateInputs(
+    internal fun validateInputs(
         host: String,
         port: Int,
         token: String,
@@ -93,7 +93,7 @@ object IdentityLanSyncClient {
         return "https://$host:$port/v1/profiles"
     }
 
-    private fun isPrivateIpv4(value: String): Boolean {
+    internal fun isPrivateIpv4(value: String): Boolean {
         val parts = value.split('.')
         if (parts.size != 4) return false
         val octets = parts.map { part ->
@@ -105,7 +105,7 @@ object IdentityLanSyncClient {
             (octets[0] == 192 && octets[1] == 168)
     }
 
-    private fun parseFingerprint(value: String): ByteArray {
+    internal fun parseFingerprint(value: String): ByteArray {
         val normalized = value.filterNot { it == ':' || it.isWhitespace() }
         require(normalized.length == 64 && normalized.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) {
             "SHA-256 certificate pin harus berisi 64 digit hexadecimal."
