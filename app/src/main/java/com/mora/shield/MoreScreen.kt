@@ -28,6 +28,7 @@ private data class MoreEntry(val title: String, val subtitle: String, val symbol
 fun MoreScreen(onSelect: (Int) -> Unit) {
     val entries = listOf(
         MoreEntry("Terminal", "Shell Android dan perintah root dalam halaman khusus", "⌁", 8),
+        MoreEntry("Mora Linux Environment", "Setup Debian, Ubuntu, Arch Linux, XFCE, dan sesi VNC via Termux", "▣", 17),
         MoreEntry("Pengaturan", "Preferensi aplikasi, keamanan, dan konfigurasi modul", "⚙", 4),
         MoreEntry("Mora Core", "App Registry, konektor, kebijakan aplikasi, dan audit perintah", "◈", 5),
         MoreEntry("Keamanan & Privasi", "Deteksi risiko jaringan, audit izin, sembunyikan/pulihkan aplikasi, dan ekspor laporan", "🛡", 9),
