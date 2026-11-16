@@ -22,7 +22,7 @@ Unit tests cover unique profile IDs, platform coverage, and User-Agent presence.
 
 ## 2026 current browser-compatibility profiles
 
-The bundled browser test catalogue also includes Google Pixel 11, Pixel 11 Pro, Pixel 11 Pro XL, Pixel 11 Pro Fold (Android 17); Samsung Galaxy S26, S26+, S26 Ultra (Android 16); and iPhone 18 Pro / Pro Max (iOS 27). The Chrome test string uses the November 2026 stable-series version marker. These are browser compatibility fixtures only. They do not provide verified build identifiers, physical-device emulation, OEM service behavior, or security attestation.
+The bundled browser test catalogue also includes Google Pixel 11, Pixel 11 Pro and Pixel 11 Pro XL (Android 17); Samsung Galaxy S26, S26+, S26 Ultra (Android 16); and iPhone 18 Pro / Pro Max (iOS 27). The Chrome test string uses the November 2026 stable-series version marker. These are browser compatibility fixtures only. They do not provide verified build identifiers, physical-device emulation, OEM service behavior, or security attestation.
 
 Official references checked for the model / OS labels:
 - Google Pixel 11 lineup and Android 17 launch: https://store.google.com/product/pixel_11_specs
