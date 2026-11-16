@@ -53,10 +53,13 @@ object TermuxBridge {
             fi
             echo MORA_ROOTFS_OK
             "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc '
-                pid="$(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
-                if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
-                    state="$(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
-                    case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                if command -v startxfce4 >/dev/null 2>&1 && command -v vncserver >/dev/null 2>&1 && command -v dbus-run-session >/dev/null 2>&1; then
+                    echo MORA_DESKTOP_READY
+                else
+                    echo MORA_DESKTOP_MISSING
+                fi
+                if vncserver -list 2>/dev/null | grep -Eq "([[:space:]]|^)(:?1)[[:space:]]+5901([[:space:]]|$)"; then
+                    echo MORA_XFCE_RUNNING
                 else
                     echo MORA_XFCE_STOPPED
                 fi
@@ -127,17 +130,159 @@ object TermuxBridge {
             chmod 700 ~/.config/tigervnc/xstartup
             cp ~/.config/tigervnc/xstartup ~/.vnc/xstartup
             chmod 700 ~/.vnc/xstartup
-            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
-            live=false
-            if [ "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
-                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d ' ')"
-                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
-            fi
-            if [ "${'$'}live" != true ]; then
+            if ! vncserver -list 2>/dev/null | grep -Eq "([[:space:]]|^)(:?1)[[:space:]]+5901([[:space:]]|$)"; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="${'$'}(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d ' ')"
-                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+}(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="${'
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+}(ps -o stat= -p "${'
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+}oldpid" 2>/dev/null | tr -d ' ')"
+                    case "${'
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
