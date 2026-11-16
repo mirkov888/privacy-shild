@@ -90,7 +90,11 @@ class IdentityEngine(context: Context) {
             val root = JSONObject(raw)
             val source = root.optJSONArray("profiles") ?: JSONArray()
             val existing = customProfiles().toMutableList()
-            val keys = existing.associateBy { it.platform.name + "|" + it.model.lowercase() + "|" + it.userAgent }.toMutableMap()
+            // Treat bundled presets as already-known records so LAN/file import does not
+            // create a custom duplicate when the receiving platform already has that preset.
+            val keys = (IdentityProfileCatalog.profiles + existing)
+                .associateBy { it.platform.name + "|" + it.model.lowercase() + "|" + it.userAgent }
+                .toMutableMap()
             val importedIdMap = mutableMapOf<String, String>()
             var added = 0
             for (index in 0 until minOf(source.length(), MAX_IMPORTED_PROFILES)) {
