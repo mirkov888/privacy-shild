@@ -901,7 +901,7 @@ def open_desktop_dashboard(root):
 
     options = ttk.Frame(create_box)
     options.grid(row=2, column=0, columnspan=5, sticky="w", pady=(8, 2))
-    ttk.Checkbutton(options, text="Canvas (Firefox)", variable=canvas_var).pack(side="left", padx=(4, 12))
+    ttk.Checkbutton(options, text="Canvas guard", variable=canvas_var).pack(side="left", padx=(4, 12))
     ttk.Checkbutton(options, text="Nonaktifkan WebGL", variable=webgl_var).pack(side="left", padx=12)
     ttk.Checkbutton(options, text="Batasi WebRTC", variable=rtc_var).pack(side="left", padx=12)
 
@@ -1150,7 +1150,7 @@ def main(argv=None):
     create.add_argument("--user-agent")
     create.add_argument("--allow-webrtc", action="store_true")
     create.add_argument("--protect-canvas", action="store_true",
-                        help="aktifkan anti-canvas bawaan Firefox (Chromium tidak didukung)")
+                        help="Firefox RFP atau ekstensi Canvas page-context untuk Chromium; sebagian situs dapat terganggu")
     create.add_argument("--protect-webgl", action="store_true",
                         help="nonaktifkan WebGL API; situs 3D dapat terganggu")
     launch = commands.add_parser("launch")
