@@ -3,6 +3,7 @@
 ## Phase 8 — Mora Shield integration boundary
 - Identity Studio remains in the existing Mora Shield Android application; there is no second Android Identity app.
 - The Android screen hosts device information, profile catalogue, WebView privacy switches, randomizer, privacy audit, diagnostic controls and recovery.
+- Profile JSON and full Identity Studio backups can be imported/exported with Android's Storage Access Framework; restore is validated and requires explicit confirmation before changing profiles or settings.
 - Linux uses the desktop-identity helper with both CLI and a lightweight Tkinter dashboard for isolated browser profiles, protection capability reporting and portable JSON exchange. It is not a shared live database; profile JSON can be exported/imported explicitly.
 - Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium.
 - Existing user browser profiles are never silently changed. Per-browser profiles live under Mora's own configuration directory.
@@ -22,11 +23,12 @@
 
 ## Manual device/browser verification still required
 1. Android: install the generated debug APK on a supported phone, open Identity Studio, switch profiles and verify the preview's User-Agent and Client Hints support status.
-2. Android: toggle Canvas/WebGL/WebRTC protection and compare baseline/after reports; test both supported and unsupported WebView feature paths.
-3. Android: enable a per-app compatibility profile only for a non-critical test app, verify LSPosed scope in its own manager, force-stop/reopen the app and test rollback.
-4. Android: enable scheduled randomization, verify WorkManager state, test reboot/battery optimization behavior, restore backup and exercise rollback.
-5. Linux: run `python mora_identity.py gui` or `doctor`, create and launch isolated profiles separately in Firefox, LibreWolf, Zen, Brave, Chrome and Chromium where installed; verify the normal browser profile is unchanged.
-6. Linux: export/import the schema-1 profile exchange, backup, mutate a test profile, rollback it and compare before/after diagnostic JSON.
+2. Android: export/import a custom-profile JSON file and a full backup through the document picker; confirm invalid/oversized files are rejected and rollback works after a restore.
+3. Android: toggle Canvas/WebGL/WebRTC protection and compare baseline/after reports; test both supported and unsupported WebView feature paths.
+4. Android: enable a per-app compatibility profile only for a non-critical test app, verify LSPosed scope in its own manager, force-stop/reopen the app and test rollback.
+5. Android: enable scheduled randomization, verify WorkManager state, test reboot/battery optimization behavior, restore backup and exercise rollback.
+6. Linux: run `python mora_identity.py gui` or `doctor`, create and launch isolated profiles separately in Firefox, LibreWolf, Zen, Brave, Chrome and Chromium where installed; verify the normal browser profile is unchanged.
+7. Linux: export/import the schema-1 profile exchange, backup, mutate a test profile, rollback it and compare before/after diagnostic JSON.
 
 ## Limitations and safety
 - User-Agent presets are compatibility labels, not complete OS/device emulation. Client Hints depend on browser engine/version and feature support.
