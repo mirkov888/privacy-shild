@@ -27,23 +27,32 @@ class TermuxResultReceiver : BroadcastReceiver() {
                 editor.putString("last_error", "Instalasi proot-distro gagal (exit code $exitCode). Periksa output Termux.")
             }
         } else if (operation.startsWith("status:")) {
-            val installed = output.contains("($distro)") ||
-                output.lines().any { line ->
-                    val normalized = line.trim().removePrefix("*").trim().lowercase()
-                    normalized == distro || normalized.startsWith("$distro ") || normalized.endsWith(" $distro")
-                }
+            val installed = output.contains("MORA_DISTRO_INSTALLED")
+            val rootfsOk = output.contains("MORA_ROOTFS_OK")
             editor.putBoolean("installed_$distro", installed)
-                .putString("status_$distro", if (installed) "installed" else "not_installed")
+                .putBoolean("rootfs_broken_$distro", installed && !rootfsOk)
+                .putString("status_$distro", when {
+                    !installed -> "not_installed"
+                    rootfsOk -> "installed"
+                    else -> "rootfs_broken"
+                })
+                .putString("session_$distro", when {
+                    output.contains("MORA_XFCE_RUNNING") -> "running"
+                    output.contains("MORA_XFCE_STOPPED") -> "stopped"
+                    else -> "unknown"
+                })
         } else if (operation.startsWith("session:")) {
             editor.putString("session_$distro", when {
                 output.contains("MORA_XFCE_RUNNING") -> "running"
                 output.contains("MORA_XFCE_STOPPED") -> "stopped"
                 else -> "unknown"
             })
+        } else if ((operation.startsWith("install:") || operation.startsWith("repair:")) && ok) {
+            editor.putBoolean("installed_$distro", true)
+                .putBoolean("rootfs_broken_$distro", false)
+                .putString("status_$distro", "installed")
         } else if (operation.startsWith("desktop:") && ok) {
             editor.putBoolean("desktop_ready_$distro", true)
-        } else if (operation.startsWith("install:") && ok) {
-            editor.putBoolean("installed_$distro", true).putString("status_$distro", "installed")
         } else if (operation.startsWith("start:") && ok) {
             editor.putString("session_$distro", "start_requested")
         } else if (operation.startsWith("stop:") && ok) {
