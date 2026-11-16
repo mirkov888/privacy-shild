@@ -1,6 +1,6 @@
 # Mora Shield Desktop Identity Bridge
 
-Linux companion utility for managing isolated browser compatibility profiles used by Mora Shield. It is a command-line bridge, not a second Android application or a full Linux GUI dashboard. It never edits the user's normal browser profile, OS identity, hardware identifier, certificate or attestation.
+Linux companion utility for Mora Shield with a CLI and a lightweight Tkinter dashboard. It manages isolated browser compatibility profiles and never edits the user's normal browser profile, OS identity, hardware identifier, certificate or attestation.
 
 Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium. Firefox-family profiles use dedicated profile directories and user.js; Chromium-family profiles use a separate user-data directory and launcher.
 
@@ -47,16 +47,6 @@ Every profile contains diagnostics.html. Open it locally to inspect User-Agent, 
 - Android external browsers are not modified by this helper.
 - The Linux dashboard is an optional Tkinter front-end to this existing companion bridge; it is not a second Android app or a shared always-live Android/Linux profile database. Use explicit JSON import/export to move profiles between platforms.
 - No IMEI, serial, Android ID, MAC, build fingerprint, security attestation or Play Integrity values are read or changed.
-
-## Desktop dashboard
-
-Launch the GUI dashboard on Linux:
-
-```bash
-python mora_identity.py gui
-```
-
-The dashboard uses Tkinter from the Python standard library. It manages Mora-owned isolated profiles, browser launch, backup/rollback, JSON import/export, browser capability checks and local diagnostic audits. If Tkinter is missing on Debian/Ubuntu, install the system package `python3-tk`. No heavy Python runtime dependency is added.
 
 ## Optional browser protection controls
 
