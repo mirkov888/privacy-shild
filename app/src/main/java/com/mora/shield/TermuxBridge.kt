@@ -33,7 +33,7 @@ object TermuxBridge {
 
     fun requestStatus(context: Context, distro: String) {
         run(context, "status:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("list", "--installed"), true)
+            arrayOf("list", "--quiet"), true)
         run(context, "session:$distro", "$PREFIX/bin/proot-distro",
             arrayOf("login", distro, "--", "bash", "-lc", "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"), true)
     }
