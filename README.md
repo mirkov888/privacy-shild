@@ -67,3 +67,8 @@ git push
 - See `docs/MORA_SHIELD_APP_MODULE_ROADMAP.md` for future app and module updates.
 
 Connector commands remain deny-by-default and require user approval. Terminal is local to Shield, not exposed through Connector IPC. Network/background policies are not OS-enforced unless the worker implements the corresponding handler.
+
+
+## Mora Identity Studio — Phase 1 & 2
+
+The additive Identity Studio introduces a local profile engine and a starter browser compatibility catalogue for Android, iOS/iPadOS, Windows, macOS, and Linux. It preserves the existing Per-App Device Identity feature. See [docs/IDENTITY-STUDIO-PHASE1-2.md](docs/IDENTITY-STUDIO-PHASE1-2.md) for scope and limitations. The selected User-Agent is exposed for opt-in use by Mora-owned WebViews; external browsers and Android system identity are not modified.

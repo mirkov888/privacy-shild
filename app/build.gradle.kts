@@ -78,10 +78,14 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("androidx.webkit:webkit:1.18.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // Mora Core persistent storage.
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     testImplementation("junit:junit:4.13.2")
+    // Use the real JSON-java implementation in JVM tests instead of Android SDK JSON stubs.
+    testImplementation("org.json:json:20260814")
 }
