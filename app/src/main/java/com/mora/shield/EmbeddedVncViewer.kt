@@ -191,6 +191,10 @@ private class RfbClient(
     private val secret = password
 
     fun run() {
+        try { runConnection() } finally { close() }
+    }
+
+    private fun runConnection() {
         socket.tcpNoDelay = true
         socket.connect(InetSocketAddress(host, port), 5000)
         socket.soTimeout = 0
@@ -224,7 +228,8 @@ private class RfbClient(
         val desktopName = ByteArray(nameLength)
         input.readFully(desktopName)
 
-        bitmap = Bitmap.createBitmap(max(1, width), max(1, height), Bitmap.Config.ARGB_8888)
+        if (width <= 0 || height <= 0 || width.toLong() * height.toLong() > 16_000_000L) throw IllegalStateException("Resolusi desktop terlalu besar; turunkan resolusi VNC")
+        bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         setPixelFormat()
         setEncodings()
         requestUpdate(false)
