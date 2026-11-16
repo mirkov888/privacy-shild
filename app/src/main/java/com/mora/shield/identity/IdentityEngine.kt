@@ -71,9 +71,11 @@ class IdentityEngine(context: Context) {
     fun importCustomProfilesJson(raw: String): Int {
         if (raw.length > MAX_IMPORT_CHARS) return 0
         return runCatching {
-            val source = JSONObject(raw).optJSONArray("profiles") ?: JSONArray()
+            val root = JSONObject(raw)
+            val source = root.optJSONArray("profiles") ?: JSONArray()
             val existing = customProfiles().toMutableList()
-            val keys = existing.map { it.platform.name + "|" + it.model.lowercase() + "|" + it.userAgent }.toMutableSet()
+            val keys = existing.associateBy { it.platform.name + "|" + it.model.lowercase() + "|" + it.userAgent }.toMutableMap()
+            val importedIdMap = mutableMapOf<String, String>()
             var added = 0
             for (index in 0 until minOf(source.length(), MAX_IMPORTED_PROFILES)) {
                 val item = source.optJSONObject(index) ?: continue
@@ -81,15 +83,37 @@ class IdentityEngine(context: Context) {
                 val label = item.optString("model").trim()
                 val ua = item.optString("userAgent").trim()
                 if (IdentityProfileValidator.validate(label, ua) != null) continue
-                if (!keys.add(platform.name + "|" + label.lowercase() + "|" + ua)) continue
-                existing += IdentityProfile(
-                    id = "custom-${UUID.randomUUID()}", platform = platform, manufacturer = "Custom",
+                val key = platform.name + "|" + label.lowercase() + "|" + ua
+                val oldId = item.optString("id")
+                val existingProfile = keys[key]
+                if (existingProfile != null) {
+                    if (oldId.isNotBlank()) importedIdMap[oldId] = existingProfile.id
+                    continue
+                }
+                val newId = "custom-" + UUID.randomUUID()
+                val newProfile = IdentityProfile(
+                    id = newId, platform = platform, manufacturer = "Custom",
                     model = label, osVersion = "Imported", browser = "Custom UA", userAgent = ua,
                     purpose = "Imported browser compatibility profile"
                 )
+                existing += newProfile
+                keys[key] = newProfile
+                if (oldId.isNotBlank()) importedIdMap[oldId] = newId
                 added++
             }
             if (added > 0) persistCustomProfiles(existing)
+
+            val sourceFavorites = root.optJSONArray("favorites") ?: JSONArray()
+            if (sourceFavorites.length() > 0) {
+                val allowedIds = (IdentityProfileCatalog.profiles.map { it.id } + existing.map { it.id }).toSet()
+                val favorites = favoriteIds().toMutableSet()
+                for (index in 0 until sourceFavorites.length()) {
+                    val oldId = sourceFavorites.optString(index)
+                    val mappedId = importedIdMap[oldId] ?: oldId
+                    if (mappedId in allowedIds) favorites.add(mappedId)
+                }
+                prefs.edit().putStringSet(KEY_FAVORITES, favorites).apply()
+            }
             added
         }.getOrDefault(0)
     }
