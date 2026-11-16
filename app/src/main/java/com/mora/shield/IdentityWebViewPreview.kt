@@ -31,7 +31,6 @@ fun IdentityWebViewPreview(profile: IdentityProfile) {
                     allowUniversalAccessFromFileURLs = false
                     mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     blockNetworkLoads = true
-                    blockNetworkImageLoads = true
                     setSupportMultipleWindows(false)
                     javaScriptCanOpenWindowsAutomatically = false
                     userAgentString = profile.userAgent
