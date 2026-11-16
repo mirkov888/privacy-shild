@@ -38,11 +38,30 @@ class FingerprintProtectionEngineTest {
                 canvasProtection = false,
                 webGlProtection = false,
                 syncClientHints = false,
-                randomizePerSession = false
+                randomizePerSession = false,
+                webRtcProtection = false
             ),
             "session-three"
         )
         assertTrue(script.isEmpty())
+    }
+
+    @Test
+    fun webRtcProtectionRunsWithoutCanvasOrWebGlProtection() {
+        val script = FingerprintProtectionEngine.buildDocumentStartScript(
+            IdentityProtectionSettings(
+                canvasProtection = false,
+                webGlProtection = false,
+                syncClientHints = false,
+                randomizePerSession = false,
+                webRtcProtection = true
+            ),
+            "session-webrtc"
+        )
+        assertTrue(script.contains("RTCPeerConnection"))
+        assertTrue(script.contains("getUserMedia"))
+        assertFalse(script.contains("CanvasRenderingContext2D"))
+        assertFalse(script.contains("WebGLRenderingContext"))
     }
 
     @Test

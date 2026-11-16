@@ -53,6 +53,7 @@ class IdentityEngine(context: Context) {
         return true
     }
     fun favoriteIds(): Set<String> = prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
+    fun clearFavorites() { prefs.edit().remove(KEY_FAVORITES).apply() }
     fun isFavorite(profileId: String): Boolean = profileId in favoriteIds()
     fun toggleFavorite(profileId: String): Boolean {
         if (profileById(profileId) == null) return false

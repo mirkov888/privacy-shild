@@ -20,7 +20,7 @@ fun PerAppIdentityScreen() {
     val apps = remember {
         @Suppress("DEPRECATION")
         pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            .filter { it.packageName != context.packageName && !it.packageName.startsWith("com.android.") }
+            .filter { it.packageName != context.packageName && PerAppPrivacyManager.isSafePackage(it.packageName) && it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM == 0 }
             .sortedBy { pm.getApplicationLabel(it).toString().lowercase() }
     }
     var selected by remember { mutableStateOf<String?>(null) }
@@ -127,7 +127,7 @@ private fun IdentityEditor(pkg: String, onBack: () -> Unit, onSaved: () -> Unit)
             if (restored) {
                 Store.message = "Profil sebelumnya berhasil dipulihkan"
             } else {
-                PerAppIdentityStore.save(context, DeviceIdentityProfile(pkg, enabled = false))
+                PerAppIdentityStore.save(context, PerAppIdentityStore.load(context, pkg).copy(enabled = false))
                 Store.message = "Tidak ada snapshot lama; profil dinonaktifkan"
             }
             onBack()

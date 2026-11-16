@@ -74,6 +74,7 @@ class IdentityProfileRecoveryManager(context: Context) {
 
     private fun applyValidatedBackup(root: JSONObject): IdentityRecoveryResult = runCatching {
         val catalog = root.getJSONObject("profileCatalog")
+        identityEngine.clearFavorites()
         identityEngine.importCustomProfilesJson(catalog.toString())
 
         val selected = root.optJSONObject("selectedProfile")

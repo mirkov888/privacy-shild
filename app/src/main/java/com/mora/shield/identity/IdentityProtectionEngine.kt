@@ -55,7 +55,7 @@ object FingerprintProtectionEngine {
         settings: IdentityProtectionSettings,
         sessionSeed: String
     ): String {
-        if (!settings.canvasProtection && !settings.webGlProtection) return ""
+        if (!settings.canvasProtection && !settings.webGlProtection && !settings.webRtcProtection) return ""
         val seed = sessionSeed.filter { it.isLetterOrDigit() || it == '-' || it == '_' }
             .take(64).ifBlank { "mora-session" }
         return buildString {
