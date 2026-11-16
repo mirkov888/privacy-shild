@@ -60,7 +60,6 @@ object TermuxBridge {
                     echo MORA_XFCE_STOPPED
                 fi
             '
-            '
         """.trimIndent()
         run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
