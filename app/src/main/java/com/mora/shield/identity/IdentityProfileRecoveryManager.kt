@@ -83,6 +83,11 @@ class IdentityProfileRecoveryManager(context: Context) {
         val result = applyValidatedBackup(JSONObject(previous))
         if (result.success) {
             rollbackPreferences.edit().putString(KEY_LAST_ROLLBACK, current).apply()
+        } else {
+            val recovered = runCatching { applyValidatedBackup(JSONObject(current)) }.getOrNull()
+            if (recovered?.success != true) {
+                return IdentityRecoveryResult(false, result.message + "; keadaan sebelum rollback juga gagal dipulihkan")
+            }
         }
         return result
     }
