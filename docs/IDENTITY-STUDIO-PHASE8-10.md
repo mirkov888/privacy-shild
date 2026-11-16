@@ -4,7 +4,7 @@
 - Identity Studio remains in the existing Mora Shield Android application; there is no second Android Identity app.
 - The Android screen hosts device information, profile catalogue, WebView privacy switches, randomizer, privacy audit, diagnostic controls and recovery.
 - Profile JSON and full Identity Studio backups can be imported/exported with Android's Storage Access Framework; backups include a read-only original-device baseline, and restore is validated and requires explicit confirmation before changing profiles or settings. Import does not overwrite the receiving device's local baseline or live Android identity.
-- Linux uses the desktop-identity helper with CLI and a lightweight Tkinter dashboard for isolated browser profiles and protection capability reporting. A manual HTTPS LAN sync session now transfers custom profiles bidirectionally between Android and Linux; it uses a short-lived token plus certificate pin and does not synchronize other settings or run continuously.
+- Linux uses the desktop-identity helper with CLI and a lightweight Tkinter dashboard for isolated browser profiles and protection capability reporting. A manual HTTPS LAN sync session now transfers custom profiles bidirectionally between Android and Linux; it uses a short-lived token plus certificate pin, binds to one selected private IPv4 interface, and Android validates the complete payload (schema, IDs, platforms and User-Agent) before import. It does not synchronize other settings or run continuously.
 - Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium.
 - Existing user browser profiles are never silently changed. Per-browser profiles live under Mora's own configuration directory.
 
