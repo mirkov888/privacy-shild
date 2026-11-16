@@ -74,7 +74,7 @@ class IdentityProfileRecoveryManager(context: Context) {
 
     private fun applyValidatedBackup(root: JSONObject): IdentityRecoveryResult = runCatching {
         val catalog = root.getJSONObject("profileCatalog")
-        identityEngine.clearFavorites()
+        identityEngine.clearForRestore()
         identityEngine.importCustomProfilesJson(catalog.toString())
 
         val selected = root.optJSONObject("selectedProfile")
@@ -100,7 +100,7 @@ class IdentityProfileRecoveryManager(context: Context) {
                 webRtcProtection = p.getBoolean("webRtcProtection")
             )
         )
-        val restored = PerAppIdentityStore.restoreCompatibilityProfilesJson(
+        val restored = PerAppIdentityStore.replaceCompatibilityProfilesJson(
             appContext, root.getJSONArray("perAppProfiles")
         )
         IdentityRecoveryResult(true, "Backup berhasil dipulihkan", restored)

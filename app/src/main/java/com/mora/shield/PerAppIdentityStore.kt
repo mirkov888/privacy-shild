@@ -125,8 +125,8 @@ object PerAppIdentityStore {
         return null
     }
 
-    /** Restore a validated portable list while preserving local legacy security/build fields. */
-    fun restoreCompatibilityProfilesJson(context: Context, source: JSONArray): Int {
+    /** Replace the exported per-app set, disabling stale entries by removing their local profile keys. */
+    fun replaceCompatibilityProfilesJson(context: Context, source: JSONArray): Int {
         validateCompatibilityProfilesJson(source)?.let { throw IllegalArgumentException(it) }
         val profiles = (0 until source.length()).map { index ->
             val item = source.getJSONObject(index)
@@ -140,6 +140,24 @@ object PerAppIdentityStore {
                 device = item.getString("device"),
                 product = item.getString("product")
             )
+        }
+        val incomingPackages = profiles.map { it.packageName }.toSet()
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val existingPackages = prefs.all.keys.mapNotNull { rawKey ->
+            rawKey.substringBeforeLast(':', "").takeIf {
+                it.isNotBlank() && PerAppPrivacyManager.isSafePackage(it)
+            }
+        }.toSet()
+        val removePackages = existingPackages - incomingPackages
+        if (removePackages.isNotEmpty()) {
+            val edit = prefs.edit()
+            removePackages.forEach { pkg ->
+                prefs.all.keys.filter { it.startsWith("$pkg:") }.forEach(edit::remove)
+            }
+            edit.apply()
+            val rollbackEdit = context.getSharedPreferences(ROLLBACK_PREFS, Context.MODE_PRIVATE).edit()
+            removePackages.forEach(rollbackEdit::remove)
+            rollbackEdit.apply()
         }
         profiles.forEach { save(context, it) }
         return profiles.size

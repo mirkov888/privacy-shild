@@ -28,6 +28,15 @@ class IdentityEngine(context: Context) {
         return true
     }
     fun clearSelection() { prefs.edit().remove(KEY_SELECTED_PROFILE).apply() }
+
+    /** Clear local catalog state before applying a complete, validated recovery snapshot. */
+    fun clearForRestore() {
+        prefs.edit()
+            .putString(KEY_CUSTOM_PROFILES, "[]")
+            .remove(KEY_SELECTED_PROFILE)
+            .remove(KEY_FAVORITES)
+            .apply()
+    }
     fun randomProfile(platform: IdentityPlatform): IdentityProfile? {
         val candidates = profilesForPlatform(platform)
         if (candidates.isEmpty()) return null
