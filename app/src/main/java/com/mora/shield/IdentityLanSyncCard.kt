@@ -52,7 +52,7 @@ fun IdentityLanSyncCard(onSynced: () -> Unit = {}) {
             )
             OutlinedTextField(
                 value = host,
-                onValueChange = { host = it.filter { char -> char.isDigit() || char == '.' }.take(15) },
+                onValueChange = { host = it.filter { char -> char in '0'..'9' || char == '.' }.take(15) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("IPv4 private komputer Linux") },
                 placeholder = { Text("192.168.1.10") },
@@ -61,7 +61,7 @@ fun IdentityLanSyncCard(onSynced: () -> Unit = {}) {
             )
             OutlinedTextField(
                 value = port,
-                onValueChange = { port = it.filter(Char::isDigit).take(5) },
+                onValueChange = { port = it.filter { char -> char in '0'..'9' }.take(5) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Port server") },
                 singleLine = true,
@@ -79,7 +79,7 @@ fun IdentityLanSyncCard(onSynced: () -> Unit = {}) {
             OutlinedTextField(
                 value = certificatePin,
                 onValueChange = { certificatePin = it.filter { char ->
-                    char.isDigit() || char.lowercaseChar() in 'a'..'f' || char == ':'
+                    char in '0'..'9' || char.lowercaseChar() in 'a'..'f' || char == ':'
                 }.take(95) },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("SHA-256 certificate fingerprint") },
