@@ -21,8 +21,11 @@ class TermuxResultReceiver : BroadcastReceiver() {
             .putString("last_error", internalError.take(1500))
             .putInt("last_exit_code", exitCode)
             .putLong("last_updated", System.currentTimeMillis())
-        if (operation == "bootstrap" && ok) {
-            editor.putBoolean("manager_ready", true)
+        if (operation == "bootstrap") {
+            editor.putBoolean("manager_ready", ok)
+            if (!ok && internalError.isBlank() && error.isBlank()) {
+                editor.putString("last_error", "Instalasi proot-distro gagal (exit code $exitCode). Periksa output Termux.")
+            }
         } else if (operation.startsWith("status:")) {
             val installed = output.contains("($distro)") ||
                 output.lines().any { line ->
