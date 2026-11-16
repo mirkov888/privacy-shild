@@ -1,21 +1,22 @@
 package com.mora.shield
 
 import android.content.Context
+import android.os.Build
 import org.json.JSONArray
 import org.json.JSONObject
 
 data class DeviceIdentityProfile(
     val packageName: String,
     val enabled: Boolean = false,
-    val manufacturer: String = "Google",
-    val brand: String = "google",
-    val model: String = "Pixel 9 Pro",
-    val device: String = "komodo",
-    val product: String = "komodo",
-    val fingerprint: String = "google/komodo/komodo:16/BP2A.250605.031/12345678:user/release-keys",
-    val release: String = "16",
-    val sdk: Int = 36,
-    val securityPatch: String = "2026-10-05"
+    val manufacturer: String = Build.MANUFACTURER.orEmpty(),
+    val brand: String = Build.BRAND.orEmpty(),
+    val model: String = Build.MODEL.orEmpty(),
+    val device: String = Build.DEVICE.orEmpty(),
+    val product: String = Build.PRODUCT.orEmpty(),
+    val fingerprint: String = Build.FINGERPRINT.orEmpty(),
+    val release: String = Build.VERSION.RELEASE.orEmpty(),
+    val sdk: Int = Build.VERSION.SDK_INT,
+    val securityPatch: String = Build.VERSION.SECURITY_PATCH.orEmpty()
 )
 
 object PerAppIdentityStore {
@@ -28,15 +29,15 @@ object PerAppIdentityStore {
         return DeviceIdentityProfile(
             packageName = pkg,
             enabled = p.getBoolean(key(pkg, "enabled"), false),
-            manufacturer = p.getString(key(pkg, "manufacturer"), "Google") ?: "Google",
-            brand = p.getString(key(pkg, "brand"), "google") ?: "google",
-            model = p.getString(key(pkg, "model"), "Pixel 9 Pro") ?: "Pixel 9 Pro",
-            device = p.getString(key(pkg, "device"), "komodo") ?: "komodo",
-            product = p.getString(key(pkg, "product"), "komodo") ?: "komodo",
-            fingerprint = p.getString(key(pkg, "fingerprint"), "google/komodo/komodo:16/BP2A.250605.031/12345678:user/release-keys") ?: "",
-            release = p.getString(key(pkg, "release"), "16") ?: "16",
-            sdk = p.getInt(key(pkg, "sdk"), 36),
-            securityPatch = p.getString(key(pkg, "patch"), "2026-10-05") ?: "2026-10-05"
+            manufacturer = p.getString(key(pkg, "manufacturer"), Build.MANUFACTURER.orEmpty()) ?: Build.MANUFACTURER.orEmpty(),
+            brand = p.getString(key(pkg, "brand"), Build.BRAND.orEmpty()) ?: Build.BRAND.orEmpty(),
+            model = p.getString(key(pkg, "model"), Build.MODEL.orEmpty()) ?: Build.MODEL.orEmpty(),
+            device = p.getString(key(pkg, "device"), Build.DEVICE.orEmpty()) ?: Build.DEVICE.orEmpty(),
+            product = p.getString(key(pkg, "product"), Build.PRODUCT.orEmpty()) ?: Build.PRODUCT.orEmpty(),
+            fingerprint = p.getString(key(pkg, "fingerprint"), Build.FINGERPRINT.orEmpty()) ?: Build.FINGERPRINT.orEmpty(),
+            release = p.getString(key(pkg, "release"), Build.VERSION.RELEASE.orEmpty()) ?: Build.VERSION.RELEASE.orEmpty(),
+            sdk = p.getInt(key(pkg, "sdk"), Build.VERSION.SDK_INT),
+            securityPatch = p.getString(key(pkg, "patch"), Build.VERSION.SECURITY_PATCH.orEmpty()) ?: Build.VERSION.SECURITY_PATCH.orEmpty()
         )
     }
 
