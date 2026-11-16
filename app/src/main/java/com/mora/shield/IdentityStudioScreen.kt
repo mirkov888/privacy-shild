@@ -341,10 +341,15 @@ private fun IdentityAndroidIntegrationCard() {
                 onClick = {
                     scanning = true
                     scope.launch {
-                        report = withContext(Dispatchers.IO) {
-                            IdentityAndroidIntegration.scan(context.applicationContext)
+                        try {
+                            report = withContext(Dispatchers.IO) {
+                                IdentityAndroidIntegration.scan(context.applicationContext)
+                            }
+                        } catch (error: Exception) {
+                            Store.message = "Scan kompatibilitas gagal: ${error.message ?: "kesalahan tidak diketahui"}"
+                        } finally {
+                            scanning = false
                         }
-                        scanning = false
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
