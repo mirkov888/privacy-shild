@@ -1171,6 +1171,13 @@ def main(argv=None):
     compare.add_argument("--after", type=Path, required=True)
     audit = commands.add_parser("audit")
     audit.add_argument("--input", type=Path, required=True)
+    sync = commands.add_parser(
+        "sync-serve",
+        help="start a short-lived HTTPS profile sync server for a trusted local network",
+    )
+    sync.add_argument("--host", default="0.0.0.0", help="private LAN IPv4 or 0.0.0.0")
+    sync.add_argument("--port", type=int, default=8765)
+    sync.add_argument("--minutes", type=int, default=15, help="session lifetime (1–60 minutes)")
     args = parser.parse_args(argv)
     try:
         if args.cmd == "gui":
@@ -1209,8 +1216,13 @@ def main(argv=None):
         elif args.cmd == "audit":
             payload = json.loads(args.input.read_text(encoding="utf-8"))
             print(json.dumps(audit_report(payload), indent=2))
+        elif args.cmd == "sync-serve":
+            return serve_lan_sync(args.root, args.host, args.port, args.minutes)
         return 0
-    except (OSError, ValueError, KeyError, zipfile.BadZipFile, json.JSONDecodeError) as error:
+    except (
+        OSError, ValueError, KeyError, RuntimeError, subprocess.CalledProcessError,
+        subprocess.TimeoutExpired, zipfile.BadZipFile, json.JSONDecodeError,
+    ) as error:
         print("mora-identity:", error, file=sys.stderr)
         return 2
 
