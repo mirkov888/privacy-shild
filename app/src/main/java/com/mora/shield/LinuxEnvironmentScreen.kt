@@ -51,7 +51,8 @@ fun LinuxEnvironmentScreen() {
     var termuxPresent by remember { mutableStateOf(TermuxBridge.installed(context)) }
     var runPermission by remember { mutableStateOf(TermuxBridge.hasRunPermission(context)) }
     val distro = moraDistros.first { it.id == selected }
-    val managerReady = prefs.getBoolean("manager_ready", false)\n    val installed = prefs.getBoolean("installed_$selected", false)
+    val managerReady = prefs.getBoolean("manager_ready", false)
+    val installed = prefs.getBoolean("installed_$selected", false)
     val session = prefs.getString("session_$selected", "unknown") ?: "unknown"
     val lastOutput = prefs.getString("last_output", "").orEmpty()
     val lastOperation = prefs.getString("last_operation", "").orEmpty()
@@ -80,7 +81,8 @@ fun LinuxEnvironmentScreen() {
     val action = confirm
     if (action != null) {
         val title = when (action) {
-            "bootstrap" -> "Siapkan proot-distro di Termux?"\n            "install" -> "Instal distro ${distro.name}?"
+            "bootstrap" -> "Siapkan proot-distro di Termux?"
+            "install" -> "Instal distro ${distro.name}?"
             "desktop" -> "Instal XFCE di ${distro.name}?"
             "start" -> "Mulai sesi XFCE?"
             else -> "Hentikan sesi XFCE?"
@@ -94,7 +96,8 @@ fun LinuxEnvironmentScreen() {
                     confirm = null
                     try {
                         when (action) {
-                            "bootstrap" -> TermuxBridge.installManager(context)\n                            "install" -> TermuxBridge.installDistro(context, selected)
+                            "bootstrap" -> TermuxBridge.installManager(context)
+                            "install" -> TermuxBridge.installDistro(context, selected)
                             "desktop" -> TermuxBridge.installDesktop(context, selected)
                             "start" -> TermuxBridge.startDesktop(context, selected)
                             "stop" -> TermuxBridge.stopDesktop(context, selected)
@@ -127,7 +130,8 @@ fun LinuxEnvironmentScreen() {
                     Text(when {
                         !termuxPresent -> "Termux belum terpasang"
                         !runPermission -> "Termux terdeteksi · izin Run commands belum diberikan"
-                        !managerReady -> "Termux terhubung · proot-distro belum disiapkan"\n                        else -> "Termux terhubung · kontrol langsung tersedia"
+                        !managerReady -> "Termux terhubung · proot-distro belum disiapkan"
+                        else -> "Termux terhubung · kontrol langsung tersedia"
                     })
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = {
@@ -172,7 +176,10 @@ fun LinuxEnvironmentScreen() {
                 }
             }
         }
-        item {\n            LinuxActionCard("Siapkan proot-distro", "Perbarui daftar paket Termux dan pasang pengelola distro Linux.", "Install proot-distro", termuxPresent && runPermission && !managerReady) { confirm = "bootstrap" }\n        }\n        item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+        item {
+            LinuxActionCard("Siapkan proot-distro", "Perbarui daftar paket Termux dan pasang pengelola distro Linux.", "Install proot-distro", termuxPresent && runPermission && !managerReady) { confirm = "bootstrap" }
+        }
+        item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
         item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}.", "Install ${distro.name}", termuxPresent && runPermission && managerReady && !installed) { confirm = "install" } }
         item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && managerReady && installed) { confirm = "desktop" } }
         item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && installed) { confirm = "start" } }
