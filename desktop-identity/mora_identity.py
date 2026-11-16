@@ -454,16 +454,23 @@ def _local_private_ipv4_addresses():
     return sorted(addresses)
 
 
-def serve_lan_sync(root, host="0.0.0.0", port=8765, minutes=15):
-    """Start an opt-in, short-lived HTTPS profile sync endpoint for a trusted LAN."""
+def serve_lan_sync(root, host=None, port=8765, minutes=15):
+    """Start an opt-in, short-lived HTTPS profile sync endpoint on one private LAN interface."""
+    addresses = _local_private_ipv4_addresses()
+    if host is None:
+        if len(addresses) != 1:
+            raise ValueError(
+                "Alamat private LAN tidak tunggal. Tentukan --host dengan IPv4 Wi-Fi/LAN komputer."
+            )
+        host = addresses[0]
     try:
         bind_address = ipaddress.ip_address(host)
     except ValueError as error:
-        raise ValueError("Host harus berupa IPv4 literal; gunakan 0.0.0.0 untuk semua interface LAN.") from error
+        raise ValueError("Host harus berupa alamat IPv4 private, bukan nama host.") from error
     if bind_address.version != 4:
         raise ValueError("Sinkronisasi LAN saat ini menggunakan IPv4.")
-    if not (bind_address.is_unspecified or bind_address.is_private):
-        raise ValueError("Server hanya boleh bind ke interface private LAN.")
+    if not bind_address.is_private or bind_address.is_loopback or bind_address.is_link_local or bind_address.is_unspecified:
+        raise ValueError("Server hanya boleh bind ke satu alamat IPv4 private LAN yang spesifik.")
     if not 1 <= int(port) <= 65535:
         raise ValueError("Port harus 1–65535.")
     if not 1 <= int(minutes) <= 60:
@@ -498,18 +505,10 @@ def serve_lan_sync(root, host="0.0.0.0", port=8765, minutes=15):
         server.timeout = 0.75
         server.socket = tls.wrap_socket(server.socket, server_side=True)
 
-        addresses = _local_private_ipv4_addresses()
         print("\nMORA SHIELD — LOCAL LAN SYNC", flush=True)
         print("HTTPS aktif untuk maksimum " + str(minutes) + " menit.", flush=True)
         print("Port: " + str(port), flush=True)
-        if bind_address.is_unspecified:
-            if addresses:
-                for address in addresses:
-                    print("Alamat Android: https://" + address + ":" + str(port) + "/v1/profiles", flush=True)
-            else:
-                print("Gunakan alamat IPv4 private komputer ini.", flush=True)
-        else:
-            print("Alamat Android: https://" + host + ":" + str(port) + "/v1/profiles", flush=True)
+        print("Alamat Android: https://" + host + ":" + str(port) + "/v1/profiles", flush=True)
         print("TOKEN (rahasia; masukkan hanya di Mora Shield): " + token, flush=True)
         print("SHA-256 CERTIFICATE PIN: " + ":".join(
             fingerprint[index:index + 2] for index in range(0, len(fingerprint), 2)
@@ -1180,7 +1179,10 @@ def main(argv=None):
         "sync-serve",
         help="start a short-lived HTTPS profile sync server for a trusted local network",
     )
-    sync.add_argument("--host", default="0.0.0.0", help="private LAN IPv4 or 0.0.0.0")
+    sync.add_argument(
+        "--host", default=None,
+        help="one private LAN IPv4 address; auto-selects only when exactly one is detected",
+    )
     sync.add_argument("--port", type=int, default=8765)
     sync.add_argument("--minutes", type=int, default=15, help="session lifetime (1–60 minutes)")
     args = parser.parse_args(argv)
