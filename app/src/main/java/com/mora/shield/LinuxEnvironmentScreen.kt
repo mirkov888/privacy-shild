@@ -1,20 +1,18 @@
 package com.mora.shield
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
-import android.content.pm.PackageManager
-import androidx.compose.foundation.horizontalScroll
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -22,7 +20,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,149 +32,170 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
-private data class LinuxDistro(
-    val id: String,
-    val title: String,
-    val family: String,
-    val note: String
-)
-
-private val moraLinuxDistros = listOf(
-    LinuxDistro("debian", "Debian", "apt", "Pilihan awal yang ringan dan stabil"),
-    LinuxDistro("ubuntu", "Ubuntu", "apt", "Kompatibilitas paket luas; butuh ruang lebih"),
-    LinuxDistro("archlinux", "Arch Linux", "pacman", "Rolling release; perlu pemeliharaan lebih aktif")
+private data class MoraDistro(val id: String, val name: String, val detail: String)
+private val moraDistros = listOf(
+    MoraDistro("debian", "Debian", "Stabil dan disarankan untuk instalasi pertama"),
+    MoraDistro("ubuntu", "Ubuntu", "Kompatibilitas paket luas"),
+    MoraDistro("archlinux", "Arch Linux", "Rolling release; pemeliharaan lebih aktif")
 )
 
 @Composable
 fun LinuxEnvironmentScreen() {
     val context = LocalContext.current
-    var selectedId by rememberSaveable { mutableStateOf("debian") }
-    val distro = moraLinuxDistros.firstOrNull { it.id == selectedId } ?: moraLinuxDistros.first()
-    val termuxInstalled = remember {
-        try {
-            context.packageManager.getPackageInfo("com.termux", PackageManager.GET_ACTIVITIES)
-            true
-        } catch (_: Exception) {
-            false
+    val prefs = remember { context.getSharedPreferences("mora_linux", Context.MODE_PRIVATE) }
+    var selected by rememberSaveable { mutableStateOf("debian") }
+    var refresh by remember { mutableStateOf(0) }
+    var confirm by remember { mutableStateOf<String?>(null) }
+    var termuxPresent by remember { mutableStateOf(TermuxBridge.installed(context)) }
+    var runPermission by remember { mutableStateOf(TermuxBridge.hasRunPermission(context)) }
+    val distro = moraDistros.first { it.id == selected }
+    val installed = prefs.getBoolean("installed_$selected", false)
+    val session = prefs.getString("session_$selected", "unknown") ?: "unknown"
+    val lastOutput = prefs.getString("last_output", "").orEmpty()
+    val lastOperation = prefs.getString("last_operation", "").orEmpty()
+    val lastError = prefs.getString("last_error", "").orEmpty()
+    val lastExit = prefs.getInt("last_exit_code", -1)
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        runPermission = TermuxBridge.hasRunPermission(context)
+    }
+
+    LaunchedEffect(selected, refresh) {
+        termuxPresent = TermuxBridge.installed(context)
+        runPermission = TermuxBridge.hasRunPermission(context)
+        if (termuxPresent && runPermission) {
+            try { TermuxBridge.requestStatus(context, selected) } catch (_: Exception) { }
+        }
+    }
+    LaunchedEffect(selected) {
+        while (true) {
+            delay(3000)
+            refresh = (refresh + 1) % 100000
+            runPermission = TermuxBridge.hasRunPermission(context)
+            termuxPresent = TermuxBridge.installed(context)
         }
     }
 
-    val installCommand = "pkg update -y && pkg upgrade -y && pkg install -y proot-distro && proot-distro install ${distro.id}"
-    val enterCommand = "proot-distro login ${distro.id}"
-    val desktopCommand = if (distro.family == "pacman") {
-        "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
-    } else {
-        "apt update && apt install -y xfce4 dbus-x11 tigervnc-standalone-server"
-    }
-    val vncSetupCommand = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod +x ~/.vnc/xstartup && vncserver :1 -localhost yes -geometry 1280x720 -depth 24"
-    val stopCommand = "vncserver -kill :1"
-
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("Mora Linux Environment", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text(
-                "Kelola Linux userspace Android melalui Termux + proot-distro. Distro berjalan terisolasi di ruang pengguna, bukan sebagai kernel atau VM terpisah.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    val action = confirm
+    if (action != null) {
+        val title = when (action) {
+            "install" -> "Instal distro ${distro.name}?"
+            "desktop" -> "Instal XFCE di ${distro.name}?"
+            "start" -> "Mulai sesi XFCE?"
+            else -> "Hentikan sesi XFCE?"
         }
-
-        Card(colors = CardDefaults.cardColors(containerColor = if (termuxInstalled) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(if (termuxInstalled) "Termux terdeteksi" else "Termux belum terdeteksi", fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (termuxInstalled) "Mora Shield akan membuka Termux untuk menjalankan perintah yang kamu salin." else "Pasang Termux dari sumber resminya terlebih dahulu. Jangan mencampur APK Termux dan plugin dari sumber tanda tangan berbeda.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                OutlinedButton(onClick = {
-                    val intent = context.packageManager.getLaunchIntentForPackage("com.termux")
-                    if (intent != null) context.startActivity(intent)
-                    else {
-                        val web = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/termux/termux-app/releases"))
-                        context.startActivity(web)
+        AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text(title) },
+            text = { Text("Perintah akan dikirim ke Termux setelah persetujuan ini. Instalasi desktop dapat memakai beberapa GB penyimpanan.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirm = null
+                    try {
+                        when (action) {
+                            "install" -> TermuxBridge.installDistro(context, selected)
+                            "desktop" -> TermuxBridge.installDesktop(context, selected)
+                            "start" -> TermuxBridge.startDesktop(context, selected)
+                            "stop" -> TermuxBridge.stopDesktop(context, selected)
+                        }
+                    } catch (e: Exception) {
+                        prefs.edit().putString("last_error", e.message ?: "Gagal menjalankan perintah").apply()
                     }
-                }) { Text(if (termuxInstalled) "Buka Termux" else "Panduan unduh Termux") }
+                    refresh++
+                }) { Text("Lanjutkan") }
+            },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Batal") } }
+        )
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("Mora Linux Environment", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Kontrol distro Linux Android melalui Termux + proot-distro memakai API RUN_COMMAND resmi Termux.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Pilih distro", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                moraLinuxDistros.forEach { item ->
-                    FilterChip(
-                        selected = selectedId == item.id,
-                        onClick = { selectedId = item.id },
-                        label = { Text(item.title) }
-                    )
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = if (termuxPresent && runPermission) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Koneksi Termux", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(when {
+                        !termuxPresent -> "Termux belum terpasang"
+                        !runPermission -> "Termux terdeteksi · izin Run commands belum diberikan"
+                        else -> "Termux terhubung · kontrol langsung tersedia"
+                    })
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            if (termuxPresent) {
+                                context.packageManager.getLaunchIntentForPackage(TermuxBridge.TERMUX_PACKAGE)?.let(context::startActivity)
+                            } else {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-app/releases")))
+                            }
+                        }) { Text(if (termuxPresent) "Buka Termux" else "Unduh Termux") }
+                        if (termuxPresent && !runPermission) {
+                            Button(onClick = { permissionLauncher.launch(TermuxBridge.RUN_PERMISSION) }) { Text("Minta izin") }
+                        }
+                    }
+                    if (termuxPresent && !runPermission) {
+                        Text("Jika dialog tidak muncul: Info aplikasi Mora Shield → Izin → Izin tambahan → Run commands in Termux environment.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Di Termux, aktifkan allow-external-apps=true pada ~/.termux/termux.properties. Pengaturan keamanan ini tidak diubah otomatis.", style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Text(distro.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        LinuxCommandCard(
-            title = "1. Pasang distro",
-            description = "Jalankan di terminal Termux, bukan di dalam shell distro.",
-            command = installCommand,
-            action = "Salin perintah"
-        )
-        LinuxCommandCard(
-            title = "2. Masuk ke distro",
-            description = "Setelah instalasi selesai, jalankan perintah ini di Termux.",
-            command = enterCommand,
-            action = "Salin perintah"
-        )
-        LinuxCommandCard(
-            title = "3. Pasang XFCE + VNC",
-            description = "Jalankan setelah masuk ke shell distro. Instalasi desktop dapat memerlukan ruang penyimpanan cukup besar.",
-            command = desktopCommand,
-            action = "Salin perintah"
-        )
-        LinuxCommandCard(
-            title = "4. Buat sesi desktop",
-            description = "Masih di shell distro. VNC dibatasi ke localhost agar tidak membuka desktop ke jaringan Wi-Fi.",
-            command = vncSetupCommand,
-            action = "Salin perintah"
-        )
-        LinuxCommandCard(
-            title = "Hentikan desktop",
-            description = "Jalankan dari shell distro saat sesi XFCE tidak digunakan.",
-            command = stopCommand,
-            action = "Salin perintah"
-        )
-
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Hubungkan aplikasi VNC", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text("Setelah server berjalan, buka aplikasi VNC Viewer dan buat koneksi ke host 127.0.0.1 dengan port 5901 (display :1). Atur password VNC saat pertama kali diminta oleh server.", style = MaterialTheme.typography.bodyMedium)
-                Text("Untuk menghentikan desktop, jalankan perintah stop di atas lalu ketik exit untuk keluar dari shell distro. Tutup sesi Termux jika proses lain masih berjalan.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        item {
+            Text("Pilih distribusi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                moraDistros.forEach { item ->
+                    FilterChip(selected = selected == item.id, onClick = { selected = item.id }, label = { Text(item.name) })
+                }
+            }
+            Text(distro.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Status ${distro.name}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(if (installed) "● Terpasang" else "○ Belum terdeteksi terpasang", color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Sesi XFCE: " + when (session) {
+                        "running" -> "Berjalan"
+                        "stopped" -> "Berhenti"
+                        "start_requested" -> "Perintah start terkirim"
+                        else -> "Belum diketahui"
+                    })
+                    OutlinedButton(enabled = termuxPresent && runPermission, onClick = { refresh++ }) { Text("Periksa status") }
+                }
             }
         }
-
-        Text(
-            "Batasan: PRoot berbagi kernel Android; systemd, Docker, modul kernel, akselerasi GPU desktop, dan aplikasi yang membutuhkan akses kernel penuh mungkin tidak berjalan. Ketersediaan distro mengikuti versi proot-distro. Backup data distro secara berkala.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+        item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}.", "Install ${distro.name}", termuxPresent && runPermission && !installed) { confirm = "install" } }
+        item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && installed) { confirm = "desktop" } }
+        item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && installed) { confirm = "start" } }
+        item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && installed) { confirm = "stop" } }
+        item {
+            Text("Hasil perintah terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("$lastOperation · exit code $lastExit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (lastError.isNotBlank()) Text(lastError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            if (lastOutput.isNotBlank()) Text(lastOutput.takeLast(1800), style = MaterialTheme.typography.bodySmall)
+        }
+        item {
+            Text("PRoot berbagi kernel Android, bukan VM/kernel terpisah. systemd, Docker, modul kernel, dan akselerasi GPU penuh tidak dijamin. Izinkan Termux berjalan di latar belakang agar sesi tidak mudah dihentikan HyperOS.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
 @Composable
-private fun LinuxCommandCard(title: String, description: String, command: String, action: String) {
-    val context = LocalContext.current
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
+private fun LinuxActionCard(title: String, detail: String, action: String, enabled: Boolean, onClick: () -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(command, style = MaterialTheme.typography.bodySmall)
-            Button(onClick = {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                clipboard.setPrimaryClip(ClipData.newPlainText(title, command))
-                Toast.makeText(context, "Perintah disalin", Toast.LENGTH_SHORT).show()
-            }) { Text(action) }
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = onClick, enabled = enabled) { Text(action) }
         }
     }
 }
