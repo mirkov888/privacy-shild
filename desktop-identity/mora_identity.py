@@ -7,6 +7,7 @@ import re
 import shutil
 import stat
 import sys
+import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
@@ -421,11 +422,244 @@ def rollback_profile(root, profile_id):
         shutil.rmtree(staging, ignore_errors=True)
         raise
 
+
+
+def launch_profile(root, profile_id, diagnostics=False):
+    destination = profile_dir(root, profile_id)
+    metadata_path = destination / "profile.json"
+    if not metadata_path.is_file():
+        raise FileNotFoundError("Profil tidak ditemukan.")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    browser = metadata.get("browser")
+    if browser not in BROWSERS:
+        raise ValueError("Browser pada profil tidak didukung.")
+    if metadata.get("engine") == "firefox":
+        command = [BROWSERS[browser][0], "-no-remote", "-profile", str(destination)]
+    else:
+        launcher = destination / "launch.sh"
+        if not launcher.is_file():
+            raise FileNotFoundError("Launcher profil Chromium tidak ditemukan.")
+        command = [str(launcher)]
+    if diagnostics:
+        command.append(diagnostics_uri(root, profile_id))
+    executable = shutil.which(command[0]) if not Path(command[0]).is_absolute() else command[0]
+    if not executable:
+        raise FileNotFoundError("Browser belum terpasang atau executable tidak ditemukan: " + command[0])
+    command[0] = executable
+    return subprocess.Popen(command, cwd=str(destination), start_new_session=True)
+
+
+def open_desktop_dashboard(root):
+    """Launch a lightweight Tk dashboard; all browser data stays in Mora's profile root."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog, messagebox, ttk
+    except ImportError as error:
+        raise RuntimeError("Tkinter tidak tersedia. Pasang paket python3-tk lalu coba lagi.") from error
+
+    root = Path(root).expanduser()
+    root.mkdir(parents=True, exist_ok=True)
+    window = tk.Tk()
+    window.title("Mora Shield — Identity Studio")
+    window.geometry("940x700")
+    window.minsize(760, 560)
+
+    style = ttk.Style(window)
+    if "clam" in style.theme_names():
+        style.theme_use("clam")
+
+    wrapper = ttk.Frame(window, padding=14)
+    wrapper.pack(fill="both", expand=True)
+    ttk.Label(wrapper, text="Mora Identity Studio", font=("TkDefaultFont", 17, "bold")).pack(anchor="w")
+    ttk.Label(
+        wrapper,
+        text="Dashboard Linux · isolated profiles · no changes to normal browser profiles",
+        foreground="#666666",
+    ).pack(anchor="w", pady=(2, 10))
+
+    form = ttk.LabelFrame(wrapper, text="Create compatibility profile", padding=10)
+    form.pack(fill="x", pady=(0, 10))
+    variables = {
+        "id": tk.StringVar(value="my-profile"),
+        "model": tk.StringVar(value="Custom compatibility profile"),
+        "browser": tk.StringVar(value="firefox"),
+        "platform": tk.StringVar(value="linux"),
+    }
+    ttk.Label(form, text="Profile ID").grid(row=0, column=0, sticky="w")
+    ttk.Entry(form, textvariable=variables["id"], width=24).grid(row=1, column=0, sticky="ew", padx=(0, 8))
+    ttk.Label(form, text="Model / label").grid(row=0, column=1, sticky="w")
+    ttk.Entry(form, textvariable=variables["model"], width=30).grid(row=1, column=1, sticky="ew", padx=(0, 8))
+    ttk.Label(form, text="Browser").grid(row=0, column=2, sticky="w")
+    ttk.Combobox(form, textvariable=variables["browser"], values=tuple(BROWSERS), state="readonly", width=13).grid(row=1, column=2, sticky="ew", padx=(0, 8))
+    ttk.Label(form, text="Test platform").grid(row=0, column=3, sticky="w")
+    ttk.Combobox(form, textvariable=variables["platform"], values=tuple(PLATFORMS), state="readonly", width=12).grid(row=1, column=3, sticky="ew")
+    for column in range(4):
+        form.columnconfigure(column, weight=1)
+
+    protect_canvas = tk.BooleanVar(value=False)
+    protect_webgl = tk.BooleanVar(value=False)
+    protect_webrtc = tk.BooleanVar(value=True)
+    show_diagnostics = tk.BooleanVar(value=True)
+    options = ttk.Frame(form)
+    options.grid(row=2, column=0, columnspan=4, sticky="w", pady=(8, 0))
+    ttk.Checkbutton(options, text="Canvas protection (Firefox only)", variable=protect_canvas).pack(side="left", padx=(0, 12))
+    ttk.Checkbutton(options, text="Disable WebGL", variable=protect_webgl).pack(side="left", padx=(0, 12))
+    ttk.Checkbutton(options, text="Restrict WebRTC", variable=protect_webrtc).pack(side="left", padx=(0, 12))
+    ttk.Checkbutton(options, text="Open diagnostics on launch", variable=show_diagnostics).pack(side="left")
+
+    split = ttk.Panedwindow(wrapper, orient="horizontal")
+    split.pack(fill="both", expand=True)
+    left = ttk.Frame(split, padding=(0, 0, 10, 0))
+    right = ttk.Frame(split)
+    split.add(left, weight=1)
+    split.add(right, weight=2)
+    ttk.Label(left, text="Mora profiles", font=("TkDefaultFont", 11, "bold")).pack(anchor="w")
+    profile_list = tk.Listbox(left, height=20, exportselection=False)
+    profile_list.pack(fill="both", expand=True, pady=(6, 8))
+    output = tk.Text(right, height=16, wrap="word", state="disabled")
+    output.pack(fill="both", expand=True)
+    status = tk.StringVar(value="Ready")
+    ttk.Label(wrapper, textvariable=status, relief="sunken", anchor="w").pack(fill="x", pady=(8, 0))
+
+    selected_ids = []
+
+    def log(message):
+        output.configure(state="normal")
+        output.insert("end", str(message) + "\n")
+        output.see("end")
+        output.configure(state="disabled")
+        status.set(str(message).splitlines()[0][:160])
+
+    def selected_id():
+        selection = profile_list.curselection()
+        if not selection:
+            raise ValueError("Pilih profil dari daftar terlebih dahulu.")
+        return selected_ids[selection[0]]
+
+    def refresh():
+        nonlocal selected_ids
+        profile_list.delete(0, "end")
+        selected_ids = []
+        for item in profiles(root):
+            profile_id = item["id"]
+            selected_ids.append(profile_id)
+            label = "{} · {} · {} · {}".format(
+                item.get("model", profile_id),
+                item.get("browser", "?"),
+                item.get("platform_test_label", "?"),
+                profile_id,
+            )
+            profile_list.insert("end", label)
+        status.set("{} isolated profile(s)".format(len(selected_ids)))
+
+    def action(callback):
+        try:
+            callback()
+        except Exception as error:
+            log("ERROR: " + str(error))
+            messagebox.showerror("Mora Identity Studio", str(error), parent=window)
+
+    def create():
+        destination = create_profile(
+            root,
+            variables["id"].get().strip(),
+            variables["browser"].get(),
+            variables["platform"].get(),
+            model=variables["model"].get().strip(),
+            protect_webrtc=protect_webrtc.get(),
+            protect_canvas=protect_canvas.get(),
+            protect_webgl=protect_webgl.get(),
+        )
+        refresh()
+        log("Created isolated profile: " + str(destination))
+
+    def launch():
+        profile_id = selected_id()
+        process = launch_profile(root, profile_id, diagnostics=show_diagnostics.get())
+        log("Started {} (PID {}). Normal browser profile untouched.".format(profile_id, process.pid))
+
+    def backup():
+        profile_id = selected_id()
+        target = filedialog.asksaveasfilename(
+            parent=window, title="Save profile backup",
+            initialfile=profile_id + ".zip", defaultextension=".zip",
+            filetypes=[("ZIP archive", "*.zip")],
+        )
+        if target:
+            archive = backup_profile(root, profile_id, target)
+            log("Backup saved: " + str(archive))
+
+    def rollback():
+        profile_id = selected_id()
+        if not messagebox.askyesno("Confirm rollback", "Restore the last saved backup for " + profile_id + "?", parent=window):
+            return
+        destination = rollback_profile(root, profile_id)
+        refresh()
+        log("Rollback completed: " + str(destination))
+
+    def export_profiles():
+        target = filedialog.asksaveasfilename(
+            parent=window, title="Export profile exchange",
+            initialfile="mora-profiles.json", defaultextension=".json",
+            filetypes=[("JSON", "*.json")],
+        )
+        if target:
+            count = export_exchange(root, target)
+            log("Exported {} profile(s): {}".format(count, target))
+
+    def import_profiles():
+        source = filedialog.askopenfilename(
+            parent=window, title="Import profile exchange",
+            filetypes=[("JSON", "*.json")],
+        )
+        if source:
+            created = import_exchange(root, source)
+            refresh()
+            log("Imported profile(s): " + (", ".join(created) if created else "none"))
+
+    def show_doctor():
+        report = doctor()
+        lines = []
+        for name, info in report.items():
+            lines.append("{}: {}".format(name, "installed" if info["installed"] else "not found"))
+            for surface, capability in info["protection"].items():
+                lines.append("  {}: {}".format(surface, capability))
+        log("\n".join(lines))
+
+    def audit():
+        source = filedialog.askopenfilename(
+            parent=window, title="Open diagnostic JSON",
+            filetypes=[("JSON", "*.json")],
+        )
+        if source:
+            report = json.loads(Path(source).read_text(encoding="utf-8"))
+            result = audit_report(report)
+            log(json.dumps(result, indent=2, ensure_ascii=False))
+
+    actions = ttk.Frame(left)
+    actions.pack(fill="x")
+    ttk.Button(actions, text="Refresh", command=lambda: action(refresh)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Create profile", command=lambda: action(create)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Launch selected", command=lambda: action(launch)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Backup selected", command=lambda: action(backup)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Rollback selected", command=lambda: action(rollback)).pack(fill="x", pady=2)
+    ttk.Separator(actions).pack(fill="x", pady=6)
+    ttk.Button(actions, text="Import JSON", command=lambda: action(import_profiles)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Export JSON", command=lambda: action(export_profiles)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Browser doctor", command=lambda: action(show_doctor)).pack(fill="x", pady=2)
+    ttk.Button(actions, text="Audit report JSON", command=lambda: action(audit)).pack(fill="x", pady=2)
+    refresh()
+    log("Profile root: " + str(root))
+    log("Tip: Canvas protection uses Firefox's built-in privacy.resistFingerprinting setting; Chromium reports it unsupported.")
+    window.mainloop()
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Mora Shield isolated desktop browser profiles")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help=argparse.SUPPRESS)
     commands = parser.add_subparsers(dest="cmd", required=True)
     commands.add_parser("list")
+    commands.add_parser("gui", help="open the lightweight Linux dashboard")
     commands.add_parser("doctor")
     create = commands.add_parser("create")
     create.add_argument("--id", required=True)
@@ -462,7 +696,9 @@ def main(argv=None):
     audit.add_argument("--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        if args.cmd == "list":
+        if args.cmd == "gui":
+            open_desktop_dashboard(args.root)
+        elif args.cmd == "list":
             print(json.dumps(profiles(args.root), indent=2))
         elif args.cmd == "doctor":
             print(json.dumps(doctor(), indent=2))
