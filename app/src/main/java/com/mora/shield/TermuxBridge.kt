@@ -28,7 +28,8 @@ object TermuxBridge {
             context.checkSelfPermission(RUN_PERMISSION) == PackageManager.PERMISSION_GRANTED
 
     fun open(context: Context) {
-        context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE)?.let(context::startActivity)
+        val launch = context.packageManager.getLaunchIntentForPackage(TERMUX_PACKAGE)
+        if (launch != null) context.startActivity(launch)
     }
 
     fun installManager(context: Context) {
