@@ -132,3 +132,5 @@ jobs:
         run: python -m py_compile desktop-identity/mora_identity.py
       - name: Run unit tests
         run: python -m unittest discover -s desktop-identity/tests -v
+      - name: Syntax check HyperOS ADB acceptance script
+        run: bash -n scripts/mora-hyperos-acceptance.sh
