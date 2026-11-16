@@ -6,6 +6,75 @@ import org.junit.Test
 
 class IdentityProfileRecoveryManagerTest {
     @Test
+    fun acceptsSchemaThreeWithOriginalDeviceSnapshot() {
+        val raw = """
+            {
+              "format":"mora-identity-studio",
+              "schema":3,
+              "originalDeviceSnapshot":{
+                "capturedAtEpochMs":1794816000000,
+                "device":{
+                  "manufacturer":"Xiaomi",
+                  "brand":"Redmi",
+                  "model":"Redmi Note 12 Pro",
+                  "device":"sweet_k6a",
+                  "product":"sweet_k6a",
+                  "androidRelease":"15",
+                  "sdkInt":35,
+                  "securityPatch":"2026-10-01"
+                }
+              },
+              "profileCatalog":{"schema":1,"profiles":[],"favorites":[]},
+              "selectedProfile":null,
+              "protection":{
+                "canvasProtection":true,
+                "webGlProtection":true,
+                "syncClientHints":true,
+                "randomizePerSession":true,
+                "webRtcProtection":true
+              },
+              "perAppProfiles":[]
+            }
+        """.trimIndent()
+        val validation = IdentityProfileRecoveryManager.validateBackupJson(raw)
+        assertNull("Unexpected validation error: $validation", validation)
+    }
+
+    @Test
+    fun rejectsMalformedOriginalDeviceSnapshot() {
+        val raw = """
+            {
+              "format":"mora-identity-studio",
+              "schema":3,
+              "originalDeviceSnapshot":{
+                "capturedAtEpochMs":1794816000000,
+                "device":{
+                  "manufacturer":"Xiaomi",
+                  "brand":"Redmi",
+                  "model":"Redmi Note",
+                  "device":"sweet",
+                  "product":"sweet",
+                  "androidRelease":"15",
+                  "sdkInt":999,
+                  "securityPatch":"2026-10-01"
+                }
+              },
+              "profileCatalog":{"schema":1,"profiles":[],"favorites":[]},
+              "selectedProfile":null,
+              "protection":{
+                "canvasProtection":true,
+                "webGlProtection":true,
+                "syncClientHints":true,
+                "randomizePerSession":true,
+                "webRtcProtection":true
+              },
+              "perAppProfiles":[]
+            }
+        """.trimIndent()
+        assertNotNull(IdentityProfileRecoveryManager.validateBackupJson(raw))
+    }
+
+    @Test
     fun rejectsMalformedJson() {
         assertNotNull(IdentityProfileRecoveryManager.validateBackupJson("{not-json"))
     }
