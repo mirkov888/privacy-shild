@@ -41,6 +41,11 @@ class TermuxResultReceiver : BroadcastReceiver() {
                     output.contains("MORA_XFCE_STOPPED") -> "stopped"
                     else -> "unknown"
                 })
+            if (output.contains("MORA_DESKTOP_READY")) {
+                editor.putBoolean("desktop_ready_$distro", true)
+            } else if (output.contains("MORA_DESKTOP_MISSING")) {
+                editor.putBoolean("desktop_ready_$distro", false)
+            }
         } else if (operation.startsWith("session:")) {
             editor.putString("session_$distro", when {
                 output.contains("MORA_XFCE_RUNNING") -> "running"
