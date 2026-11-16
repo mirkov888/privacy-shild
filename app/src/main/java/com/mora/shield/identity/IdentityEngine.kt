@@ -78,6 +78,12 @@ class IdentityEngine(context: Context) {
         root.put("profiles", array).put("favorites", JSONArray(favoriteIds().toList()))
         return root.toString(2)
     }
+    /** Strict validation for the authenticated LAN sync path; file import keeps its tolerant behavior. */
+    fun importSyncedProfilesJson(raw: String): Int {
+        validateSyncPayload(raw)
+        return importCustomProfilesJson(raw)
+    }
+
     fun importCustomProfilesJson(raw: String): Int {
         if (raw.length > MAX_IMPORT_CHARS) return 0
         return runCatching {
@@ -152,5 +158,34 @@ class IdentityEngine(context: Context) {
         private const val KEY_FAVORITES = "favorite_profile_ids"
         private const val MAX_IMPORT_CHARS = 256_000
         private const val MAX_IMPORTED_PROFILES = 100
+
+        internal fun validateSyncPayload(raw: String): Int {
+            require(raw.length <= MAX_IMPORT_CHARS) { "Payload sinkronisasi melewati 256 KB." }
+            val root = JSONObject(raw)
+            require(root.optInt("schema", -1) == 1) { "Schema profil tidak didukung." }
+            val source = root.optJSONArray("profiles")
+                ?: throw IllegalArgumentException("Daftar profil tidak ditemukan.")
+            require(source.length() <= MAX_IMPORTED_PROFILES) { "Maksimal 100 profil per sinkronisasi." }
+            val ids = mutableSetOf<String>()
+            for (index in 0 until source.length()) {
+                val item = source.optJSONObject(index)
+                    ?: throw IllegalArgumentException("Entri profil ke-${index + 1} tidak valid.")
+                val id = item.optString("id").trim()
+                require(id.isNotBlank() && id.length <= 128 && ids.add(id)) {
+                    "ID profil kosong, terlalu panjang, atau duplikat."
+                }
+                val platform = runCatching {
+                    IdentityPlatform.valueOf(item.optString("platform"))
+                }.getOrNull()
+                require(platform != null) { "Platform profil ke-${index + 1} tidak didukung." }
+                val model = item.optString("model").trim()
+                val userAgent = item.optString("userAgent").trim()
+                val validationError = IdentityProfileValidator.validate(model, userAgent)
+                require(validationError == null) {
+                    "Profil ke-${index + 1} tidak valid: ${validationError ?: "data tidak sesuai"}"
+                }
+            }
+            return source.length()
+        }
     }
 }
