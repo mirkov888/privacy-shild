@@ -92,10 +92,11 @@ fun IdentityRandomizationCard(platform: IdentityPlatform) {
             OutlinedButton(
                 onClick = {
                     runCatching {
-                        val result = IdentityRandomizationEngine.runNow(
-                            context,
-                            settings.copy(platform = platform, seed = seed)
-                        )
+                        val configured = store.save(settings.copy(platform = platform, seed = seed))
+                        settings = configured
+                        seed = configured.seed
+                        IdentityRandomizationScheduler.sync(context, configured)
+                        val result = IdentityRandomizationEngine.runNow(context, configured)
                         settings = store.load()
                         seed = settings.seed
                         status = "Run #" + result.runIndex + ": " +
