@@ -63,7 +63,33 @@ clientHints:navigator.userAgentData?{brands:navigator.userAgentData.brands,mobil
 platform:navigator.platform,language:navigator.language,languages:navigator.languages,
 timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,
 screen:{width:screen.width,height:screen.height,depth:screen.colorDepth,dpr:devicePixelRatio},
-webRtc:{peerConnection:typeof RTCPeerConnection!=="undefined",mediaDevices:!!navigator.mediaDevices},webgl:null,canvas:null};
+webRtc:{peerConnection:typeof RTCPeerConnection!=="undefined",mediaDevices:!!navigator.mediaDevices,
+ice:{supported:false,complete:false,candidateTypes:[],addressCandidates:0,mdnsCandidates:0}},webgl:null,canvas:null};
+if(typeof RTCPeerConnection!=="undefined"){
+ try{
+  const pc=new RTCPeerConnection({iceServers:[]}),seen=new Set();
+  r.webRtc.ice.supported=true;
+  const finish=()=>new Promise(resolve=>{
+   let done=false;
+   const end=()=>{if(done)return;done=true;resolve()};
+   pc.addEventListener("icecandidate",event=>{
+    if(!event.candidate){r.webRtc.ice.complete=true;end();return}
+    const value=String(event.candidate.candidate||"");
+    const type=(value.match(/\\btyp\\s+(host|srflx|prflx|relay)\\b/)||[])[1];
+    if(type)seen.add(type);
+    const address=(value.match(/candidate:\\S+\\s+\\d+\\s+\\S+\\s+\\d+\\s+([^\\s]+)\\s+\\d+/)||[])[1]||"";
+    if(address){
+     if(address.toLowerCase().endsWith(".local"))r.webRtc.ice.mdnsCandidates++;
+     else if(/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(address)||address.includes(":"))r.webRtc.ice.addressCandidates++;
+    }
+   });
+   pc.createDataChannel("mora-diagnostic");
+   pc.createOffer().then(offer=>pc.setLocalDescription(offer)).catch(()=>end());
+   setTimeout(end,1800);
+  });
+  await finish();r.webRtc.ice.candidateTypes=[...seen].sort();pc.close();
+ }catch(x){r.webRtc.ice.error=String(x).slice(0,160)}
+}
 try{let c=document.createElement('canvas'),g=c.getContext('webgl'),e=g&&g.getExtension('WEBGL_debug_renderer_info');
 r.webgl=g?{vendor:e?g.getParameter(e.UNMASKED_VENDOR_WEBGL):'masked/unavailable',renderer:e?g.getParameter(e.UNMASKED_RENDERER_WEBGL):'masked/unavailable'}:null}catch(x){r.webgl={error:String(x)}}
 try{let c=document.createElement('canvas');c.width=160;c.height=48;let x=c.getContext('2d');x.fillText('Mora privacy test',2,20);let v=c.toDataURL(),h=2166136261;for(let i=0;i<v.length;i++){h^=v.charCodeAt(i);h=Math.imul(h,16777619)}r.canvas={available:true,hash:(h>>>0).toString(16),dataUrlLength:v.length}}catch(x){r.canvas={available:false,error:String(x)}}
@@ -585,8 +611,27 @@ def audit_report(report):
     checks.append({"surface": "webgl", "status": "visible" if webgl.get("available") else "unavailable",
                    "detail": "WebGL API tersedia" if webgl.get("available") else "WebGL API tidak tersedia"})
     rtc = report.get("webRtc") if isinstance(report.get("webRtc"), dict) else {}
-    checks.append({"surface": "webRtc", "status": "visible" if rtc.get("peerConnection") else "unavailable",
-                   "detail": "RTCPeerConnection tersedia; ini bukan bukti IP bocor" if rtc.get("peerConnection") else "RTCPeerConnection tidak tersedia"})
+    if not rtc.get("peerConnection"):
+        checks.append({"surface": "webRtc", "status": "unavailable",
+                       "detail": "RTCPeerConnection tidak tersedia"})
+    else:
+        ice = rtc.get("ice") if isinstance(rtc.get("ice"), dict) else {}
+        address_candidates = max(0, int(ice.get("addressCandidates") or 0))
+        mdns_candidates = max(0, int(ice.get("mdnsCandidates") or 0))
+        if address_candidates:
+            status = "attention"
+            detail = ("ICE candidate memuat alamat IP literal; Mora hanya menghitungnya, "
+                      "tidak menyimpan alamatnya. Ini bukan bukti alamat IP publik bocor.")
+        elif mdns_candidates:
+            status = "reduced_exposure"
+            detail = "ICE candidate menggunakan hostname mDNS; alamat IP literal tidak terdeteksi."
+        else:
+            status = "visible"
+            detail = "RTCPeerConnection tersedia; belum ada alamat IP literal yang terdeteksi."
+        checks.append({"surface": "webRtc", "status": status, "detail": detail,
+                       "address_candidates": address_candidates,
+                       "mdns_candidates": mdns_candidates,
+                       "candidate_types": sorted(set(ice.get("candidateTypes") or []))})
     for field in ("timezone", "language", "languages", "screen"):
         present = field in report and report.get(field) not in (None, "", [])
         checks.append({"surface": field, "status": "reported" if present else "missing",
@@ -597,6 +642,9 @@ def audit_report(report):
             "mismatches": sum(item["status"] == "mismatch" for item in checks),
             "visible_apis": sum(item["status"] == "visible" for item in checks),
             "missing_or_unavailable": sum(item["status"] in ("missing", "unavailable", "not_supported") for item in checks),
+            "webrtc_address_exposures": sum(
+                item.get("address_candidates", 0) for item in checks if item["surface"] == "webRtc"
+            ),
         },
         "checks": checks,
         "note": "Pemeriksaan API/metadata lokal; tidak menguji IP publik, DNS, VPN, atau rute jaringan.",
