@@ -21,6 +21,7 @@ This matrix distinguishes code that is present from platform coverage that still
 - Randomizer and diagnostic state remain app-private. Empty profile catalogues are handled without crashing a scheduled randomizer; manual randomization refreshes the visible selected profile. Desktop profiles are stored under Mora's own configuration directory and use separate browser data directories.
 - The Android preview blocks network loads and external navigation. WebView is destroyed when the preview leaves composition.
 - Linux helper uses Python standard library only; Tkinter is loaded only when the GUI command is used. Browser launching remains opt-in and opens only Mora-created profiles.
+- Original-device backup stores only read-only public Build labels and is reference metadata; restoring a backup never rewrites Android's live device identity.
 - No IMEI, serial, Android ID, MAC address, build fingerprint, security patch, hardware attestation or Play Integrity value is fabricated, modified or bypassed.
 - iOS, Windows, macOS and Linux labels are browser compatibility test profiles, not real device/OS emulation.
 
