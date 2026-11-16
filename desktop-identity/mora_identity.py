@@ -21,6 +21,15 @@ BROWSERS = {
     "chrome": ("google-chrome", "chromium"),
     "chromium": ("chromium", "chromium"),
 }
+# Flatpak IDs are optional fallbacks for common Linux desktop installations.
+FLATPAK_APPS = {
+    "firefox": "org.mozilla.firefox",
+    "librewolf": "io.gitlab.librewolf-community",
+    "zen": "app.zen_browser.zen",
+    "brave": "com.brave.Browser",
+    "chrome": "com.google.Chrome",
+    "chromium": "org.chromium.Chromium",
+}
 PLATFORMS = {
     "android": "Mozilla/5.0 (Linux; Android 15; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
     "iphone": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
@@ -321,16 +330,50 @@ def audit_report(report):
     }
 
 
+def _flatpak_applications():
+    flatpak = shutil.which("flatpak")
+    if not flatpak:
+        return set()
+    try:
+        result = subprocess.run(
+            [flatpak, "list", "--app", "--columns=application"],
+            capture_output=True, text=True, timeout=8, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    if result.returncode != 0:
+        return set()
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
+def browser_installation(name, flatpak_apps=None):
+    if name not in BROWSERS:
+        raise ValueError("Browser tidak didukung: " + str(name))
+    executable, _engine = BROWSERS[name]
+    native_path = shutil.which(executable)
+    if native_path:
+        return {"kind": "native", "executable": native_path}
+    apps = _flatpak_applications() if flatpak_apps is None else set(flatpak_apps)
+    app_id = FLATPAK_APPS.get(name)
+    if app_id and app_id in apps and shutil.which("flatpak"):
+        return {"kind": "flatpak", "executable": shutil.which("flatpak"), "app_id": app_id}
+    return None
+
+
 def doctor():
-    return {
-        name: {
-            "executable": command,
-            "installed": shutil.which(command) is not None,
+    flatpak_apps = _flatpak_applications()
+    result = {}
+    for name, (command, engine) in BROWSERS.items():
+        installation = browser_installation(name, flatpak_apps)
+        result[name] = {
+            "executable": installation["executable"] if installation else command,
+            "installed": installation is not None,
+            "launch_type": installation["kind"] if installation else "unavailable",
+            "flatpak_app_id": installation.get("app_id") if installation else None,
             "engine": engine,
             "protection": protection_capabilities(name),
         }
-        for name, (command, engine) in BROWSERS.items()
-    }
+    return result
 
 def _safe_extract_profile(archive, destination, expected_id):
     destination.mkdir(parents=True, exist_ok=False)
@@ -433,8 +476,33 @@ def launch_profile(root, profile_id, diagnostics=False):
     browser = metadata.get("browser")
     if browser not in BROWSERS:
         raise ValueError("Browser pada profil tidak didukung.")
-    if metadata.get("engine") == "firefox":
-        command = [BROWSERS[browser][0], "-no-remote", "-profile", str(destination)]
+    installation = browser_installation(browser)
+    if not installation:
+        raise FileNotFoundError(
+            "Browser belum terpasang. Pasang paket native atau Flatpak untuk " + browser + "."
+        )
+    engine = metadata.get("engine")
+    if installation["kind"] == "flatpak":
+        flatpak = installation["executable"]
+        app_id = installation["app_id"]
+        command = [flatpak, "run", "--filesystem=" + str(destination.resolve()) + ":rw"]
+        if engine == "firefox":
+            command += ["--command=" + BROWSERS[browser][0], app_id,
+                        "-no-remote", "-profile", str(destination.resolve())]
+        else:
+            command += [
+                app_id,
+                "--user-data-dir=" + str((destination / "chromium-data").resolve()),
+                "--user-agent=" + _validate_user_agent(metadata.get("user_agent")),
+                "--no-first-run",
+            ]
+            protection = metadata.get("protection", {})
+            if protection.get("webgl", {}).get("applied"):
+                command.append("--disable-webgl")
+            if protection.get("webrtc", {}).get("applied"):
+                command.append("--force-webrtc-ip-handling-policy=disable_non_proxied_udp")
+    elif engine == "firefox":
+        command = [installation["executable"], "-no-remote", "-profile", str(destination)]
     else:
         launcher = destination / "launch.sh"
         if not launcher.is_file():
@@ -442,10 +510,8 @@ def launch_profile(root, profile_id, diagnostics=False):
         command = [str(launcher)]
     if diagnostics:
         command.append(diagnostics_uri(root, profile_id))
-    executable = shutil.which(command[0]) if not Path(command[0]).is_absolute() else command[0]
-    if not executable:
-        raise FileNotFoundError("Browser belum terpasang atau executable tidak ditemukan: " + command[0])
-    command[0] = executable
+    if installation["kind"] == "native" and engine == "chromium":
+        command[0] = str((destination / "launch.sh").resolve())
     return subprocess.Popen(command, cwd=str(destination), start_new_session=True)
 
 
