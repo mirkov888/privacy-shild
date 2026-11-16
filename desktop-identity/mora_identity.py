@@ -616,8 +616,17 @@ def audit_report(report):
                        "detail": "RTCPeerConnection tidak tersedia"})
     else:
         ice = rtc.get("ice") if isinstance(rtc.get("ice"), dict) else {}
-        address_candidates = max(0, int(ice.get("addressCandidates") or 0))
-        mdns_candidates = max(0, int(ice.get("mdnsCandidates") or 0))
+        try:
+            address_candidates = max(0, int(ice.get("addressCandidates") or 0))
+        except (TypeError, ValueError, OverflowError):
+            address_candidates = 0
+        try:
+            mdns_candidates = max(0, int(ice.get("mdnsCandidates") or 0))
+        except (TypeError, ValueError, OverflowError):
+            mdns_candidates = 0
+        raw_types = ice.get("candidateTypes")
+        candidate_types = sorted({item for item in raw_types if isinstance(item, str)})
+            if isinstance(raw_types, (list, tuple, set)) else []
         if address_candidates:
             status = "attention"
             detail = ("ICE candidate memuat alamat IP literal; Mora hanya menghitungnya, "
@@ -631,7 +640,7 @@ def audit_report(report):
         checks.append({"surface": "webRtc", "status": status, "detail": detail,
                        "address_candidates": address_candidates,
                        "mdns_candidates": mdns_candidates,
-                       "candidate_types": sorted(set(ice.get("candidateTypes") or []))})
+                       "candidate_types": candidate_types})
     for field in ("timezone", "language", "languages", "screen"):
         present = field in report and report.get(field) not in (None, "", [])
         checks.append({"surface": field, "status": "reported" if present else "missing",
