@@ -15,6 +15,8 @@ class FingerprintProtectionEngineTest {
         assertTrue(script.contains("getImageData"))
         assertTrue(script.contains("toDataURL"))
         assertTrue(script.contains("toBlob"))
+        assertTrue(script.contains("OffscreenCanvas"))
+        assertTrue(script.contains("convertToBlob"))
         assertFalse(script.contains("WebGLRenderingContext"))
     }
 
