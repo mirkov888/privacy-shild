@@ -31,6 +31,11 @@ object TermuxBridge {
         if (launch != null) context.startActivity(launch)
     }
 
+    fun installManager(context: Context) {
+        run(context, "bootstrap", "$PREFIX/bin/bash",
+            arrayOf("-lc", "pkg update -y && pkg install -y proot-distro"), true)
+    }
+
     fun requestStatus(context: Context, distro: String) {
         run(context, "status:$distro", "$PREFIX/bin/proot-distro",
             arrayOf("list", "--quiet"), true)
