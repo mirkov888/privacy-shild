@@ -37,10 +37,6 @@ class PerAppLocationProvider : ContentProvider() {
                     putString("model", identity.model)
                     putString("device", identity.device)
                     putString("product", identity.product)
-                    putString("fingerprint", identity.fingerprint)
-                    putString("release", identity.release)
-                    putInt("sdk", identity.sdk)
-                    putString("securityPatch", identity.securityPatch)
                 }
             }
             "get_profile" -> {
