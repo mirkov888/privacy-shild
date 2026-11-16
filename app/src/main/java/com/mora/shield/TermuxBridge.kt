@@ -64,7 +64,7 @@ object TermuxBridge {
         requireDistro(distro)
         val script = "mkdir -p ~/.vnc && printf '%s\\n' '#!/bin/sh' 'unset SESSION_MANAGER' 'unset DBUS_SESSION_BUS_ADDRESS' 'exec dbus-run-session startxfce4' > ~/.vnc/xstartup && chmod 700 ~/.vnc/xstartup && (pgrep -f 'Xtigervnc.*:1' >/dev/null || vncserver :1 -localhost yes -geometry 1280x720 -depth 24)"
         run(context, "start:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("login", distro, "--", "bash", "-lc", script), true)
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
     }
 
     fun stopDesktop(context: Context, distro: String) {
