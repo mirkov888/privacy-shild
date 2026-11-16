@@ -57,7 +57,7 @@ object TermuxBridge {
             "apt-get update && apt-get install -y xfce4 dbus-x11 tigervnc-standalone-server"
         }
         run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+            arrayOf("login", distro, "--", "bash", "-lc", script), true)
     }
 
     fun startDesktop(context: Context, distro: String) {
