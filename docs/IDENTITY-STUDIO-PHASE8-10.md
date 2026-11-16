@@ -4,7 +4,7 @@
 - Identity Studio remains in the existing Mora Shield Android application; there is no second Android Identity app.
 - The Android screen hosts device information, profile catalogue, WebView privacy switches, randomizer, privacy audit, diagnostic controls and recovery.
 - Profile JSON and full Identity Studio backups can be imported/exported with Android's Storage Access Framework; backups include a read-only original-device baseline, and restore is validated and requires explicit confirmation before changing profiles or settings. Import does not overwrite the receiving device's local baseline or live Android identity.
-- Linux uses the desktop-identity helper with both CLI and a lightweight Tkinter dashboard for isolated browser profiles, protection capability reporting and portable JSON exchange. It is not a shared live database; profile JSON can be exported/imported explicitly.
+- Linux uses the desktop-identity helper with CLI and a lightweight Tkinter dashboard for isolated browser profiles and protection capability reporting. A manual HTTPS LAN sync session now transfers custom profiles bidirectionally between Android and Linux; it uses a short-lived token plus certificate pin and does not synchronize other settings or run continuously.
 - Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium.
 - Existing user browser profiles are never silently changed. Per-browser profiles live under Mora's own configuration directory.
 
@@ -16,7 +16,7 @@
 
 ## Phase 10 — Build, tests and release
 - Android CI runs Gradle unit tests and assembles debug APKs for Mora Shield and the companion hook.
-- Linux CI runs Python syntax compilation and standard-library unit tests for profile isolation, portable exchange, backup/restore, rollback, browser protection configuration and diagnostic auditing.
+- Linux CI runs Python syntax compilation and standard-library unit tests for profile isolation, portable exchange, HTTPS LAN sync authorization/idempotency/conflict handling, backup/restore, rollback, browser protection configuration and diagnostic auditing.
 - The protected release workflow validates the persistent signing secrets, builds release APKs and uploads artifacts when its required secrets are available.
 - Android unit tests cover profile catalogues, randomization selection, diagnostic comparison, backup validation and recovery validation.
 - Automated CI cannot replace testing on real Android hardware/ROMs or each installed Linux browser build.
@@ -29,11 +29,13 @@
 5. Android: enable scheduled randomization, verify WorkManager state, test reboot/battery optimization behavior, restore backup and exercise rollback.
 6. Linux: run `python mora_identity.py gui` or `doctor`, create and launch isolated profiles separately in Firefox, LibreWolf, Zen, Brave, Chrome and Chromium where installed; verify the normal browser profile is unchanged.
 7. Linux: export/import the schema-1 profile exchange, backup, mutate a test profile, rollback it and compare before/after diagnostic JSON.
+8. Android ↔ Linux: start the 15-minute LAN sync server on a trusted Wi-Fi network, compare the certificate pin, perform two-way sync, repeat to confirm idempotency, then stop the server.
+9. HyperOS: run `bash scripts/mora-hyperos-acceptance.sh` with USB debugging enabled, then complete the on-device WebView, WorkManager, battery, backup/restore and LSPosed checklist in `docs/IDENTITY-STUDIO-HYPEROS-ACCEPTANCE.md`.
 
 ## Limitations and safety
 - User-Agent presets are compatibility labels, not complete OS/device emulation. Client Hints depend on browser engine/version and feature support.
 - Android fingerprint protection applies only to Mora's own offline preview WebView. External Android browsers remain discovery-only.
-- Linux browser controls use dedicated isolated profiles; Firefox preferences and Chromium startup flags are best-effort and version-dependent. Chromium Canvas protection is not provided by this launcher and is reported as unsupported.
+- Linux browser controls use dedicated isolated profiles; Firefox preferences and Chromium extensions/startup flags are best-effort and version-dependent. Chromium Canvas protection blocks common page APIs, not worker contexts or every fingerprint surface.
 - WorkManager schedules are inexact and may be deferred by Android background/battery policies.
 - WebRTC restrictions are best-effort browser controls, not a VPN or leak-proof guarantee.
 - No IMEI, serial, Android ID, MAC, build fingerprint, security patch, hardware attestation or Play Integrity values are changed, fabricated or bypassed.
