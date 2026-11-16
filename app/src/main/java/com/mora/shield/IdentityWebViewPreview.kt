@@ -116,6 +116,16 @@ fun IdentityWebViewPreview(
         },
         modifier = Modifier.fillMaxWidth()
     ) { Text("Ambil & salin laporan JSON") }
+    OutlinedButton(
+        onClick = {
+            captureReport { report ->
+                val summary = IdentityDiagnostics.leakageSummary(report)
+                clipboard.setText(AnnotatedString(summary))
+                diagnosticMessage = "Laporan permukaan identitas disalin. Periksa catatan WebRTC dan keterbatasan jaringan."
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) { Text("Buat laporan kebocoran identitas") }
     if (diagnosticMessage.isNotBlank()) {
         Text(diagnosticMessage, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
