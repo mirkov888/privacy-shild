@@ -14,7 +14,7 @@ For multiple connected phones:
 
     ANDROID_SERIAL=<adb-device-serial> bash scripts/mora-hyperos-acceptance.sh
 
-The script records manufacturer/model, Android/HyperOS release properties, WebView provider, installed browser packages, Mora Shield package metadata, a launch smoke test, JobScheduler/battery-policy snapshots and relevant recent logs. It intentionally does not query IMEI, serial, Android ID, MAC address or build fingerprint. The report file is created with owner-only permissions.
+The script records manufacturer/model, Android/HyperOS release properties, WebView provider, installed browser packages, Mora Shield package metadata, a launch smoke test, JobScheduler/battery-policy snapshots and relevant recent logs. It intentionally does not query Android hardware identifier properties such as IMEI, device serial property, Android ID, MAC address or build fingerprint. The ADB device selector is used internally and redacted from output. The report file is created with owner-only permissions.
 
 Install the debug APK first when needed:
 
