@@ -80,7 +80,7 @@ object TermuxBridge {
 
     private fun installScript(distro: String, removeFirst: Boolean): String {
         val remove = if (removeFirst) {
-            ""$PREFIX/bin/proot-distro" remove $distro >/dev/null 2>&1 || true"
+            "\"$PREFIX/bin/proot-distro\" remove \"$distro\" >/dev/null 2>&1 || true"
         } else ":"
         return """
             set +e
