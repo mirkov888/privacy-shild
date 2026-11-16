@@ -148,7 +148,7 @@ fun LinuxEnvironmentScreen() {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Hubungkan aplikasi VNC", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Setelah server berjalan, buka aplikasi VNC Viewer dan buat koneksi ke host 127.0.0.1 dengan port 5901 (display :1). Atur password VNC saat pertama kali diminta oleh server.", style = MaterialTheme.typography.bodyMedium)
-                Text("Untuk menghentikan seluruh distro, keluar dari shell lalu gunakan: proot-distro shutdown ${distro.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Untuk menghentikan desktop, jalankan perintah stop di atas lalu ketik exit untuk keluar dari shell distro. Tutup sesi Termux jika proses lain masih berjalan.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
