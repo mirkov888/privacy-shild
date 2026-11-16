@@ -21,7 +21,9 @@ class TermuxResultReceiver : BroadcastReceiver() {
             .putString("last_error", internalError.take(1500))
             .putInt("last_exit_code", exitCode)
             .putLong("last_updated", System.currentTimeMillis())
-        if (operation.startsWith("status:")) {
+        if (operation == "bootstrap" && ok) {
+            editor.putBoolean("manager_ready", true)
+        } else if (operation.startsWith("status:")) {
             val installed = output.contains("($distro)") ||
                 output.lines().any { line ->
                     val normalized = line.trim().removePrefix("*").trim().lowercase()
