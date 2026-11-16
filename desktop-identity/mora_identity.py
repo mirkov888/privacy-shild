@@ -66,7 +66,7 @@ def _validate_user_agent(user_agent):
         raise ValueError("User-Agent tidak valid.")
     return user_agent
 
-def create_profile(root, profile_id, browser, platform, user_agent=None, protect_webrtc=True, model=None):
+def create_profile(root, profile_id, browser, platform, user_agent=None, protect_webrtc=True, model=None, protect_canvas=False, protect_webgl=False):
     if browser not in BROWSERS or platform not in PLATFORMS:
         raise ValueError("Browser/platform tidak didukung.")
     ua = _validate_user_agent(user_agent or PLATFORMS[platform])
@@ -88,6 +88,10 @@ def create_profile(root, profile_id, browser, platform, user_agent=None, protect
             "// Mora isolated test profile; existing profiles are untouched.",
             'user_pref("general.useragent.override", ' + json.dumps(ua) + ');',
         ]
+        if protect_canvas:
+            prefs.append('user_pref("privacy.resistFingerprinting", true);')
+        if protect_webgl:
+            prefs.append('user_pref("webgl.disabled", true);')
         if protect_webrtc:
             prefs += [
                 'user_pref("media.peerconnection.enabled", false);',
@@ -98,6 +102,8 @@ def create_profile(root, profile_id, browser, platform, user_agent=None, protect
         exe = BROWSERS[browser][0]
         args = [exe, "--user-data-dir=" + str(target / "chromium-data"),
                 "--user-agent=" + ua, "--no-first-run"]
+        if protect_webgl:
+            args.append("--disable-webgl")
         if protect_webrtc:
             args.append("--force-webrtc-ip-handling-policy=disable_non_proxied_udp")
         quote = lambda value: "'" + value.replace("'", "'\\''") + "'"
@@ -215,10 +221,94 @@ def compare_reports(before_path, after_path):
             changes.append({"field": field, "before": old, "after": new})
     return {"changed": len(changes), "changes": changes}
 
+def protection_capabilities(browser):
+    if browser not in BROWSERS:
+        raise ValueError("Browser tidak didukung.")
+    engine = BROWSERS[browser][1]
+    if engine == "firefox":
+        return {
+            "canvas": "available: privacy.resistFingerprinting (also changes some web-visible values)",
+            "webgl": "available: disable WebGL API (may break 3D sites)",
+            "webrtc": "available: disable peer-connection API",
+        }
+    return {
+        "canvas": "not available through browser startup flags",
+        "webgl": "available: disable WebGL API (may break 3D sites)",
+        "webrtc": "best effort: restrict non-proxied UDP; not a VPN or IP-leak guarantee",
+    }
+
+
+def diagnostics_uri(root, profile_id):
+    page = profile_dir(root, profile_id) / "diagnostics.html"
+    if not page.is_file():
+        raise FileNotFoundError("Halaman diagnostik profil tidak ditemukan.")
+    return page.resolve().as_uri()
+
+
+def audit_report(report):
+    if not isinstance(report, dict):
+        raise ValueError("Laporan diagnostik harus berupa objek JSON.")
+    user_agent = str(report.get("userAgent") or "")
+    hints = report.get("clientHints")
+    ua_platform = None
+    ua_lower = user_agent.lower()
+    if "android" in ua_lower:
+        ua_platform = "android"
+    elif "iphone" in ua_lower or "ipad" in ua_lower:
+        ua_platform = "ios"
+    elif "windows nt" in ua_lower:
+        ua_platform = "windows"
+    elif "macintosh" in ua_lower:
+        ua_platform = "macos"
+    elif "linux" in ua_lower:
+        ua_platform = "linux"
+    hint_platform = str(hints.get("platform") or "").lower() if isinstance(hints, dict) else ""
+    checks = [
+        {"surface": "userAgent", "status": "visible" if user_agent else "missing",
+         "detail": "User-Agent " + ("tersedia" if user_agent else "tidak dilaporkan")},
+    ]
+    if not isinstance(hints, dict):
+        checks.append({"surface": "clientHints", "status": "not_supported",
+                       "detail": "Client Hints tidak dilaporkan oleh browser/profil ini"})
+    elif ua_platform and hint_platform and ua_platform != hint_platform:
+        checks.append({"surface": "clientHints", "status": "mismatch",
+                       "detail": "Platform UA=" + ua_platform + " tetapi CH=" + hint_platform})
+    else:
+        checks.append({"surface": "clientHints", "status": "visible",
+                       "detail": "Client Hints tersedia; platform=" + (hint_platform or "tidak diketahui")})
+    canvas = report.get("canvas") if isinstance(report.get("canvas"), dict) else {}
+    checks.append({"surface": "canvas", "status": "visible" if canvas.get("available") else "unavailable",
+                   "detail": "Canvas readback tersedia" if canvas.get("available") else "Canvas readback tidak tersedia"})
+    webgl = report.get("webgl") if isinstance(report.get("webgl"), dict) else {}
+    checks.append({"surface": "webgl", "status": "visible" if webgl.get("available") else "unavailable",
+                   "detail": "WebGL API tersedia" if webgl.get("available") else "WebGL API tidak tersedia"})
+    rtc = report.get("webRtc") if isinstance(report.get("webRtc"), dict) else {}
+    checks.append({"surface": "webRtc", "status": "visible" if rtc.get("peerConnection") else "unavailable",
+                   "detail": "RTCPeerConnection tersedia; ini bukan bukti IP bocor" if rtc.get("peerConnection") else "RTCPeerConnection tidak tersedia"})
+    for field in ("timezone", "language", "languages", "screen"):
+        present = field in report and report.get(field) not in (None, "", [])
+        checks.append({"surface": field, "status": "reported" if present else "missing",
+                       "detail": "Informasi " + field + (" dilaporkan" if present else " tidak dilaporkan")})
+    return {
+        "summary": {
+            "checks": len(checks),
+            "mismatches": sum(item["status"] == "mismatch" for item in checks),
+            "visible_apis": sum(item["status"] == "visible" for item in checks),
+            "missing_or_unavailable": sum(item["status"] in ("missing", "unavailable", "not_supported") for item in checks),
+        },
+        "checks": checks,
+        "note": "Pemeriksaan API/metadata lokal; tidak menguji IP publik, DNS, VPN, atau rute jaringan.",
+    }
+
+
 def doctor():
     return {
-        name: {"executable": command, "installed": shutil.which(command) is not None,
-               "engine": engine}
+        name: {
+            "executable": command,
+            "installed": shutil.which(command) is not None,
+            "engine": engine,
+            "protection": protection_capabilities(name),
+        }
         for name, (command, engine) in BROWSERS.items()
     }
 
@@ -325,8 +415,14 @@ def main(argv=None):
     create.add_argument("--model")
     create.add_argument("--user-agent")
     create.add_argument("--allow-webrtc", action="store_true")
+    create.add_argument("--protect-canvas", action="store_true",
+                        help="aktifkan anti-canvas bawaan Firefox (Chromium tidak didukung)")
+    create.add_argument("--protect-webgl", action="store_true",
+                        help="nonaktifkan WebGL API; situs 3D dapat terganggu")
     launch = commands.add_parser("launch")
     launch.add_argument("--id", required=True)
+    launch.add_argument("--diagnostics", action="store_true",
+                        help="buka halaman diagnostik lokal di profil terisolasi")
     backup = commands.add_parser("backup")
     backup.add_argument("--id", required=True)
     backup.add_argument("--output", type=Path, required=True)
@@ -343,6 +439,8 @@ def main(argv=None):
     compare = commands.add_parser("compare")
     compare.add_argument("--before", type=Path, required=True)
     compare.add_argument("--after", type=Path, required=True)
+    audit = commands.add_parser("audit")
+    audit.add_argument("--input", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         if args.cmd == "list":
@@ -351,7 +449,8 @@ def main(argv=None):
             print(json.dumps(doctor(), indent=2))
         elif args.cmd == "create":
             dest = create_profile(args.root, args.id, args.browser, args.platform,
-                                  args.user_agent, not args.allow_webrtc, args.model)
+                                  args.user_agent, not args.allow_webrtc, args.model,
+                                  args.protect_canvas, args.protect_webgl)
             print("Created:", dest)
         elif args.cmd == "launch":
             dest = profile_dir(args.root, args.id)
@@ -360,6 +459,8 @@ def main(argv=None):
                 command = [BROWSERS[metadata["browser"]][0], "-no-remote", "-profile", str(dest)]
             else:
                 command = [str(dest / "launch.sh")]
+            if args.diagnostics:
+                command.append(diagnostics_uri(args.root, args.id))
             os.execvp(command[0], command)
         elif args.cmd == "backup":
             print("Backup:", backup_profile(args.root, args.id, args.output))
@@ -373,6 +474,9 @@ def main(argv=None):
             print("Imported profiles:", ", ".join(import_exchange(args.root, args.input, args.browser)))
         elif args.cmd == "compare":
             print(json.dumps(compare_reports(args.before, args.after), indent=2))
+        elif args.cmd == "audit":
+            payload = json.loads(args.input.read_text(encoding="utf-8"))
+            print(json.dumps(audit_report(payload), indent=2))
         return 0
     except (OSError, ValueError, KeyError, zipfile.BadZipFile, json.JSONDecodeError) as error:
         print("mora-identity:", error, file=sys.stderr)
