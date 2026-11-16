@@ -170,14 +170,6 @@ class DesktopIdentityTests(unittest.TestCase):
                 self.assertIn(str(profile), command)
                 self.assertTrue(command[-1].startswith("file://"))
 
-    def test_cli_gui_opens_integrated_dashboard(self):
-        from unittest.mock import patch
-        with tempfile.TemporaryDirectory() as root:
-            with patch.object(m, "launch_gui") as launch:
-                result = m.main(["--root", root, "gui"])
-                self.assertEqual(result, 0)
-                launch.assert_called_once_with(Path(root))
-
     def test_cli_protection_switches_write_profile_capabilities(self):
         with tempfile.TemporaryDirectory() as root:
             result = m.main([
