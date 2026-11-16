@@ -1,45 +1,63 @@
 # Mora Linux Environment (Android)
 
-Mora Linux Environment is an in-app setup guide for running Linux userlands on Android through Termux and proot-distro. It does not bundle a Linux kernel or a virtual machine.
+Mora Linux Environment mengelola Linux userspace di Android melalui Termux + proot-distro. Ini bukan virtual machine dan tidak menyediakan kernel Linux terpisah.
 
-## Supported starter profiles
+## Distro yang didukung
 
-- Debian (recommended first install)
-- Ubuntu
-- Arch Linux (proot-distro identifier: `archlinux`)
+- Debian (`debian`) — direkomendasikan untuk mulai.
+- Ubuntu (`ubuntu`).
+- Arch Linux (`archlinux`).
 
-The available distro names and versions depend on the installed proot-distro release. Check `proot-distro list` in Termux before installing if a profile is unavailable.
+Nama distro dan ketersediaannya mengikuti versi proot-distro yang terpasang.
 
-## Requirements
+## Integrasi langsung Mora Shield
 
-1. Install the official Termux app from one trusted source (F-Droid or the official Termux GitHub releases). Do not mix Termux and its plugins from different signing sources.
-2. Keep sufficient free internal storage. XFCE and its dependencies can consume several gigabytes.
-3. Install a VNC Viewer app separately to display the desktop.
-4. Use a current Android version and allow Termux to run in the background if long sessions are needed.
+Buka **Lainnya → Mora Linux Environment**.
 
-## Setup
+Mora Shield menggunakan API resmi Termux `com.termux.RUN_COMMAND` untuk menjalankan daftar perintah terbatas:
+- Memeriksa daftar distro yang terpasang.
+- Memasang distro terpilih.
+- Memasang XFCE, D-Bus, dan TigerVNC.
+- Memulai VNC display `:1` yang hanya bind ke localhost.
+- Menghentikan VNC display `:1`.
+- Menerima stdout/stderr dan exit code dari Termux, lalu menampilkan hasil operasi.
 
-The Mora Shield screen **More > Mora Linux Environment** provides copyable commands for the selected distro.
+Mora Shield tidak menyediakan kolom arbitrary shell command, tidak menjalankan root, dan meminta konfirmasi sebelum aksi instalasi/start/stop. Status distro disegarkan berkala; status sesi XFCE diperiksa lewat `vncserver -list`. Jika perintah gagal atau versi Termux tidak mendukung API hasil, status akan tetap tidak diketahui dan hasil terakhir dapat dilihat pada layar.
 
-1. In Termux, update packages, install `proot-distro`, and install the selected distro.
-2. Enter the distro with `proot-distro login <distro>`.
-3. Inside the distro, install XFCE, D-Bus and TigerVNC. Debian/Ubuntu use apt; Arch uses pacman.
-4. Create the VNC startup file and start display `:1` bound to localhost only.
-5. In VNC Viewer, connect to `127.0.0.1:5901`.
+## Persiapan satu kali
 
-The VNC server is intentionally restricted to loopback. Do not change it to listen on all network interfaces unless you understand the exposure and have configured authentication and firewall rules.
+1. Pasang Termux dari [rilis resmi Termux](https://github.com/termux/termux-app/releases) atau F-Droid. Jangan mencampur Termux dan plugin dari sumber tanda tangan berbeda.
+2. Buka Termux sekali dan jalankan:
+   ```sh
+   mkdir -p ~/.termux
+   printf 'allow-external-apps=true\\n' >> ~/.termux/termux.properties
+   ```
+   Jika file sudah memiliki pengaturan tersebut, pastikan hanya ada satu nilai aktif. Restart Termux setelah mengubah properti.
+3. Di Android, buka **Info aplikasi Mora Shield → Izin → Izin tambahan → Run commands in Termux environment**, lalu izinkan. Mora Shield meminta izin ini saat diperlukan.
+4. Pastikan Termux tidak dibatasi optimasi baterai jika sesi desktop harus tetap hidup.
+5. Instal aplikasi VNC Viewer terpisah untuk melihat desktop.
 
-To stop the desktop, run `vncserver -kill :1` inside the distro, then exit the distro shell. A first VNC start may ask you to create a VNC password.
+API Termux memerlukan izin `com.termux.permission.RUN_COMMAND` dan `allow-external-apps=true`. Pengaturan tersebut memang sengaja memerlukan tindakan pengguna; Mora Shield tidak mengaktifkannya secara diam-diam.
 
-## Architecture and limitations
+## Alur penggunaan
 
-- Termux provides the Android-side package environment; proot-distro creates a userspace root filesystem and launches it through PRoot.
-- The distro shares the Android device kernel. It is not a VM and does not boot its own kernel.
-- systemd as PID 1, Docker, kernel modules, privileged mounts, hardware virtualization and full desktop GPU acceleration are not guaranteed and commonly unavailable in PRoot.
-- Desktop performance depends on device RAM, storage speed, Android process management and VNC settings. Start with 1280x720 and lower color depth/resolution if the desktop feels slow.
-- The Mora Shield screen currently guides setup and copies commands. It does not silently execute shell commands, install Termux, provision a distro, or claim that a desktop session is running.
-- Distro backups and removals are performed in Termux with proot-distro commands. Export important files before removing or resetting a distro.
+1. Pilih Debian, Ubuntu, atau Arch Linux.
+2. Tekan **Install distro** dan setujui konfirmasi. Tunggu proses selesai di notifikasi/sesi Termux; periksa status kembali.
+3. Tekan **Install XFCE + VNC** dan tunggu sampai Termux mengembalikan exit code sukses.
+4. Tekan **Start XFCE**. Jika server meminta password pada pemakaian pertama, selesaikan pengaturan tersebut di Termux.
+5. Di VNC Viewer, sambungkan ke host `127.0.0.1`, port `5901` (display `:1`).
+6. Tekan **Stop XFCE** saat selesai.
 
-## Security
+Jika Termux tidak mengembalikan hasil, buka Termux dan periksa notifikasi atau sesi perintahnya. Mora Shield tidak boleh menampilkan status sukses hanya karena perintah sudah dikirim.
 
-Commands are shown to the user and copied only after a tap. Mora Shield does not expose a remote shell service, does not open VNC to the LAN, and does not request root access for this integration.
+## Penyimpanan dan performa
+
+XFCE dan dependensinya dapat menggunakan beberapa GB. Mulailah dengan resolusi VNC 1280×720. Turunkan resolusi atau color depth jika terasa lambat. Simpan salinan file penting sebelum menghapus atau memasang ulang distro.
+
+## Batasan teknis
+
+- PRoot berbagi kernel Android; bukan VM dengan kernel sendiri.
+- systemd sebagai PID 1, Docker, modul kernel, privileged mounts, hardware virtualization, dan akselerasi GPU penuh tidak dijamin.
+- Android/HyperOS dapat menghentikan Termux di latar belakang. Izinkan aktivitas latar dan sesuaikan optimasi baterai jika diperlukan.
+- Start/stop mengelola VNC display `:1`; bukan menghidupkan/mematikan seluruh distro.
+- Distro lain dapat ditambahkan jika didukung proot-distro, tetapi belum tersedia sebagai preset UI.
