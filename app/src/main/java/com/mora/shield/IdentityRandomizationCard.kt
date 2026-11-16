@@ -27,7 +27,7 @@ import com.mora.shield.identity.IdentityRandomizationScheduler
 import com.mora.shield.identity.IdentityRandomizationStore
 
 @Composable
-fun IdentityRandomizationCard(platform: IdentityPlatform) {
+fun IdentityRandomizationCard(platform: IdentityPlatform, onRandomized: () -> Unit = {}) {
     val context = LocalContext.current
     val store = remember(context) { IdentityRandomizationStore(context) }
     var settings by remember { mutableStateOf(store.load()) }
@@ -102,6 +102,7 @@ fun IdentityRandomizationCard(platform: IdentityPlatform) {
                         status = "Run #" + result.runIndex + ": " +
                             (result.selectedProfile ?: "tidak ada profil") + "; " +
                             result.randomizedApps + " profil per-app diacak."
+                        onRandomized()
                     }.onFailure { status = it.message ?: "Randomisasi gagal" }
                 },
                 modifier = Modifier.fillMaxWidth()
