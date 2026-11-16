@@ -181,6 +181,30 @@ class DesktopIdentityTests(unittest.TestCase):
         self.assertEqual(set(result), set(m.BROWSERS))
         self.assertTrue(all("installed" in item for item in result.values()))
 
+    def test_flatpak_browser_installation_is_detected(self):
+        with patch.object(m.shutil, "which", return_value="/usr/bin/flatpak"):
+            result = m.browser_installation("zen", {"app.zen_browser.zen"})
+        self.assertEqual(result["kind"], "flatpak")
+        self.assertEqual(result["app_id"], "app.zen_browser.zen")
+
+    def test_flatpak_firefox_launch_uses_isolated_profile_permission(self):
+        with tempfile.TemporaryDirectory() as root:
+            profile = m.create_profile(Path(root), "zen-flatpak", "zen", "linux")
+            installation = {
+                "kind": "flatpak",
+                "executable": "/usr/bin/flatpak",
+                "app_id": "app.zen_browser.zen",
+            }
+            with patch.object(m, "browser_installation", return_value=installation), \
+                 patch.object(m.subprocess, "Popen") as popen:
+                m.launch_profile(Path(root), "zen-flatpak", diagnostics=True)
+            command = popen.call_args.args[0]
+            self.assertEqual(command[0:2], ["/usr/bin/flatpak", "run"])
+            self.assertIn("--filesystem=" + str(profile.resolve()) + ":rw", command)
+            self.assertIn("app.zen_browser.zen", command)
+            self.assertIn("-profile", command)
+            self.assertTrue(command[-1].startswith("file://"))
+
 
 if __name__ == "__main__":
     unittest.main()
