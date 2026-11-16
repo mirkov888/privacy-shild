@@ -96,7 +96,7 @@ class IdentityProfileRecoveryManagerTest {
     }
 
     @Test
-    fun rejectsInvalidRandomizationSeed() {
+    fun rejectsEmptyRandomizationSeed() {
         val raw = """
             {
               "format":"mora-identity-studio",
@@ -113,7 +113,7 @@ class IdentityProfileRecoveryManagerTest {
               "randomization":{
                 "enabled":true,
                 "intervalHours":24,
-                "seed":"bad\\nseed",
+                "seed":"",
                 "platform":"ANDROID",
                 "randomizeEnabledApps":false
               },
