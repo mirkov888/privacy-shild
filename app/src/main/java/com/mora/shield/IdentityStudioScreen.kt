@@ -46,6 +46,7 @@ import com.mora.shield.identity.IdentityProtectionStore
 import com.mora.shield.identity.IdentityProfileRecoveryManager
 import com.mora.shield.identity.IdentityAndroidIntegration
 import com.mora.shield.identity.IdentityAndroidIntegrationReport
+import com.mora.shield.IdentityPrivacyAuditCard
 
 @Composable
 fun IdentityStudioScreen() {
@@ -86,6 +87,7 @@ fun IdentityStudioScreen() {
             refreshKey++
             sessionSeed = FingerprintProtectionEngine.newSessionSeed()
         }) }
+        item { IdentityPrivacyAuditCard() }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
