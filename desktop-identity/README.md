@@ -12,7 +12,7 @@ Start the lightweight Linux dashboard (Tkinter):
 
     python3 mora_identity.py gui
 
-The dashboard contains profile search/create, browser launch and local diagnostics, protection capability status, backup/restore/rollback, JSON import/export, report comparison and audit. It uses the same profile store and helper functions as the CLI. On Debian/Ubuntu, install the optional UI runtime with `sudo apt install python3-tk` when Tkinter is missing.
+The dashboard contains profile search/create, browser launch and local diagnostics, protection capability status, backup/restore/rollback, JSON import/export, report comparison and audit. It uses the same profile store and helper functions as the CLI. On Debian/Ubuntu, install the optional UI runtime with `sudo apt install python3-tk` when Tkinter is missing. The WebRTC diagnostic gathers ICE candidates without contacting a STUN server, records only candidate types and counts (mDNS hostname versus IP-literal), and never stores raw candidate addresses. An IP-literal candidate is a signal to inspect browser/network settings, not proof that a public IP or VPN is exposed.
 
     python3 mora_identity.py doctor
     python3 mora_identity.py list
