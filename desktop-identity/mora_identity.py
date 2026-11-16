@@ -654,6 +654,306 @@ def open_desktop_dashboard(root):
     window.mainloop()
 
 
+
+def launch_gui(root_path):
+    """Open the lightweight Linux dashboard for the existing Mora Shield bridge."""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog, messagebox, simpledialog, ttk
+    except ImportError as error:
+        raise RuntimeError("Tkinter belum terpasang. Debian/Ubuntu: sudo apt install python3-tk") from error
+
+    base = Path(root_path).expanduser()
+    base.mkdir(parents=True, exist_ok=True)
+    window = tk.Tk()
+    window.title("Mora Shield • Identity Desk")
+    window.geometry("1040x720")
+    window.minsize(860, 600)
+
+    style = ttk.Style(window)
+    try:
+        style.theme_use("clam")
+    except tk.TclError:
+        pass
+
+    selected_id = tk.StringVar()
+    search_text = tk.StringVar()
+    profile_id = tk.StringVar()
+    browser_var = tk.StringVar(value="firefox")
+    platform_var = tk.StringVar(value="android")
+    model_var = tk.StringVar()
+    ua_var = tk.StringVar()
+    canvas_var = tk.BooleanVar(value=False)
+    webgl_var = tk.BooleanVar(value=False)
+    rtc_var = tk.BooleanVar(value=True)
+    status_var = tk.StringVar(value="Profil lokal: " + str(base))
+
+    outer = ttk.Frame(window, padding=14)
+    outer.pack(fill="both", expand=True)
+    ttk.Label(outer, text="Mora Shield Identity Desk", font=("TkDefaultFont", 18, "bold")).pack(anchor="w")
+    ttk.Label(
+        outer,
+        text="Kelola profil browser Linux yang terisolasi. Profil browser utama tidak disentuh.",
+        foreground="#666666",
+    ).pack(anchor="w", pady=(2, 10))
+
+    create_box = ttk.LabelFrame(outer, text="Buat profil baru", padding=10)
+    create_box.pack(fill="x", pady=(0, 10))
+    ttk.Label(create_box, text="ID profil").grid(row=0, column=0, sticky="w", padx=4, pady=3)
+    ttk.Entry(create_box, textvariable=profile_id, width=20).grid(row=1, column=0, sticky="ew", padx=4)
+    ttk.Label(create_box, text="Browser").grid(row=0, column=1, sticky="w", padx=4, pady=3)
+    ttk.Combobox(create_box, textvariable=browser_var, values=list(BROWSERS), state="readonly", width=14).grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Label(create_box, text="Label platform").grid(row=0, column=2, sticky="w", padx=4, pady=3)
+    ttk.Combobox(create_box, textvariable=platform_var, values=list(PLATFORMS), state="readonly", width=13).grid(row=1, column=2, sticky="ew", padx=4)
+    ttk.Label(create_box, text="Model / label").grid(row=0, column=3, sticky="w", padx=4, pady=3)
+    ttk.Entry(create_box, textvariable=model_var, width=22).grid(row=1, column=3, sticky="ew", padx=4)
+    ttk.Label(create_box, text="User-Agent kustom (opsional)").grid(row=0, column=4, sticky="w", padx=4, pady=3)
+    ttk.Entry(create_box, textvariable=ua_var, width=34).grid(row=1, column=4, sticky="ew", padx=4)
+    for column in range(5):
+        create_box.columnconfigure(column, weight=1)
+
+    options = ttk.Frame(create_box)
+    options.grid(row=2, column=0, columnspan=5, sticky="w", pady=(8, 2))
+    ttk.Checkbutton(options, text="Canvas (Firefox)", variable=canvas_var).pack(side="left", padx=(4, 12))
+    ttk.Checkbutton(options, text="Nonaktifkan WebGL", variable=webgl_var).pack(side="left", padx=12)
+    ttk.Checkbutton(options, text="Batasi WebRTC", variable=rtc_var).pack(side="left", padx=12)
+
+    toolbar = ttk.Frame(outer)
+    toolbar.pack(fill="x", pady=(0, 8))
+    ttk.Label(toolbar, text="Cari profil").pack(side="left")
+    search_entry = ttk.Entry(toolbar, textvariable=search_text, width=32)
+    search_entry.pack(side="left", padx=(6, 12))
+    tree_frame = ttk.Frame(outer)
+    tree_frame.pack(fill="both", expand=True)
+    columns = ("id", "model", "browser", "platform", "protection")
+    tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=12, selectmode="browse")
+    headers = {"id": "Profile ID", "model": "Model / label", "browser": "Browser", "platform": "Platform", "protection": "Protection"}
+    widths = {"id": 160, "model": 210, "browser": 100, "platform": 100, "protection": 250}
+    for key in columns:
+        tree.heading(key, text=headers[key])
+        tree.column(key, width=widths[key], minwidth=70, stretch=key in ("model", "protection"))
+    scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+    tree.configure(yscrollcommand=scrollbar.set)
+    tree.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
+
+    detail_box = ttk.LabelFrame(outer, text="Detail profil terpilih", padding=8)
+    detail_box.pack(fill="x", pady=8)
+    details = tk.Text(detail_box, height=5, wrap="word", state="disabled")
+    details.pack(fill="x")
+
+    def set_status(message):
+        status_var.set(str(message))
+
+    def selected_profile():
+        profile = selected_id.get()
+        if not profile:
+            choice = tree.selection()
+            if choice:
+                profile = choice[0]
+        if not profile:
+            messagebox.showinfo("Mora Shield", "Pilih profil terlebih dahulu.", parent=window)
+            return None
+        try:
+            return profile_dir(base, profile), json.loads((profile_dir(base, profile) / "profile.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            messagebox.showerror("Mora Shield", str(error), parent=window)
+            return None
+
+    def refresh(*_):
+        query = search_text.get().strip().lower()
+        for item in tree.get_children():
+            tree.delete(item)
+        for entry in profiles(base):
+            haystack = " ".join(str(entry.get(key, "")) for key in ("id", "model", "browser", "platform_test_label")).lower()
+            if query and query not in haystack:
+                continue
+            protection = entry.get("protection", {})
+            active = [
+                name.upper() for name in ("canvas", "webgl", "webrtc")
+                if protection.get(name, {}).get("applied")
+            ]
+            tree.insert("", "end", iid=entry["id"], values=(
+                entry["id"], entry.get("model", ""), entry.get("browser", ""),
+                entry.get("platform_test_label", ""), ", ".join(active) or "—"
+            ))
+        if selected_id.get() and tree.exists(selected_id.get()):
+            tree.selection_set(selected_id.get())
+        set_status(str(len(profiles(base))) + " profil tersimpan • " + str(base))
+
+    def on_select(_event=None):
+        choice = tree.selection()
+        if not choice:
+            return
+        selected_id.set(choice[0])
+        found = next((item for item in profiles(base) if item.get("id") == choice[0]), {})
+        details.configure(state="normal")
+        details.delete("1.0", "end")
+        details.insert("1.0", json.dumps(found, indent=2, ensure_ascii=False))
+        details.configure(state="disabled")
+
+    def create_action():
+        try:
+            ident = safe_id(profile_id.get().strip())
+            created = create_profile(
+                base, ident, browser_var.get(), platform_var.get(),
+                user_agent=ua_var.get().strip() or None,
+                protect_webrtc=rtc_var.get(),
+                model=model_var.get().strip() or None,
+                protect_canvas=canvas_var.get(),
+                protect_webgl=webgl_var.get(),
+            )
+            selected_id.set(ident)
+            profile_id.set("")
+            refresh()
+            if tree.exists(ident):
+                tree.selection_set(ident)
+                on_select()
+            set_status("Profil dibuat: " + str(created))
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Gagal membuat profil", str(error), parent=window)
+
+    def launch_action(with_diagnostics=False):
+        selected = selected_profile()
+        if not selected:
+            return
+        destination, metadata = selected
+        if metadata.get("engine") == "firefox":
+            command = [BROWSERS[metadata["browser"]][0], "-no-remote", "-profile", str(destination)]
+        else:
+            command = [str(destination / "launch.sh")]
+        if with_diagnostics:
+            command.append(diagnostics_uri(base, metadata["id"]))
+        try:
+            import subprocess
+            subprocess.Popen(command, start_new_session=True)
+            set_status("Membuka profil terisolasi: " + metadata["id"])
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Gagal membuka browser", str(error), parent=window)
+
+    def backup_action():
+        selected = selected_profile()
+        if not selected:
+            return
+        destination, metadata = selected
+        output = filedialog.asksaveasfilename(
+            parent=window, title="Simpan backup profil", defaultextension=".zip",
+            initialfile=metadata["id"] + ".zip", filetypes=[("ZIP", "*.zip")]
+        )
+        if not output:
+            return
+        try:
+            archive = backup_profile(base, metadata["id"], output)
+            set_status("Backup tersimpan: " + str(archive))
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Backup gagal", str(error), parent=window)
+
+    def restore_action():
+        archive = filedialog.askopenfilename(parent=window, title="Pilih backup profil", filetypes=[("ZIP", "*.zip")])
+        if not archive:
+            return
+        ident = simpledialog.askstring("Restore profil", "Masukkan Profile ID yang ada di backup:", parent=window)
+        if not ident:
+            return
+        try:
+            restored = restore_profile(base, ident.strip(), archive)
+            selected_id.set(ident.strip())
+            refresh()
+            set_status("Profil dipulihkan: " + str(restored))
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
+            messagebox.showerror("Restore gagal", str(error), parent=window)
+
+    def rollback_action():
+        selected = selected_profile()
+        if not selected:
+            return
+        _, metadata = selected
+        if not messagebox.askyesno(
+            "Konfirmasi rollback",
+            "Pulihkan backup terakhir untuk " + metadata["id"] + "?\nProfil aktif saat ini akan disimpan sebagai pre-rollback.",
+            parent=window
+        ):
+            return
+        try:
+            restored = rollback_profile(base, metadata["id"])
+            refresh()
+            set_status("Rollback selesai: " + str(restored))
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile) as error:
+            messagebox.showerror("Rollback gagal", str(error), parent=window)
+
+    def import_action():
+        source = filedialog.askopenfilename(parent=window, title="Impor profil Mora", filetypes=[("JSON", "*.json")])
+        if not source:
+            return
+        try:
+            imported = import_exchange(base, source)
+            refresh()
+            set_status("Profil diimpor: " + (", ".join(imported) if imported else "tidak ada"))
+        except (OSError, ValueError, KeyError, json.JSONDecodeError) as error:
+            messagebox.showerror("Impor gagal", str(error), parent=window)
+
+    def export_action():
+        output = filedialog.asksaveasfilename(
+            parent=window, title="Ekspor profil Mora", defaultextension=".json",
+            initialfile="mora-identity-profiles.json", filetypes=[("JSON", "*.json")]
+        )
+        if not output:
+            return
+        try:
+            count = export_exchange(base, output)
+            set_status(str(count) + " profil diekspor: " + output)
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Ekspor gagal", str(error), parent=window)
+
+    def compare_action():
+        before = filedialog.askopenfilename(parent=window, title="Pilih laporan sebelum", filetypes=[("JSON", "*.json")])
+        if not before:
+            return
+        after = filedialog.askopenfilename(parent=window, title="Pilih laporan sesudah", filetypes=[("JSON", "*.json")])
+        if not after:
+            return
+        try:
+            result = compare_reports(before, after)
+            messagebox.showinfo("Perbandingan diagnostik", json.dumps(result, indent=2, ensure_ascii=False), parent=window)
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            messagebox.showerror("Perbandingan gagal", str(error), parent=window)
+
+    def audit_action():
+        source = filedialog.askopenfilename(parent=window, title="Pilih laporan diagnostik", filetypes=[("JSON", "*.json")])
+        if not source:
+            return
+        try:
+            report = json.loads(Path(source).read_text(encoding="utf-8"))
+            result = audit_report(report)
+            messagebox.showinfo("Audit identitas lokal", json.dumps(result, indent=2, ensure_ascii=False), parent=window)
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            messagebox.showerror("Audit gagal", str(error), parent=window)
+
+    def doctor_action():
+        result = doctor()
+        messagebox.showinfo("Browser & protection status", json.dumps(result, indent=2, ensure_ascii=False), parent=window)
+
+    buttons = ttk.Frame(outer)
+    buttons.pack(fill="x", pady=(2, 6))
+    actions = [
+        ("Buat profil", create_action), ("Buka browser", launch_action),
+        ("Diagnostik", lambda: launch_action(True)), ("Backup", backup_action),
+        ("Restore", restore_action), ("Rollback", rollback_action),
+        ("Impor JSON", import_action), ("Ekspor JSON", export_action),
+        ("Bandingkan", compare_action), ("Audit", audit_action), ("Doctor", doctor_action),
+    ]
+    for index, (label, callback) in enumerate(actions):
+        ttk.Button(buttons, text=label, command=callback).grid(row=index // 6, column=index % 6, sticky="ew", padx=3, pady=3)
+    for column in range(6):
+        buttons.columnconfigure(column, weight=1)
+    ttk.Label(outer, textvariable=status_var, foreground="#666666").pack(anchor="w", pady=(4, 0))
+
+    tree.bind("<<TreeviewSelect>>", on_select)
+    tree.bind("<Double-1>", lambda _event: launch_action())
+    search_text.trace_add("write", refresh)
+    refresh()
+    window.mainloop()
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Mora Shield isolated desktop browser profiles")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help=argparse.SUPPRESS)
@@ -661,6 +961,7 @@ def main(argv=None):
     commands.add_parser("list")
     commands.add_parser("gui", help="open the lightweight Linux dashboard")
     commands.add_parser("doctor")
+    commands.add_parser("gui", help="buka dashboard Linux Mora Shield Identity Desk")
     create = commands.add_parser("create")
     create.add_argument("--id", required=True)
     create.add_argument("--browser", choices=BROWSERS, required=True)
