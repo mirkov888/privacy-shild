@@ -625,8 +625,10 @@ def audit_report(report):
         except (TypeError, ValueError, OverflowError):
             mdns_candidates = 0
         raw_types = ice.get("candidateTypes")
-        candidate_types = sorted({item for item in raw_types if isinstance(item, str)})
+        candidate_types = (
+            sorted({item for item in raw_types if isinstance(item, str)})
             if isinstance(raw_types, (list, tuple, set)) else []
+        )
         if address_candidates:
             status = "attention"
             detail = ("ICE candidate memuat alamat IP literal; Mora hanya menghitungnya, "
