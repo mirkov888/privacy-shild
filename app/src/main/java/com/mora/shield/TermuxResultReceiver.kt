@@ -37,6 +37,8 @@ class TermuxResultReceiver : BroadcastReceiver() {
                 output.contains("MORA_XFCE_STOPPED") -> "stopped"
                 else -> "unknown"
             })
+        } else if (operation.startsWith("desktop:") && ok) {
+            editor.putBoolean("desktop_ready_$distro", true)
         } else if (operation.startsWith("install:") && ok) {
             editor.putBoolean("installed_$distro", true).putString("status_$distro", "installed")
         } else if (operation.startsWith("start:") && ok) {
