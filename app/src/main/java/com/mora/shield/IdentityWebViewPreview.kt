@@ -43,6 +43,13 @@ fun IdentityWebViewPreview(profile: IdentityProfile) {
                 }
                 loadDataWithBaseURL("https://mora.local/", PREVIEW_HTML, "text/html", "UTF-8", null)
             }
+        },
+        update = { view ->
+            if (view.tag != profile.id) {
+                view.tag = profile.id
+                view.settings.userAgentString = profile.userAgent
+                view.loadDataWithBaseURL("https://mora.local/", PREVIEW_HTML, "text/html", "UTF-8", null)
+            }
         }
     )
 }
