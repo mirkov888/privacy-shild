@@ -116,3 +116,19 @@ jobs:
             app/build/outputs/logs/
           if-no-files-found: warn
           retention-days: 30
+
+  desktop-identity:
+    name: Test Linux desktop identity helper
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Compile helper
+        run: python -m py_compile desktop-identity/mora_identity.py
+      - name: Run unit tests
+        run: python -m unittest discover -s desktop-identity/tests -v
