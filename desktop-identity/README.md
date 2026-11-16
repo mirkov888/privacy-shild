@@ -2,7 +2,7 @@
 
 Linux companion utility for Mora Shield with a CLI and a lightweight Tkinter dashboard. It manages isolated browser compatibility profiles and never edits the user's normal browser profile, OS identity, hardware identifier, certificate or attestation.
 
-Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium. Firefox-family profiles use dedicated profile directories and user.js; Chromium-family profiles use a separate user-data directory and launcher.
+Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium. Firefox-family profiles use dedicated profile directories and user.js; Chromium-family profiles use a separate user-data directory and launcher. Native packages and common Flatpak app IDs are detected; Flatpak launches receive access only to the selected Mora profile directory.
 
 Compatibility labels: Android, iPhone, iPad, Windows, macOS and Linux. Labels select a User-Agent test string only. They do not emulate operating systems, hardware, fonts, codecs, GPU, Client Hints, browser engines or mobile touch behavior. An iPhone/Safari User-Agent opened in Firefox remains Firefox.
 
@@ -41,8 +41,7 @@ Every profile contains diagnostics.html. Open it locally to inspect User-Agent, 
 
 ## Scope limits
 
-- Browser detection via doctor only checks whether supported executable names are on PATH.
-- A browser may use a different binary name or install path; specify the browser manually and check its launch behavior.
+- Browser detection via doctor checks known native executable names and common Flatpak app IDs. Unusual custom install paths or renamed Flatpak IDs may still require manual setup.
 - User-Agent overrides do not provide true device emulation or guarantee consistent Client Hints across browsers.
 - Android external browsers are not modified by this helper.
 - The Linux dashboard is an optional Tkinter front-end to this existing companion bridge; it is not a second Android app or a shared always-live Android/Linux profile database. Use explicit JSON import/export to move profiles between platforms.
