@@ -80,7 +80,7 @@ object TermuxBridge {
 
     private fun installScript(distro: String, removeFirst: Boolean): String {
         val remove = if (removeFirst) {
-            "\"$PREFIX/bin/proot-distro\" remove $distro >/dev/null 2>&1 || true"
+            ""$PREFIX/bin/proot-distro" remove $distro >/dev/null 2>&1 || true"
         } else ":"
         return """
             set +e
@@ -127,7 +127,7 @@ object TermuxBridge {
             chmod 700 ~/.config/tigervnc/xstartup
             cp ~/.config/tigervnc/xstartup ~/.vnc/xstartup
             chmod 700 ~/.vnc/xstartup
-            pid="$(vncserver -list 2>/dev/null | awk '$1 == \"1\" && $2 == \"5901\" { print $4; exit }')"
+            pid="$(vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
             live=false
             if [ "$pid" ] && kill -0 "$pid" 2>/dev/null; then
                 state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
