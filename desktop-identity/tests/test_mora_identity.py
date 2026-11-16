@@ -109,6 +109,48 @@ class DesktopIdentityTests(unittest.TestCase):
                 m.restore_profile(Path(root), "bad", archive)
             self.assertFalse((Path(root).parent / "escape.txt").exists())
 
+    def test_firefox_privacy_controls_are_recorded_and_written(self):
+        with tempfile.TemporaryDirectory() as root:
+            profile = m.create_profile(Path(root), "firefox-guard", "firefox", "linux",
+                                       protect_canvas=True, protect_webgl=True)
+            prefs = (profile / "user.js").read_text()
+            metadata = json.loads((profile / "profile.json").read_text())
+            self.assertIn("privacy.resistFingerprinting", prefs)
+            self.assertIn("webgl.disabled", prefs)
+            self.assertTrue(metadata["protection"]["canvas"]["applied"])
+            self.assertTrue(metadata["protection"]["webgl"]["applied"])
+
+    def test_chromium_marks_canvas_unsupported_and_webgl_opt_in(self):
+        with tempfile.TemporaryDirectory() as root:
+            profile = m.create_profile(Path(root), "chromium-guard", "chromium", "linux",
+                                       protect_canvas=True, protect_webgl=True)
+            launcher = (profile / "launch.sh").read_text()
+            metadata = json.loads((profile / "profile.json").read_text())
+            self.assertIn("--disable-webgl", launcher)
+            self.assertFalse(metadata["protection"]["canvas"]["applied"])
+            self.assertIn("not available", metadata["protection"]["canvas"]["method"])
+
+    def test_diagnostics_uri_is_local_file(self):
+        with tempfile.TemporaryDirectory() as root:
+            profile = m.create_profile(Path(root), "diagnostic", "firefox", "linux")
+            uri = m.diagnostics_uri(Path(root), "diagnostic")
+            self.assertTrue(uri.startswith("file://"))
+            self.assertTrue(uri.endswith("/diagnostics.html"))
+
+    def test_audit_report_detects_ua_client_hints_mismatch(self):
+        report = {
+            "userAgent": "Mozilla/5.0 (Linux; Android 15) Chrome/131.0.0.0",
+            "clientHints": {"platform": "Windows", "mobile": False},
+            "canvas": {"available": True}, "webgl": {"available": True},
+            "webRtc": {"peerConnection": False}, "timezone": "Asia/Jakarta",
+            "language": "id-ID", "screen": {"width": 1080, "height": 2400},
+        }
+        result = m.audit_report(report)
+        self.assertEqual(result["summary"]["mismatches"], 1)
+        mismatch = next(item for item in result["checks"] if item["surface"] == "clientHints")
+        self.assertEqual(mismatch["status"], "mismatch")
+        self.assertIn("tidak menguji IP publik", result["note"])
+
     def test_doctor_reports_supported_browser_families(self):
         result = m.doctor()
         self.assertEqual(set(result), set(m.BROWSERS))
