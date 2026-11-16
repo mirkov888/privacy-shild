@@ -2,6 +2,7 @@ package com.mora.shield.identity
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,5 +29,10 @@ class IdentityRandomizationTest {
     @Test(expected = IllegalArgumentException::class)
     fun emptyCandidateListIsRejected() {
         IdentityRandomizationStore.stableIndex("seed", "scope", 1, 0)
+    }
+
+    @Test
+    fun emptyCandidateSetIsHandledWithoutSelection() {
+        assertNull(IdentityRandomizationStore.stableIndexOrNull("seed", "scope", 1, 0))
     }
 }
