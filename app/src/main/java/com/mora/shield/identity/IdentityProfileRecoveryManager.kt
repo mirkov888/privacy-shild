@@ -138,8 +138,9 @@ class IdentityProfileRecoveryManager(context: Context) {
             val favorites = catalog.optJSONArray("favorites") ?: JSONArray()
             if (favorites.length() > MAX_CATALOG_PROFILES + 250) return "Daftar favorit terlalu besar"
 
-            if (!root.isNull("selectedProfile")) {
-                val selected = root.optJSONObject("selectedProfile") ?: return "Profil terpilih tidak valid"
+            val selectedValue = root.opt("selectedProfile")
+            if (selectedValue != null && selectedValue !== JSONObject.NULL) {
+                val selected = selectedValue as? JSONObject ?: return "Profil terpilih tidak valid"
                 runCatching { IdentityPlatform.valueOf(selected.optString("platform")) }.getOrNull()
                     ?: return "Platform profil terpilih tidak valid"
                 IdentityProfileValidator.validate(
