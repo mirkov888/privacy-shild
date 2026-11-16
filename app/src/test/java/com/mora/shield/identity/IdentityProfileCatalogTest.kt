@@ -26,6 +26,14 @@ class IdentityProfileCatalogTest {
         iphoneProfiles.forEach { assertTrue(it.id, it.userAgent.contains("(iPhone; CPU iPhone OS")) }
     }
 
+    @Test fun androidBrowserPickerIncludesCuratedPerAppDeviceModels() {
+        val androidProfiles = IdentityProfileCatalog.forPlatform(IdentityPlatform.ANDROID)
+        assertTrue("Expected Android device preset coverage in the browser picker", androidProfiles.size >= 30)
+        assertTrue(androidProfiles.any { it.model == "SM-S938B" })
+        assertTrue(androidProfiles.any { it.model == "Pixel 8 Pro" })
+        assertTrue(androidProfiles.all { it.userAgent.contains("Android ") && it.userAgent.contains("Chrome/") })
+    }
+
     @Test fun everyProfileHasUserAgent() {
         IdentityProfileCatalog.profiles.forEach { profile ->
             assertTrue(profile.id, profile.userAgent.startsWith("Mozilla/5.0"))
