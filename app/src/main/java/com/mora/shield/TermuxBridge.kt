@@ -52,13 +52,14 @@ object TermuxBridge {
             fi
             echo MORA_ROOTFS_OK
             "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc '
-                pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
-                if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                    state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                    case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                pid="$(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
+                if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                    state="$(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                 else
                     echo MORA_XFCE_STOPPED
                 fi
+            '
             '
         """.trimIndent()
         run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
