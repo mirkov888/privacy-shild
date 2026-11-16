@@ -1,8 +1,10 @@
 package com.mora.shield.identity
 
+import com.mora.shield.DeviceIdentityPresetCatalog
+
 /** Curated starter catalogue; data-driven so verified profiles can be added independently. */
 object IdentityProfileCatalog {
-    val profiles = listOf(
+    private val bundledProfiles = listOf(
         IdentityProfile("android-pixel9-chrome", IdentityPlatform.ANDROID, "Google", "Pixel 9", "Android 15", "Chrome", "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36", "Android Chrome compatibility testing"),
         IdentityProfile("android-samsung-s25-chrome", IdentityPlatform.ANDROID, "Samsung", "Galaxy S25", "Android 15", "Chrome", "Mozilla/5.0 (Linux; Android 15; SM-S931B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36", "Android Chrome compatibility testing"),
         IdentityProfile("android-xiaomi15-chrome", IdentityPlatform.ANDROID, "Xiaomi", "Xiaomi 15", "Android 15", "Chrome", "Mozilla/5.0 (Linux; Android 15; 24129PN74G) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36", "Android Chrome compatibility testing"),
@@ -37,6 +39,34 @@ object IdentityProfileCatalog {
         IdentityProfile("linux-desktop-firefox", IdentityPlatform.LINUX, "Linux", "Linux Desktop", "Linux x86_64", "Firefox", "Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0", "Linux browser compatibility testing"),
         IdentityProfile("linux-desktop-chrome", IdentityPlatform.LINUX, "Linux", "Linux Desktop", "Linux x86_64", "Chrome", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", "Linux browser compatibility testing")
     )
+
+    /**
+     * Reuse the curated non-security Android device catalogue in the browser picker.
+     * These entries are User-Agent compatibility templates, not verified hardware emulators.
+     */
+    private val androidDeviceProfiles = DeviceIdentityPresetCatalog.presets.mapNotNull { preset ->
+        val model = preset.model.trim().ifBlank { return@mapNotNull null }
+        if (bundledProfiles.any {
+                it.platform == IdentityPlatform.ANDROID &&
+                    it.manufacturer.equals(preset.manufacturer, ignoreCase = true) &&
+                    it.model.equals(model, ignoreCase = true)
+            }
+        ) return@mapNotNull null
+
+        IdentityProfile(
+            id = "android-device-${preset.id}-chrome",
+            platform = IdentityPlatform.ANDROID,
+            manufacturer = preset.manufacturer,
+            model = model,
+            osVersion = "Android ${preset.release}",
+            browser = "Chrome",
+            userAgent = "Mozilla/5.0 (Linux; Android ${preset.release}; ${model}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+            purpose = "Android Chrome compatibility template: ${preset.label}; not device emulation"
+        )
+    }
+
+    val profiles: List<IdentityProfile> = (bundledProfiles + androidDeviceProfiles)
+        .distinctBy { it.id }
 
     fun byId(id: String?): IdentityProfile? = profiles.firstOrNull { it.id == id }
     fun forPlatform(platform: IdentityPlatform): List<IdentityProfile> = profiles.filter { it.platform == platform }
