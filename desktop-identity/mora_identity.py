@@ -269,7 +269,7 @@ def export_exchange(root, output):
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name(output.name + ".tmp")
-    temporary.write_text(json.dumps(payload, indent=2) + "\\n", encoding="utf-8")
+    temporary.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     os.replace(temporary, output)
     return len(payload["profiles"])
 
@@ -498,7 +498,7 @@ def serve_lan_sync(root, host="0.0.0.0", port=8765, minutes=15):
         server.socket = tls.wrap_socket(server.socket, server_side=True)
 
         addresses = _local_private_ipv4_addresses()
-        print("\\nMORA SHIELD — LOCAL LAN SYNC", flush=True)
+        print("\nMORA SHIELD — LOCAL LAN SYNC", flush=True)
         print("HTTPS aktif untuk maksimum " + str(minutes) + " menit.", flush=True)
         print("Port: " + str(port), flush=True)
         if bind_address.is_unspecified:
@@ -518,7 +518,7 @@ def serve_lan_sync(root, host="0.0.0.0", port=8765, minutes=15):
             while time.monotonic() < expires_at:
                 server.handle_request()
         except KeyboardInterrupt:
-            print("\\nSesi sinkronisasi dihentikan.", flush=True)
+            print("\nSesi sinkronisasi dihentikan.", flush=True)
         finally:
             server.server_close()
     return 0
