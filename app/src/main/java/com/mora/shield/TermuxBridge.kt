@@ -37,16 +37,51 @@ object TermuxBridge {
     }
 
     fun requestStatus(context: Context, distro: String) {
-        run(context, "status:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("list", "--quiet"), true)
-        run(context, "session:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"), true)
+        requireDistro(distro)
+        val script = """
+            ROOT="$PREFIX/var/lib/proot-distro/containers/$distro/rootfs"
+            if [ ! -d "$PREFIX/var/lib/proot-distro/containers/$distro" ]; then
+                echo MORA_DISTRO_NOT_INSTALLED
+                exit 0
+            fi
+            echo MORA_DISTRO_INSTALLED
+            if [ -x "$ROOT/bin/sh" ] && [ -f "$ROOT/etc/os-release" ]; then
+                echo MORA_ROOTFS_OK
+                "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc "vncserver -list 2>/dev/null | grep -q ':1' && echo MORA_XFCE_RUNNING || echo MORA_XFCE_STOPPED"
+            else
+                echo MORA_ROOTFS_BROKEN
+            fi
+        """.trimIndent()
+        run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
 
     fun installDistro(context: Context, distro: String) {
         requireDistro(distro)
-        run(context, "install:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("install", distro), true)
+        run(context, "install:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = false)), true)
+    }
+
+    fun repairDistro(context: Context, distro: String) {
+        requireDistro(distro)
+        run(context, "repair:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", installScript(distro, removeFirst = true)), true)
+    }
+
+    private fun installScript(distro: String, removeFirst: Boolean): String {
+        val prefix = if (removeFirst) "\"$PREFIX/bin/proot-distro\" remove $distro >/dev/null 2>&1 || true; " else ""
+        return """
+            set +e
+            $prefix
+            for attempt in 1 2 3; do
+                "$PREFIX/bin/proot-distro" install "$distro" && exit 0
+                code=$?
+                echo "MORA_INSTALL_RETRY attempt=$attempt exit=$code"
+                "$PREFIX/bin/proot-distro" remove "$distro" >/dev/null 2>&1 || true
+                [ "$attempt" -lt 3 ] && sleep 5
+            done
+            echo MORA_INSTALL_FAILED
+            exit 1
+        """.trimIndent()
     }
 
     fun installDesktop(context: Context, distro: String) {
