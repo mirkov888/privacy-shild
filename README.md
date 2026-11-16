@@ -71,7 +71,7 @@ Connector commands remain deny-by-default and require user approval. Terminal is
 
 ## Mora Linux Environment — Android userspace
 
-Mora Shield now includes an in-app setup guide for Debian, Ubuntu, and Arch Linux userspaces through Termux + proot-distro, with XFCE over localhost-only VNC. The guide copies commands for the user; it does not silently install packages or execute shell commands. This is a PRoot userspace, not a full VM or separate kernel. See [docs/MORA-LINUX-ENVIRONMENT.md](docs/MORA-LINUX-ENVIRONMENT.md).
+Mora Shield integrates with Termux through its documented RUN_COMMAND API for confirmed distro installation, XFCE/VNC package setup, start/stop actions, and returned command status. Supported starter profiles are Debian, Ubuntu, and Arch Linux via proot-distro. Termux's RUN_COMMAND permission and allow-external-apps policy must be explicitly enabled by the user. This is a PRoot userspace sharing the Android kernel, not a full VM. See [docs/MORA-LINUX-ENVIRONMENT.md](docs/MORA-LINUX-ENVIRONMENT.md).
 
 ## Mora Identity Studio — Phase 1 & 2
 
