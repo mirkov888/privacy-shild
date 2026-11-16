@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 """Mora Shield isolated desktop browser profiles and portable identity-profile exchange."""
 import argparse
+import hashlib
+import hmac
+import ipaddress
 import json
 import os
 import re
+import secrets
 import shutil
+import socket
+import ssl
 import stat
 import sys
 import subprocess
 import tempfile
+import threading
+import time
 import zipfile
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 DEFAULT_ROOT = Path.home() / ".config/mora-shield/identity-profiles"
@@ -76,6 +85,58 @@ def _validate_user_agent(user_agent):
         raise ValueError("User-Agent tidak valid.")
     return user_agent
 
+def _write_chromium_privacy_extension(profile_dir):
+    """Install an opt-in MV3 extension into a Mora-owned Chromium profile."""
+    extension_dir = profile_dir / "mora-privacy-extension"
+    extension_dir.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "manifest_version": 3,
+        "name": "Mora Shield Privacy Guard",
+        "version": "1.0.0",
+        "description": "Blocks common Canvas readback surfaces in this isolated Mora profile.",
+        "content_scripts": [{
+            "matches": ["<all_urls>"],
+            "js": ["privacy.js"],
+            "run_at": "document_start",
+            "all_frames": True,
+            "world": "MAIN",
+        }],
+    }
+    script = r'''(() => {
+  "use strict";
+  if (globalThis.__moraCanvasGuardInstalled) return;
+  try {
+    Object.defineProperty(globalThis, "__moraCanvasGuardInstalled", {
+      value: true, configurable: false, enumerable: false, writable: false
+    });
+  } catch (_) { return; }
+  const deny = function () {
+    throw new DOMException("Canvas readback blocked by Mora Shield profile protection", "SecurityError");
+  };
+  const block = (prototype, name) => {
+    if (!prototype) return;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+    if (!descriptor || typeof descriptor.value !== "function") return;
+    try {
+      Object.defineProperty(prototype, name, {
+        ...descriptor, value: deny, configurable: false, writable: false
+      });
+    } catch (_) {}
+  };
+  try {
+    block(globalThis.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype, "getImageData");
+    block(globalThis.HTMLCanvasElement && HTMLCanvasElement.prototype, "toDataURL");
+    block(globalThis.HTMLCanvasElement && HTMLCanvasElement.prototype, "toBlob");
+    block(globalThis.OffscreenCanvas && OffscreenCanvas.prototype, "convertToBlob");
+  } catch (_) {}
+})();'''
+    (extension_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    (extension_dir / "privacy.js").write_text(script + "\n", encoding="utf-8")
+    return extension_dir
+
+
 def create_profile(root, profile_id, browser, platform, user_agent=None, protect_webrtc=True, model=None, protect_canvas=False, protect_webgl=False):
     if browser not in BROWSERS or platform not in PLATFORMS:
         raise ValueError("Browser/platform tidak didukung.")
@@ -92,9 +153,12 @@ def create_profile(root, profile_id, browser, platform, user_agent=None, protect
         "protection": {
             "canvas": {
                 "requested": bool(protect_canvas),
-                "applied": bool(protect_canvas and engine == "firefox"),
-                "method": "Firefox privacy.resistFingerprinting" if protect_canvas and engine == "firefox" else
-                          ("not available through Chromium startup flags" if protect_canvas else "disabled"),
+                "applied": bool(protect_canvas),
+                "method": (
+                    "Firefox privacy.resistFingerprinting"
+                    if protect_canvas and engine == "firefox"
+                    else ("Mora MV3 extension blocks page Canvas readback APIs; worker surfaces may remain" if protect_canvas else "disabled")
+                ),
             },
             "webgl": {
                 "requested": bool(protect_webgl),
@@ -131,6 +195,11 @@ def create_profile(root, profile_id, browser, platform, user_agent=None, protect
         exe = BROWSERS[browser][0]
         args = [exe, "--user-data-dir=" + str(target / "chromium-data"),
                 "--user-agent=" + ua, "--no-first-run"]
+        extension_dir = _write_chromium_privacy_extension(target) if protect_canvas else None
+        if extension_dir:
+            extension_path = str(extension_dir.resolve())
+            args.extend(["--disable-extensions-except=" + extension_path,
+                         "--load-extension=" + extension_path])
         if protect_webgl:
             args.append("--disable-webgl")
         if protect_webrtc:
@@ -261,7 +330,7 @@ def protection_capabilities(browser):
             "webrtc": "available: disable peer-connection API",
         }
     return {
-        "canvas": "not available through browser startup flags",
+        "canvas": "available: opt-in Mora MV3 extension blocks page Canvas readback (worker surfaces may remain)",
         "webgl": "available: disable WebGL API (may break 3D sites)",
         "webrtc": "best effort: restrict non-proxied UDP; not a VPN or IP-leak guarantee",
     }
@@ -497,6 +566,11 @@ def launch_profile(root, profile_id, diagnostics=False):
                 "--no-first-run",
             ]
             protection = metadata.get("protection", {})
+            extension_dir = destination / "mora-privacy-extension"
+            if protection.get("canvas", {}).get("applied") and extension_dir.is_dir():
+                extension_path = str(extension_dir.resolve())
+                command.extend(["--disable-extensions-except=" + extension_path,
+                                "--load-extension=" + extension_path])
             if protection.get("webgl", {}).get("applied"):
                 command.append("--disable-webgl")
             if protection.get("webrtc", {}).get("applied"):
