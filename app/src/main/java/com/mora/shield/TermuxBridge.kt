@@ -119,7 +119,7 @@ object TermuxBridge {
             set -e
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'MORA_XSTARTUP'
+                cat > "${'startup" <<'MORA_XSTARTUP'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
@@ -140,6 +140,229 @@ object TermuxBridge {
                     oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
                     oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
                     case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}startup" <<'MORA_XSTARTUP'
+            #!/bin/sh
+            unset SESSION_MANAGER
+            unset DBUS_SESSION_BUS_ADDRESS
+            exec dbus-run-session startxfce4
+            MORA_XSTARTUP
+                chmod 700 "${'startup"
+            done
+
+            pid="$(vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
+            live=false
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}startup"
+            done
+
+            pid="${'(vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
+            live=false
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}(vncserver -list 2>/dev/null | awk '${'1 == "1" && $2 == "5901" { print $4; exit }')"
+            live=false
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}1 == "1" && ${'2 == "5901" { print $4; exit }')"
+            live=false
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}2 == "5901" { print ${'4; exit }')"
+            live=false
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}4; exit }')"
+            live=false
+            if [ -n "${'pid" ] && kill -0 "$pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}pid" ] && kill -0 "${'pid" 2>/dev/null; then
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}pid" 2>/dev/null; then
+                state="${'(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}(ps -o stat= -p "${'pid" 2>/dev/null | tr -d ' ')"
+                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}pid" 2>/dev/null | tr -d ' ')"
+                case "${'state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "$live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}state" in ""|Z*|z*) ;; *) live=true ;; esac
+            fi
+
+            if [ "${'live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}live" != true ]; then
+                if [ -f /tmp/.X1-lock ]; then
+                    oldpid="${'(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="${'(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}(ps -o stat= -p "${'oldpid" 2>/dev/null | tr -d ' ')"
+                    case "$oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}oldpid" 2>/dev/null | tr -d ' ')"
+                    case "${'oldstate" in
+                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
+                    esac
+                fi
+                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
+            fi
+}oldstate" in
                         ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
                     esac
                 fi
