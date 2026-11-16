@@ -53,6 +53,7 @@ fun LinuxEnvironmentScreen() {
     val distro = moraDistros.first { it.id == selected }
     val managerReady = prefs.getBoolean("manager_ready", false)
     val installed = prefs.getBoolean("installed_$selected", false)
+    val desktopReady = prefs.getBoolean("desktop_ready_$selected", false)
     val session = prefs.getString("session_$selected", "unknown") ?: "unknown"
     val lastOutput = prefs.getString("last_output", "").orEmpty()
     val lastOperation = prefs.getString("last_operation", "").orEmpty()
@@ -168,6 +169,7 @@ fun LinuxEnvironmentScreen() {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Status ${distro.name}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text(if (installed) "● Terpasang" else "○ Belum terdeteksi terpasang", color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(if (desktopReady) "Paket XFCE/VNC: siap" else "Paket XFCE/VNC: belum dipasang")
                     Text("Sesi XFCE: " + when (session) {
                         "running" -> "Berjalan"
                         "stopped" -> "Berhenti"
@@ -183,10 +185,10 @@ fun LinuxEnvironmentScreen() {
         }
         item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
         item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}.", "Install ${distro.name}", termuxPresent && runPermission && managerReady && !installed) { confirm = "install" } }
-        item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && managerReady && installed) { confirm = "desktop" } }
-        item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && installed) { confirm = "password" } }
-        item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && installed) { confirm = "start" } }
-        item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && installed) { confirm = "stop" } }
+        item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && managerReady && installed && !desktopReady) { confirm = "desktop" } }
+        item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && desktopReady) { confirm = "password" } }
+        item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && desktopReady) { confirm = "start" } }
+        item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && desktopReady) { confirm = "stop" } }
         item {
             Text("Hasil perintah terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("$lastOperation · exit code $lastExit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
