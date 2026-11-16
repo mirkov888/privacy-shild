@@ -100,7 +100,7 @@ fun EmbeddedVncViewerCard() {
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = {
-                    surface.sendText("\\n")
+                    surface.sendText("\n")
                     keyboardText = ""
                 })
             )
