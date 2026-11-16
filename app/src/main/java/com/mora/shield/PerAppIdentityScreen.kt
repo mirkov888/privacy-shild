@@ -29,7 +29,7 @@ fun PerAppIdentityScreen() {
     val filtered = apps.filter { pm.getApplicationLabel(it).toString().contains(query, true) || it.packageName.contains(query, true) }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Per-App Device Identity", style = MaterialTheme.typography.headlineSmall)
-        Text("Pilih preset perangkat atau atur manual. Perubahan hanya diterapkan pada proses aplikasi yang dipilih melalui LSPosed; tidak mengubah identitas sistem global.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Pilih aplikasi secara eksplisit. Hanya label perangkat publik yang didukung yang diterapkan ke proses target melalui LSPosed; identitas keamanan dan hardware tidak disentuh.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Cari aplikasi") }, singleLine = true)
         if (selected == null) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -60,10 +60,6 @@ private fun IdentityEditor(pkg: String, onBack: () -> Unit, onSaved: () -> Unit)
     var model by remember { mutableStateOf(original.model) }
     var device by remember { mutableStateOf(original.device) }
     var product by remember { mutableStateOf(original.product) }
-    var fingerprint by remember { mutableStateOf(original.fingerprint) }
-    var release by remember { mutableStateOf(original.release) }
-    var sdk by remember { mutableStateOf(original.sdk.toString()) }
-    var patch by remember { mutableStateOf(original.securityPatch) }
     var presetExpanded by remember { mutableStateOf(false) }
     var selectedPresetLabel by remember { mutableStateOf("Pilih preset perangkat") }
 
@@ -86,19 +82,19 @@ private fun IdentityEditor(pkg: String, onBack: () -> Unit, onSaved: () -> Unit)
                         model = preset.model
                         device = preset.device
                         product = preset.product
-                        release = preset.release
-                        sdk = preset.sdk.toString()
-                        // Fingerprint/security patch intentionally remain untouched:
-                        // they are build-specific and should not be fabricated.
                         selectedPresetLabel = preset.label
                         presetExpanded = false
                     }
                 )
             }
         }
-        Text("Preset mengisi manufacturer, brand, model, device, product, dan versi Android. Fingerprint serta security patch tetap manual karena harus berasal dari build resmi yang cocok.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "Properti yang didukung: Manufacturer, Brand, Model, Device, dan Product. Build fingerprint, Android release/SDK, security patch, IMEI, serial number, hardware attestation, dan Play Integrity tetap asli.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text("Aktifkan spoofing", Modifier.weight(1f))
+            Text("Aktifkan profil kompatibilitas", Modifier.weight(1f))
             Switch(enabled, { enabled = it })
         }
         @Composable fun field(label: String, value: String, set: (String) -> Unit) {
@@ -109,23 +105,33 @@ private fun IdentityEditor(pkg: String, onBack: () -> Unit, onSaved: () -> Unit)
         field("Model", model) { model = it }
         field("Device", device) { device = it }
         field("Product", product) { product = it }
-        field("Build fingerprint (opsional)", fingerprint) { fingerprint = it }
-        field("Android release", release) { release = it }
-        field("SDK integer", sdk) { sdk = it.filter(Char::isDigit).take(2) }
-        field("Security patch (YYYY-MM-DD, opsional)", patch) { patch = it }
         Button(onClick = {
-            val n = sdk.toIntOrNull() ?: 36
+            // Preserve legacy values for backward compatibility; the hook intentionally ignores them.
             runCatching {
-                PerAppIdentityStore.save(context, DeviceIdentityProfile(pkg, enabled, manufacturer, brand, model, device, product, fingerprint, release, n, patch))
-            }.onSuccess { Store.message = "Profil identitas disimpan. Force-stop lalu buka ulang aplikasi target."; onSaved() }
-                .onFailure { Store.message = "Profil tidak valid: ${it.message}" }
+                PerAppIdentityStore.save(
+                    context,
+                    DeviceIdentityProfile(
+                        pkg, enabled, manufacturer, brand, model, device, product,
+                        original.fingerprint, original.release, original.sdk, original.securityPatch
+                    )
+                )
+            }.onSuccess {
+                Store.message = "Profil disimpan. Force-stop lalu buka ulang aplikasi target."
+                onSaved()
+            }.onFailure {
+                Store.message = "Profil tidak valid: ${it.message}"
+            }
         }, Modifier.fillMaxWidth()) { Text("Simpan profil") }
         OutlinedButton(onClick = {
             PerAppIdentityStore.save(context, DeviceIdentityProfile(pkg, enabled = false))
-            Store.message = "Spoofing dinonaktifkan untuk aplikasi ini"
+            Store.message = "Perubahan identitas dinonaktifkan untuk aplikasi ini"
             onBack()
         }, Modifier.fillMaxWidth()) { Text("Emergency restore") }
         TextButton(onClick = onBack) { Text("Kembali") }
-        Text("Catatan: profil ini untuk pengujian kompatibilitas. Aplikasi tertentu membaca identitas lewat native code atau layanan sistem sehingga hasilnya bisa berbeda. Ini tidak mengubah IMEI/serial, hardware attestation, atau Play Integrity.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "Penerapan hanya bekerja untuk aplikasi target yang dipilih dan memerlukan LSPosed + companion hook. Aplikasi dapat memakai sumber identitas lain sehingga hasilnya tidak dijamin seragam.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

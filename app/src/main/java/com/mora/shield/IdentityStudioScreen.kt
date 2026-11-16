@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalMaterial3Api::class)
 package com.mora.shield
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,31 +32,43 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.mora.shield.identity.DeviceSnapshot
+import com.mora.shield.identity.FingerprintProtectionEngine
 import com.mora.shield.identity.IdentityEngine
 import com.mora.shield.identity.IdentityPlatform
 import com.mora.shield.identity.IdentityProfileValidator
+import com.mora.shield.identity.IdentityProtectionSettings
+import com.mora.shield.identity.IdentityProtectionStore
 
 @Composable
 fun IdentityStudioScreen() {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val engine = remember(context) { IdentityEngine(context) }
+    val protectionStore = remember(context) { IdentityProtectionStore(context) }
     var platform by remember { mutableStateOf(IdentityPlatform.ANDROID) }
     var selected by remember { mutableStateOf(engine.selectedProfile()) }
     var refreshKey by remember { mutableIntStateOf(0) }
     var customName by remember { mutableStateOf("") }
     var customUserAgent by remember { mutableStateOf("") }
     var showWebPreview by remember { mutableStateOf(true) }
+    var protection by remember { mutableStateOf(protectionStore.load()) }
+    var sessionSeed by remember { mutableStateOf(FingerprintProtectionEngine.newSessionSeed()) }
     val device = remember { DeviceSnapshot.capture() }
     val profiles = engine.profilesForPlatform(platform)
     val customProfiles = engine.customProfiles()
     @Suppress("UNUSED_VARIABLE") val refresh = refreshKey
 
+    fun updateProtection(next: IdentityProtectionSettings) {
+        protection = next
+        protectionStore.save(next)
+        sessionSeed = FingerprintProtectionEngine.newSessionSeed()
+    }
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("Mora Identity Studio", style = MaterialTheme.typography.headlineSmall)
-                Text("Profil kompatibilitas browser untuk WebView milik Mora, tanpa mengubah identitas Android asli perangkat.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Profil kompatibilitas browser dan perlindungan fingerprint untuk WebView milik Mora. Identitas Android asli tetap terpisah.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item {
@@ -64,6 +78,27 @@ fun IdentityStudioScreen() {
                     Text("${device.manufacturer} ${device.model}", style = MaterialTheme.typography.bodyLarge)
                     Text("Brand: ${device.brand} • Device: ${device.device}", style = MaterialTheme.typography.bodySmall)
                     Text("Android ${device.androidRelease} (SDK ${device.sdkInt}) • Patch ${device.securityPatch.ifBlank { "tidak tersedia" }}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("System & Fingerprint Protection", style = MaterialTheme.typography.titleMedium)
+                    Text("Pengaturan ini aktif hanya di WebView lokal Mora Identity Studio. Bukan spoofing global untuk Chrome, Firefox, atau aplikasi lain.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    ProtectionSwitch("Canvas protection", "Ganggu pembacaan pixel dengan perubahan minimal yang konsisten selama satu sesi.", protection.canvasProtection) {
+                        updateProtection(protection.copy(canvasProtection = it))
+                    }
+                    ProtectionSwitch("WebGL protection", "Sembunyikan renderer detail dan blokir ekstensi debug renderer pada WebView preview.", protection.webGlProtection) {
+                        updateProtection(protection.copy(webGlProtection = it))
+                    }
+                    ProtectionSwitch("Sinkronkan User-Agent + Client Hints", "Gunakan metadata native WebView bila fitur didukung dan profil memakai Chromium.", protection.syncClientHints) {
+                        updateProtection(protection.copy(syncClientHints = it))
+                    }
+                    ProtectionSwitch("Randomisasi per sesi", "Seed Canvas baru setiap sesi; hasil tetap konsisten selama sesi tersebut.", protection.randomizePerSession) {
+                        updateProtection(protection.copy(randomizePerSession = it))
+                    }
+                    Text("Profile isolation: aktif. Setiap pergantian profil/sesi membuat WebView baru; jaringan, cache, cookie persistence, dan DOM storage tidak dipakai.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -79,7 +114,13 @@ fun IdentityStudioScreen() {
         items(profiles, key = { it.id }) { profile ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 Card(
-                    onClick = { if (engine.select(profile.id)) { selected = profile; Store.message = "Profil ${profile.model} dipilih untuk WebView Mora" } },
+                    onClick = {
+                        if (engine.select(profile.id)) {
+                            selected = profile
+                            sessionSeed = FingerprintProtectionEngine.newSessionSeed()
+                            Store.message = "Profil ${profile.model} dipilih untuk WebView Mora"
+                        }
+                    },
                     modifier = Modifier.weight(1f),
                     colors = CardDefaults.cardColors(containerColor = if (selected?.id == profile.id) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
                 ) {
@@ -103,7 +144,11 @@ fun IdentityStudioScreen() {
                         Text(selected!!.purpose, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedButton(onClick = { clipboard.setText(AnnotatedString(selected!!.userAgent)) }, Modifier.fillMaxWidth()) { Text("Salin User-Agent") }
                         OutlinedButton(onClick = { showWebPreview = !showWebPreview }, Modifier.fillMaxWidth()) { Text(if (showWebPreview) "Sembunyikan WebView Preview" else "Tes di WebView Mora") }
-                        if (showWebPreview) IdentityWebViewPreview(selected!!)
+                        if (showWebPreview) {
+                            val previewSeed = if (protection.randomizePerSession) sessionSeed else "profile-${selected!!.id}"
+                            IdentityWebViewPreview(selected!!, protection, previewSeed)
+                            TextButton(onClick = { sessionSeed = FingerprintProtectionEngine.newSessionSeed() }) { Text("Buat sesi baru") }
+                        }
                         if (engine.isCustomProfile(selected!!.id)) {
                             TextButton(onClick = {
                                 engine.deleteCustomProfile(selected!!.id)
@@ -114,8 +159,19 @@ fun IdentityStudioScreen() {
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { val p = engine.randomProfile(platform); if (p != null && engine.select(p.id)) { selected = p; Store.message = "Profil acak dipilih: ${p.model}" } }, Modifier.weight(1f)) { Text("Randomize") }
-                        OutlinedButton(onClick = { engine.clearSelection(); selected = null; Store.message = "Pilihan profil direset" }, Modifier.weight(1f)) { Text("Reset") }
+                        Button(onClick = {
+                            val p = engine.randomProfile(platform)
+                            if (p != null && engine.select(p.id)) {
+                                selected = p
+                                sessionSeed = FingerprintProtectionEngine.newSessionSeed()
+                                Store.message = "Profil acak dipilih: ${p.model}"
+                            }
+                        }, Modifier.weight(1f)) { Text("Randomize") }
+                        OutlinedButton(onClick = {
+                            engine.clearSelection()
+                            selected = null
+                            Store.message = "Pilihan profil direset"
+                        }, Modifier.weight(1f)) { Text("Reset") }
                     }
                 }
             }
@@ -133,7 +189,12 @@ fun IdentityStudioScreen() {
                         else {
                             val saved = engine.saveCustomProfile(platform, customName, customUserAgent)
                             if (saved != null) {
-                                engine.select(saved.id); selected = saved; customName = ""; customUserAgent = ""; refreshKey++
+                                engine.select(saved.id)
+                                selected = saved
+                                customName = ""
+                                customUserAgent = ""
+                                refreshKey++
+                                sessionSeed = FingerprintProtectionEngine.newSessionSeed()
                                 Store.message = "Profil kustom disimpan"
                             } else Store.message = "Gagal menyimpan profil"
                         }
@@ -151,7 +212,26 @@ fun IdentityStudioScreen() {
             }
         }
         item {
-            Text("Batasan: User-Agent hanya diterapkan pada WebView preview lokal milik Mora. Preview memblokir request jaringan; profil iOS/Windows/macOS/Linux tidak mengubah Android menjadi sistem operasi tersebut. Chrome, Firefox, aplikasi lain, Build properties, hardware ID, dan Play Integrity tidak disentuh. Per-App Device Identity tetap terpisah.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Batasan identitas: profil iOS/Windows/macOS/Linux hanya untuk kompatibilitas User-Agent/preview; WebView tetap memakai Chromium Android. Build fingerprint, versi keamanan, IMEI, serial number, hardware attestation, dan Play Integrity tidak diubah.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+@Composable
+private fun ProtectionSwitch(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
