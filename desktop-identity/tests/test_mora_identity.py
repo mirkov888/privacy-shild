@@ -164,6 +164,55 @@ class DesktopIdentityTests(unittest.TestCase):
         self.assertEqual(mismatch["status"], "mismatch")
         self.assertIn("tidak menguji IP publik", result["note"])
 
+    def test_webrtc_diagnostics_count_candidate_exposure_without_storing_addresses(self):
+        html = m.DIAGNOSTICS
+        self.assertIn("RTCPeerConnection", html)
+        self.assertIn("addressCandidates", html)
+        self.assertIn("mdnsCandidates", html)
+        self.assertNotIn("candidateAddress:", html)
+        report = {
+            "userAgent": m.PLATFORMS["linux"], "clientHints": None,
+            "webRtc": {
+                "peerConnection": True,
+                "ice": {
+                    "complete": True, "candidateTypes": ["host", "srflx"],
+                    "addressCandidates": 2, "mdnsCandidates": 1,
+                },
+            },
+        }
+        audit = m.audit_report(report)
+        rtc = next(item for item in audit["checks"] if item["surface"] == "webRtc")
+        self.assertEqual(rtc["status"], "attention")
+        self.assertEqual(rtc["address_candidates"], 2)
+        self.assertEqual(audit["summary"]["webrtc_address_exposures"], 2)
+        self.assertNotIn("192.168.", json.dumps(audit))
+
+    def test_webrtc_diagnostics_report_mdns_without_raw_ip(self):
+        report = {
+            "userAgent": m.PLATFORMS["linux"], "clientHints": None,
+            "webRtc": {
+                "peerConnection": True,
+                "ice": {"candidateTypes": ["host"], "addressCandidates": 0, "mdnsCandidates": 2},
+            },
+        }
+        audit = m.audit_report(report)
+        rtc = next(item for item in audit["checks"] if item["surface"] == "webRtc")
+        self.assertEqual(rtc["status"], "reduced_exposure")
+        self.assertEqual(rtc["mdns_candidates"], 2)
+
+    def test_webrtc_audit_handles_malformed_candidate_counts(self):
+        report = {
+            "userAgent": m.PLATFORMS["linux"], "clientHints": None,
+            "webRtc": {
+                "peerConnection": True,
+                "ice": {"addressCandidates": "invalid", "mdnsCandidates": None, "candidateTypes": "host"},
+            },
+        }
+        audit = m.audit_report(report)
+        rtc = next(item for item in audit["checks"] if item["surface"] == "webRtc")
+        self.assertEqual(rtc["address_candidates"], 0)
+        self.assertEqual(rtc["candidate_types"], [])
+
     def test_profile_launch_uses_mora_isolated_firefox_directory(self):
         with tempfile.TemporaryDirectory() as root:
             profile = m.create_profile(Path(root), "launch-check", "firefox", "linux")
