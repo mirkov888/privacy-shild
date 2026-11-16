@@ -100,6 +100,7 @@ fun IdentityStudioScreen() {
             sessionSeed = FingerprintProtectionEngine.newSessionSeed()
         }) }
         item { IdentityPrivacyAuditCard() }
+        item { IdentityOriginalSnapshotCard() }
         item { IdentityFileTransferCard(onUpdated = {
             selected = engine.selectedProfile()
             protection = protectionStore.load()
