@@ -79,6 +79,25 @@ def create_profile(root, profile_id, browser, platform, user_agent=None, protect
         "schema": 1, "id": profile_id, "browser": browser, "engine": engine,
         "platform_test_label": platform, "model": (model or platform)[:120],
         "user_agent": ua, "webrtc_restriction_requested": bool(protect_webrtc),
+        "protection": {
+            "canvas": {
+                "requested": bool(protect_canvas),
+                "applied": bool(protect_canvas and engine == "firefox"),
+                "method": "Firefox privacy.resistFingerprinting" if protect_canvas and engine == "firefox" else
+                          ("not available through Chromium startup flags" if protect_canvas else "disabled"),
+            },
+            "webgl": {
+                "requested": bool(protect_webgl),
+                "applied": bool(protect_webgl),
+                "method": "disable WebGL API" if protect_webgl else "disabled",
+            },
+            "webrtc": {
+                "requested": bool(protect_webrtc),
+                "applied": bool(protect_webrtc),
+                "method": "disable peer connection API" if protect_webrtc and engine == "firefox" else
+                          ("restrict non-proxied UDP; not a VPN" if protect_webrtc else "disabled"),
+            },
+        },
         "scope": "isolated browser compatibility profile; not device emulation",
     }
     (target / "profile.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
