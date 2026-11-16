@@ -62,7 +62,8 @@ adb -s "$SERIAL" shell pm list packages 2>/dev/null |
   grep -Ei 'webview|chrome|firefox|brave|zen|librewolf|browser' || true
 
 section "MORA SHIELD PACKAGE"
-if adb -s "$SERIAL" shell pm path "$APP_ID" >/dev/null 2>&1; then
+APK_PATH="$(adb -s "$SERIAL" shell pm path "$APP_ID" 2>/dev/null | head -n 1)"
+if [[ "$APK_PATH" == package:* ]]; then
   adb -s "$SERIAL" shell dumpsys package "$APP_ID" 2>/dev/null |
     grep -E 'versionName=|versionCode=|targetSdk=|userId=|granted=true|POST_NOTIFICATIONS|INTERNET' |
     head -n 60 || true
