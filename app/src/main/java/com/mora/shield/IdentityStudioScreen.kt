@@ -64,7 +64,9 @@ fun IdentityStudioScreen() {
     var protection by remember { mutableStateOf(protectionStore.load()) }
     var sessionSeed by remember { mutableStateOf(FingerprintProtectionEngine.newSessionSeed()) }
     val device = remember { DeviceSnapshot.capture() }
-    val profiles = engine.profilesForPlatform(platform)
+    val profiles = remember(engine, platform, refreshKey) {
+        engine.profilesForPlatform(platform)
+    }
     val visibleProfiles = remember(profiles, profileQuery) {
         val query = profileQuery.trim()
         if (query.isEmpty()) profiles else profiles.filter { profile ->
@@ -74,7 +76,7 @@ fun IdentityStudioScreen() {
                 profile.purpose.contains(query, ignoreCase = true)
         }
     }
-    val customProfiles = engine.customProfiles()
+    val customProfiles = remember(engine, refreshKey) { engine.customProfiles() }
     @Suppress("UNUSED_VARIABLE") val refresh = refreshKey
 
     fun updateProtection(next: IdentityProtectionSettings) {
