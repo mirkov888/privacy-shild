@@ -182,7 +182,10 @@ class DesktopIdentityTests(unittest.TestCase):
         self.assertTrue(all("installed" in item for item in result.values()))
 
     def test_flatpak_browser_installation_is_detected(self):
-        with patch.object(m.shutil, "which", return_value="/usr/bin/flatpak"):
+        with patch.object(
+            m.shutil, "which",
+            side_effect=lambda name: "/usr/bin/flatpak" if name == "flatpak" else None,
+        ):
             result = m.browser_installation("zen", {"app.zen_browser.zen"})
         self.assertEqual(result["kind"], "flatpak")
         self.assertEqual(result["app_id"], "app.zen_browser.zen")
