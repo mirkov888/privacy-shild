@@ -22,6 +22,7 @@ class IdentityProfileRecoveryManager(context: Context) {
     private val identityEngine = IdentityEngine(appContext)
     private val protectionStore = IdentityProtectionStore(appContext)
     private val randomizationStore = IdentityRandomizationStore(appContext)
+    private val originalSnapshotStore = IdentityOriginalDeviceSnapshotStore(appContext)
     private val rollbackPreferences = appContext.getSharedPreferences(
         "mora_identity_recovery", Context.MODE_PRIVATE
     )
@@ -42,6 +43,7 @@ class IdentityProfileRecoveryManager(context: Context) {
                     .put("model", it.model)
                     .put("userAgent", it.userAgent)
             } ?: JSONObject.NULL)
+            .put("originalDeviceSnapshot", originalSnapshotStore.exportJson())
             .put("protection", JSONObject()
                 .put("canvasProtection", protection.canvasProtection)
                 .put("webGlProtection", protection.webGlProtection)
@@ -147,7 +149,7 @@ class IdentityProfileRecoveryManager(context: Context) {
 
     companion object {
         private const val BACKUP_FORMAT = "mora-identity-studio"
-        private const val BACKUP_SCHEMA = 2
+        private const val BACKUP_SCHEMA = 3
         private const val KEY_LAST_ROLLBACK = "last_identity_backup"
 
         /** Returns null when valid, otherwise a user-readable reason. Safe for unit tests. */
@@ -156,6 +158,17 @@ class IdentityProfileRecoveryManager(context: Context) {
             val root = runCatching { JSONObject(raw) }.getOrNull() ?: return "JSON backup tidak valid"
             if (root.optString("format") != BACKUP_FORMAT || root.optInt("schema") !in 1..BACKUP_SCHEMA) {
                 return "Format atau versi backup Mora tidak didukung"
+            }
+
+            val snapshotValue = root.opt("originalDeviceSnapshot")
+            if (snapshotValue == null || snapshotValue === JSONObject.NULL) {
+                if (root.optInt("schema") >= 3) return "Snapshot identitas asli tidak ditemukan"
+            } else {
+                val snapshot = snapshotValue as? JSONObject
+                    ?: return "Snapshot identitas asli tidak valid"
+                IdentityOriginalDeviceSnapshotStore.validateJson(snapshot)?.let {
+                    return "Snapshot identitas asli: $it"
+                }
             }
 
             val catalog = root.optJSONObject("profileCatalog") ?: return "Katalog profil tidak ditemukan"
