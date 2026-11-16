@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -77,6 +78,7 @@ fun IdentityStudioScreen() {
         }
     }
     val customProfiles = remember(engine, refreshKey) { engine.customProfiles() }
+    val favoriteCount = remember(engine, refreshKey) { engine.favoriteIds().size }
     @Suppress("UNUSED_VARIABLE") val refresh = refreshKey
 
     fun updateProtection(next: IdentityProtectionSettings) {
@@ -87,9 +89,37 @@ fun IdentityStudioScreen() {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("Mora Identity Studio", style = MaterialTheme.typography.headlineSmall)
-                Text("Profil kompatibilitas browser dan perlindungan fingerprint untuk WebView milik Mora. Identitas Android asli tetap terpisah.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "MORA SHIELD  /  IDENTITY STUDIO",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        "Identity Studio",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        "Kelola profil kompatibilitas, privasi WebView, randomizer, dan pemulihan dalam satu tempat. Identitas Android asli tetap terpisah.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OverviewMetric(profiles.size.toString(), "Preset")
+                        OverviewMetric(favoriteCount.toString(), "Favorit")
+                        OverviewMetric(if (selected == null) "—" else "Aktif", "Pilihan")
+                    }
+                }
             }
         }
         item { IdentityAndroidIntegrationCard() }
@@ -165,7 +195,7 @@ fun IdentityStudioScreen() {
             )
             Text("${visibleProfiles.size} profil cocok dari ${profiles.size} profil ${platform.label}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        items(visibleProfiles, key = { it.id }) { profile ->
+        items(visibleProfiles, key = { it.id }, contentType = { "identity-profile" }) { profile ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 Card(
                     onClick = {
@@ -188,7 +218,7 @@ fun IdentityStudioScreen() {
             }
         }
         item {
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth().animateContentSize()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Profil terpilih", style = MaterialTheme.typography.titleMedium)
                     if (selected == null) {
@@ -433,5 +463,24 @@ private fun IdentityRecoveryCard(onRestored: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { confirmRollback = false }) { Text("Batal") } }
         )
+    }
+}
+
+
+@Composable
+private fun OverviewMetric(value: String, label: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Text(value, style = MaterialTheme.typography.titleMedium)
+            Text(label, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
