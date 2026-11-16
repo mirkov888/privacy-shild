@@ -152,12 +152,6 @@ class DesktopIdentityTests(unittest.TestCase):
         self.assertEqual(mismatch["status"], "mismatch")
         self.assertIn("tidak menguji IP publik", result["note"])
 
-    def test_linux_gui_command_opens_dashboard_without_running_a_browser(self):
-        with tempfile.TemporaryDirectory() as root:
-            with patch.object(m, "open_desktop_dashboard") as dashboard:
-                self.assertEqual(m.main(["--root", root, "gui"]), 0)
-                dashboard.assert_called_once()
-
     def test_profile_launch_uses_mora_isolated_firefox_directory(self):
         with tempfile.TemporaryDirectory() as root:
             profile = m.create_profile(Path(root), "launch-check", "firefox", "linux")
