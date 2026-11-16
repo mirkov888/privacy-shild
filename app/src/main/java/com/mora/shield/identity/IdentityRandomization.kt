@@ -97,6 +97,10 @@ class IdentityRandomizationStore(context: Context) {
             for (index in 0 until 8) value = (value shl 8) or (digest[index].toLong() and 0xffL)
             return ((value ushr 1) % size.toLong()).toInt()
         }
+
+        /** Returns null for an empty candidate set instead of crashing a scheduled worker. */
+        fun stableIndexOrNull(seed: String, scope: String, runIndex: Int, size: Int): Int? =
+            if (size <= 0) null else stableIndex(seed, scope, runIndex, size)
     }
 }
 
@@ -111,9 +115,9 @@ object IdentityRandomizationEngine {
         val runIndex = store.nextRunIndex()
         val engine = IdentityEngine(app)
         val candidates = engine.profilesForPlatform(saved.platform)
-        val chosen = candidates.getOrNull(
-            IdentityRandomizationStore.stableIndex(saved.seed, "browser:" + saved.platform.name, runIndex, candidates.size)
-        )
+        val chosen = IdentityRandomizationStore.stableIndexOrNull(
+            saved.seed, "browser:" + saved.platform.name, runIndex, candidates.size
+        )?.let(candidates::get)
         if (chosen != null) engine.select(chosen.id)
         val appCount = if (saved.randomizeEnabledApps) {
             PerAppIdentityStore.randomizeEnabledCompatibilityProfiles(app, saved.seed, runIndex)
