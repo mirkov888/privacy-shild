@@ -120,6 +120,8 @@ fun SettingsScreen() {
         }
         ProfileCard()
         MonitorCard(ctx)
+        MoraDownloaderControlCard()
+        MoraSystemManagerPolicyCard()
         PrivacyCard()
         ContentCard()
         SensorCard()
