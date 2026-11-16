@@ -75,12 +75,12 @@ if(typeof RTCPeerConnection!=="undefined"){
    pc.addEventListener("icecandidate",event=>{
     if(!event.candidate){r.webRtc.ice.complete=true;end();return}
     const value=String(event.candidate.candidate||"");
-    const type=(value.match(/\\btyp\\s+(host|srflx|prflx|relay)\\b/)||[])[1];
+    const type=(value.match(/\btyp\s+(host|srflx|prflx|relay)\b/)||[])[1];
     if(type)seen.add(type);
-    const address=(value.match(/candidate:\\S+\\s+\\d+\\s+\\S+\\s+\\d+\\s+([^\\s]+)\\s+\\d+/)||[])[1]||"";
+    const address=(value.match(/candidate:\S+\s+\d+\s+\S+\s+\d+\s+([^\s]+)\s+\d+/)||[])[1]||"";
     if(address){
      if(address.toLowerCase().endsWith(".local"))r.webRtc.ice.mdnsCandidates++;
-     else if(/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(address)||address.includes(":"))r.webRtc.ice.addressCandidates++;
+     else if(/^(?:\d{1,3}\\.){3}\d{1,3}$/.test(address)||address.includes(":"))r.webRtc.ice.addressCandidates++;
     }
    });
    pc.createDataChannel("mora-diagnostic");
