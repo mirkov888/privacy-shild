@@ -152,7 +152,7 @@ object PerAppIdentityStore {
         if (removePackages.isNotEmpty()) {
             val edit = prefs.edit()
             removePackages.forEach { pkg ->
-                prefs.all.keys.filter { it.startsWith("$pkg:") }.forEach(edit::remove)
+                prefs.all.keys.filter { it.startsWith("$pkg:") }.forEach { key -> edit.remove(key) }
             }
             edit.apply()
             val rollbackEdit = context.getSharedPreferences(ROLLBACK_PREFS, Context.MODE_PRIVATE).edit()
