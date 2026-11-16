@@ -127,16 +127,16 @@ object TermuxBridge {
             chmod 700 ~/.config/tigervnc/xstartup
             cp ~/.config/tigervnc/xstartup ~/.vnc/xstartup
             chmod 700 ~/.vnc/xstartup
-            pid="$ (vncserver -list 2>/dev/null | awk '$1 == \"1\" && $2 == \"5901\" { print $4; exit }')"
+            pid="$(vncserver -list 2>/dev/null | awk '$1 == \"1\" && $2 == \"5901\" { print $4; exit }')"
             live=false
             if [ "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$ (ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
+                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
                 case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
             if [ "$live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$ (tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$ (ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
+                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
                     case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
