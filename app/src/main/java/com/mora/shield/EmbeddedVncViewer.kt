@@ -82,7 +82,7 @@ fun EmbeddedVncViewerCard() {
             }
             AndroidView(
                 factory = { surface },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 520.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp, max = 360.dp)
             )
             OutlinedTextField(
                 value = keyboardText,
