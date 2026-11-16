@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -88,13 +89,20 @@ fun EmbeddedVncViewerCard() {
                 onValueChange = { next ->
                     if (next.length > keyboardText.length && next.startsWith(keyboardText)) {
                         surface.sendText(next.substring(keyboardText.length))
+                    } else if (next.length < keyboardText.length && keyboardText.startsWith(next)) {
+                        repeat(keyboardText.length - next.length) { surface.sendKey(0xff08) }
                     }
                     keyboardText = if (next.length > 80) next.takeLast(40) else next
                 },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Ketik ke desktop Linux") },
                 placeholder = { Text("Teks dikirim ke jendela aktif") },
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    surface.sendText("\\n")
+                    keyboardText = ""
+                })
             )
             Text("Sentuh untuk klik/drag. Gunakan kolom ketik untuk memasukkan teks. Viewer ini meminta encoding Raw agar kompatibel; performa bergantung pada resolusi desktop dan perangkat.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -353,7 +361,7 @@ private class RfbClient(
         }
     }
 
-    private fun sendKey(keysym: Int, down: Boolean) {
+    fun sendKey(keysym: Int, down: Boolean) {
         val data = ByteArray(8)
         data[0] = 4
         data[1] = if (down) 1 else 0
