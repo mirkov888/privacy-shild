@@ -18,7 +18,7 @@ class TermuxResultReceiver : BroadcastReceiver() {
         val editor = prefs.edit()
             .putString("last_operation", operation)
             .putString("last_output", (output + if (error.isNotBlank()) "\n$error" else "").takeLast(6000))
-            .putString("last_error", internalError.take(1500))
+            .putString("last_error", (internalError.ifBlank { error }).take(3000))
             .putInt("last_exit_code", exitCode)
             .putLong("last_updated", System.currentTimeMillis())
         if (operation == "bootstrap") {
