@@ -189,6 +189,7 @@ fun LinuxEnvironmentScreen() {
         item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && desktopReady) { confirm = "password" } }
         item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && desktopReady) { confirm = "start" } }
         item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && desktopReady) { confirm = "stop" } }
+        item { EmbeddedVncViewerCard() }
         item {
             Text("Hasil perintah terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text("$lastOperation · exit code $lastExit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
