@@ -68,6 +68,11 @@ class IdentityRandomizationStore(context: Context) {
 
     fun runIndex(): Int = prefs.getInt(KEY_RUN_INDEX, 0)
 
+    fun restoreRunIndex(value: Int) {
+        require(value >= 0) { "Nomor run randomizer tidak valid" }
+        prefs.edit().putInt(KEY_RUN_INDEX, value).apply()
+    }
+
     private fun newSeed(): String {
         val bytes = ByteArray(16)
         SecureRandom().nextBytes(bytes)
