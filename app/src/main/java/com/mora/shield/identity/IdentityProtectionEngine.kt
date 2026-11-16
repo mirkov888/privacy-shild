@@ -117,6 +117,26 @@ object FingerprintProtectionEngine {
                           return nativeToBlob.apply(copy || this, arguments);
                         };
                       }
+                      // OffscreenCanvas is another common readback path used by modern fingerprint scripts.
+                      try {
+                        const offscreen = window.OffscreenCanvas && window.OffscreenCanvas.prototype;
+                        const nativeConvertToBlob = offscreen && offscreen.convertToBlob;
+                        if (nativeConvertToBlob) {
+                          offscreen.convertToBlob = function() {
+                            if (!this.width || !this.height) return nativeConvertToBlob.apply(this, arguments);
+                            const copy = new OffscreenCanvas(this.width, this.height);
+                            const context = copy.getContext('2d');
+                            if (!context) return nativeConvertToBlob.apply(this, arguments);
+                            context.drawImage(this, 0, 0);
+                            const pixel = context.getImageData(0, 0, 1, 1);
+                            perturb(pixel, 'offscreen:' + this.width + 'x' + this.height);
+                            context.putImageData(pixel, 0, 0);
+                            return nativeConvertToBlob.apply(copy, arguments);
+                          };
+                        }
+                      } catch (error) {
+                        console.warn('Mora OffscreenCanvas protection unavailable', error);
+                      }
                     } catch (error) {
                       console.warn('Mora Canvas protection unavailable', error);
                     }
