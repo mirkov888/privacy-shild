@@ -268,7 +268,7 @@ pre{white-space:pre-wrap;background:#eee;padding:8px;border-radius:8px;margin:4p
     report.locale.language,
     report.timezone
   ].join(" · "));
-})();;
+})();
 </script>
 </body></html>
 """
