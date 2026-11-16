@@ -31,7 +31,7 @@ The desktop helper now includes a lightweight Tkinter dashboard:
 python mora_identity.py gui
 ```
 
-The dashboard can create, search via the profile list, launch, backup, rollback, import/export JSON profiles, inspect browser support, and audit a saved diagnostic report. It launches only Mora-created isolated profile directories. The GUI loads Tkinter lazily; CLI use does not require a graphical session.
+The dashboard can create, search via the profile list, launch, backup, rollback, import/export JSON profiles, inspect browser support, and audit a saved diagnostic report. It launches only Mora-created isolated profile directories. Browser detection supports known native executable names and common Flatpak app IDs; Flatpak launches are granted access only to the selected Mora profile directory. The GUI loads Tkinter lazily; CLI use does not require a graphical session.
 
 Optional controls:
 - Firefox Canvas reduction: `privacy.resistFingerprinting`.
