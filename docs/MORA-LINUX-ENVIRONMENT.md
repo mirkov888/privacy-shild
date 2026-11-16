@@ -45,9 +45,10 @@ API Termux memerlukan izin `com.termux.permission.RUN_COMMAND` dan `allow-extern
 2. Tekan **Install proot-distro** untuk memperbarui paket Termux dan memasang pengelola distro.
 3. Tekan **Install distro** dan setujui konfirmasi. Tunggu proses selesai di notifikasi/sesi Termux; periksa status kembali.
 4. Tekan **Install XFCE + VNC** dan tunggu sampai Termux mengembalikan exit code sukses.
-5. Tekan **Start XFCE**. Jika server meminta password pada pemakaian pertama, selesaikan pengaturan tersebut di Termux.
-6. Di VNC Viewer, sambungkan ke host `127.0.0.1`, port `5901` (display `:1`).
-7. Tekan **Stop XFCE** saat selesai.
+5. Tekan **Set VNC password**. Mora Shield membuka sesi Termux interaktif agar kamu membuat password VNC sendiri.
+6. Tekan **Start XFCE**.
+7. Di VNC Viewer, sambungkan ke host `127.0.0.1`, port `5901` (display `:1`) dan masukkan password yang tadi dibuat.
+8. Tekan **Stop XFCE** saat selesai.
 
 Jika Termux tidak mengembalikan hasil, buka Termux dan periksa notifikasi atau sesi perintahnya. Mora Shield tidak boleh menampilkan status sukses hanya karena perintah sudah dikirim.
 
