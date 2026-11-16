@@ -4,7 +4,7 @@
     <permission android:name="com.mora.shield.permission.CONNECTOR" android:protectionLevel="signature" />
 
     <!-- Internet is used only when the user explicitly starts a pinned HTTPS LAN profile sync. -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -157,5 +157,5 @@
                 <action android:name="com.mora.shield.action.CONNECTOR" />
             </intent-filter>
         </service>
-    </application>
+        <receiver android:name=".TermuxResultReceiver" android:exported="false" />\n    </application>
 </manifest>
