@@ -67,7 +67,7 @@ object IdentityLanSyncClient {
         require(inbound.isNotBlank() && inbound.length <= MAX_RESPONSE_BYTES) {
             "Data profil Linux kosong atau melewati batas ukuran."
         }
-        val received = engine.importCustomProfilesJson(inbound)
+        val received = engine.importSyncedProfilesJson(inbound)
 
         return IdentityLanSyncResult(
             sentCreated = push.optInt("created", 0),
