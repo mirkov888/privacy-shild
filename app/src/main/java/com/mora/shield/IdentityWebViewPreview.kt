@@ -38,7 +38,7 @@ fun IdentityWebViewPreview(
 
     Text("Preview WebView Mora • " + profile.model, style = MaterialTheme.typography.titleSmall)
     Text(
-        "Sesi terisolasi • jaringan diblokir • penyimpanan web nonaktif",
+        "Sesi terisolasi • jaringan diblokir • DOM Storage/cache nonaktif",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )

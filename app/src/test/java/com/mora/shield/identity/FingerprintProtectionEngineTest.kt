@@ -24,7 +24,7 @@ class FingerprintProtectionEngineTest {
             IdentityProtectionSettings(canvasProtection = false, webGlProtection = true),
             "session-two"
         )
-        assertTrue(script.contains("WEBGL_debug_renderer_info"))
+        assertTrue(script.contains("webgl_debug_renderer_info"))
         assertTrue(script.contains("WebGL Renderer"))
         assertTrue(script.contains("WebGL2RenderingContext"))
         assertFalse(script.contains("CanvasRenderingContext2D"))
