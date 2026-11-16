@@ -23,12 +23,19 @@ class TermuxResultReceiver : BroadcastReceiver() {
             .putInt("last_exit_code", exitCode)
             .putLong("last_updated", System.currentTimeMillis())
         if (operation.startsWith("status:")) {
-            val installed = output.lines().any { line ->
-                val normalized = line.trim().removePrefix("*").trim()
-                normalized == distro || normalized.startsWith("$distro ")
-            }
+            val installed = output.contains("($distro)") ||
+                output.lines().any { line ->
+                    val normalized = line.trim().removePrefix("*").trim().lowercase()
+                    normalized == distro || normalized.startsWith("$distro ") || normalized.endsWith(" $distro")
+                }
             editor.putBoolean("installed_$distro", installed)
                 .putString("status_$distro", if (installed) "installed" else "not_installed")
+        } else if (operation.startsWith("session:")) {
+            editor.putString("session_$distro", when {
+                output.contains("MORA_XFCE_RUNNING") -> "running"
+                output.contains("MORA_XFCE_STOPPED") -> "stopped"
+                else -> "unknown"
+            })
         } else if (operation.startsWith("install:") && ok) {
             editor.putBoolean("installed_$distro", true).putString("status_$distro", "installed")
         } else if (operation.startsWith("start:") && ok) {
