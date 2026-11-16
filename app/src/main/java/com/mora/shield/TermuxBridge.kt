@@ -53,10 +53,10 @@ object TermuxBridge {
             if [ -x "$rootfs/bin/sh" ] && [ -f "$rootfs/etc/os-release" ]; then
                 echo MORA_ROOTFS_OK
                 "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc '
-                    pid="${'(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
-                    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                    pid="${'(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
+                    if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -122,25 +122,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -180,10 +180,10 @@ object TermuxBridge {
         context.startService(intent)
     }
 }
-}(vncserver -list 2>/dev/null | awk '\''${'1 == "1" && $2 == "5901" { print $4; exit }'\'')"
-                    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+}(vncserver -list 2>/dev/null | awk '\''${'1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
+                    if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -249,25 +249,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -307,10 +307,10 @@ object TermuxBridge {
         context.startService(intent)
     }
 }
-}1 == "1" && ${'2 == "5901" { print $4; exit }'\'')"
-                    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+}1 == "1" && ${'2 == "5901" { print ${'$'}4; exit }'\'')"
+                    if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -376,25 +376,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -435,9 +435,9 @@ object TermuxBridge {
     }
 }
 }2 == "5901" { print ${'4; exit }'\'')"
-                    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                    if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -503,25 +503,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -562,9 +562,9 @@ object TermuxBridge {
     }
 }
 }4; exit }'\'')"
-                    if [ -n "${'pid" ] && kill -0 "$pid" 2>/dev/null; then
-                        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                    if [ -n "${'pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -630,25 +630,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -689,8 +689,8 @@ object TermuxBridge {
     }
 }
 }pid" ] && kill -0 "${'pid" 2>/dev/null; then
-                        state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                        state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -756,25 +756,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -815,8 +815,8 @@ object TermuxBridge {
     }
 }
 }pid" 2>/dev/null; then
-                        state="${'(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                        state="${'(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -882,25 +882,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -941,7 +941,7 @@ object TermuxBridge {
     }
 }
 }(ps -o stat= -p "${'pid" 2>/dev/null | tr -d " ")"
-                        case "$state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
+                        case "${'$'}state" in ""|Z*|z*) echo MORA_XFCE_STOPPED ;; *) echo MORA_XFCE_RUNNING ;; esac
                     else
                         echo MORA_XFCE_STOPPED
                     fi
@@ -1007,25 +1007,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1132,25 +1132,25 @@ object TermuxBridge {
         val script = """
             mkdir -p ~/.config/tigervnc ~/.vnc
             for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "$startup" <<'EOF'
+                cat > "${'$'}startup" <<'EOF'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1262,19 +1262,19 @@ object TermuxBridge {
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             EOF
-                chmod 700 "$startup"
+                chmod 700 "${'$'}startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1322,17 +1322,17 @@ object TermuxBridge {
             EOF
                 chmod 700 "${'startup"
             done
-            pid="$(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1374,17 +1374,17 @@ object TermuxBridge {
 }
 }startup"
             done
-            pid="${'(vncserver -list 2>/dev/null | awk '\''$1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+            pid="${'(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1424,17 +1424,17 @@ object TermuxBridge {
         context.startService(intent)
     }
 }
-}(vncserver -list 2>/dev/null | awk '\''${'1 == "1" && $2 == "5901" { print $4; exit }'\'')"
+}(vncserver -list 2>/dev/null | awk '\''${'1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1474,17 +1474,17 @@ object TermuxBridge {
         context.startService(intent)
     }
 }
-}1 == "1" && ${'2 == "5901" { print $4; exit }'\'')"
+}1 == "1" && ${'2 == "5901" { print ${'$'}4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1526,15 +1526,15 @@ object TermuxBridge {
 }
 }2 == "5901" { print ${'4; exit }'\'')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1576,15 +1576,15 @@ object TermuxBridge {
 }
 }4; exit }'\'')"
             live=false
-            if [ -n "${'pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1625,14 +1625,14 @@ object TermuxBridge {
     }
 }
 }pid" ] && kill -0 "${'pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1673,14 +1673,14 @@ object TermuxBridge {
     }
 }
 }pid" 2>/dev/null; then
-                state="${'(ps -o stat= -p "$pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+                state="${'(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d " ")"
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1721,13 +1721,13 @@ object TermuxBridge {
     }
 }
 }(ps -o stat= -p "${'pid" 2>/dev/null | tr -d " ")"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1770,11 +1770,11 @@ object TermuxBridge {
 }pid" 2>/dev/null | tr -d " ")"
                 case "${'state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
-            if [ "$live" != true ]; then
+            if [ "${'$'}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1818,9 +1818,9 @@ object TermuxBridge {
             fi
             if [ "${'live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldpid="${'$'}(tr -dc "0-9" < /tmp/.X1-lock)"
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1863,8 +1863,8 @@ object TermuxBridge {
 }live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
                     oldpid="${'(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1905,8 +1905,8 @@ object TermuxBridge {
     }
 }
 }(tr -dc "0-9" < /tmp/.X1-lock)"
-                    oldstate="${'(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    oldstate="${'(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d " ")"
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -1947,7 +1947,7 @@ object TermuxBridge {
     }
 }
 }(ps -o stat= -p "${'oldpid" 2>/dev/null | tr -d " ")"
-                    case "$oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
