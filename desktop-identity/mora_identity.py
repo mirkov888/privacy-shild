@@ -283,13 +283,34 @@ def restore_profile(root, profile_id, archive):
 
 def rollback_profile(root, profile_id):
     profile_id = safe_id(profile_id)
-    archive = root / ".rollback" / (profile_id + ".zip")
+    rollback_dir = root / ".rollback"
+    archive = rollback_dir / (profile_id + ".zip")
     if not archive.is_file():
         raise FileNotFoundError("Belum ada backup terakhir untuk profil ini. Jalankan backup dulu.")
     destination = profile_dir(root, profile_id)
-    if destination.exists():
-        raise FileExistsError("Target aktif ada. Pindahkan atau backup profil aktif sebelum rollback.")
-    return restore_profile(root, profile_id, archive)
+    staging = Path(tempfile.mkdtemp(prefix=".mora-rollback-", dir=root))
+    staging.rmdir()
+    rotated = rollback_dir / (profile_id + ".pre-rollback")
+    current_archive = rollback_dir / (profile_id + ".pre-rollback.zip")
+    try:
+        _safe_extract_profile(archive, staging, profile_id)
+        if destination.exists():
+            if current_archive.exists():
+                current_archive.unlink()
+            shutil.make_archive(str(current_archive.with_suffix("")), "zip", destination)
+            if rotated.exists():
+                shutil.rmtree(rotated)
+            os.replace(destination, rotated)
+        try:
+            os.replace(staging, destination)
+        except Exception:
+            if rotated.exists() and not destination.exists():
+                os.replace(rotated, destination)
+            raise
+        return destination
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Mora Shield isolated desktop browser profiles")
