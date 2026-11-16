@@ -84,6 +84,7 @@ fun LinuxEnvironmentScreen() {
             "bootstrap" -> "Siapkan proot-distro di Termux?"
             "install" -> "Instal distro ${distro.name}?"
             "desktop" -> "Instal XFCE di ${distro.name}?"
+            "password" -> "Atur password VNC?"
             "start" -> "Mulai sesi XFCE?"
             else -> "Hentikan sesi XFCE?"
         }
@@ -99,6 +100,7 @@ fun LinuxEnvironmentScreen() {
                             "bootstrap" -> TermuxBridge.installManager(context)
                             "install" -> TermuxBridge.installDistro(context, selected)
                             "desktop" -> TermuxBridge.installDesktop(context, selected)
+                            "password" -> TermuxBridge.setupVncPassword(context, selected)
                             "start" -> TermuxBridge.startDesktop(context, selected)
                             "stop" -> TermuxBridge.stopDesktop(context, selected)
                         }
@@ -182,6 +184,7 @@ fun LinuxEnvironmentScreen() {
         item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
         item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}.", "Install ${distro.name}", termuxPresent && runPermission && managerReady && !installed) { confirm = "install" } }
         item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && managerReady && installed) { confirm = "desktop" } }
+        item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && installed) { confirm = "password" } }
         item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && installed) { confirm = "start" } }
         item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && installed) { confirm = "stop" } }
         item {
