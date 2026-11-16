@@ -1,5 +1,9 @@
 package com.mora.shield
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import java.io.OutputStreamWriter
 import android.webkit.WebChromeClient
 import android.webkit.PermissionRequest
 import android.webkit.WebResourceRequest
@@ -50,6 +54,26 @@ fun IdentityWebViewPreview(
     val diagnostics = remember(context) { IdentityDiagnosticsStore(context) }
     var previewWebView by remember(profile.id, protection, sessionSeed) { mutableStateOf<WebView?>(null) }
     var diagnosticMessage by remember(profile.id, protection, sessionSeed) { mutableStateOf("") }
+    var pendingReportExport by remember(profile.id, protection, sessionSeed) { mutableStateOf<String?>(null) }
+    val exportReport = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        val report = pendingReportExport
+        pendingReportExport = null
+        if (uri == null || report == null) {
+            diagnosticMessage = "Ekspor laporan dibatalkan."
+        } else {
+            runCatching {
+                context.contentResolver.openOutputStream(uri, "wt")
+                    ?.bufferedWriter(Charsets.UTF_8)?.use { it.write(report) }
+                    ?: error("Tidak dapat membuka file tujuan")
+            }.onSuccess {
+                diagnosticMessage = "Laporan diagnostik berhasil disimpan sebagai JSON."
+            }.onFailure {
+                diagnosticMessage = "Gagal menyimpan laporan: ${it.message ?: "kesalahan I/O"}"
+            }
+        }
+    }
     fun captureReport(onCaptured: (String) -> Unit) {
         val current = previewWebView
         if (current == null) {
@@ -116,6 +140,15 @@ fun IdentityWebViewPreview(
         },
         modifier = Modifier.fillMaxWidth()
     ) { Text("Ambil & salin laporan JSON") }
+    OutlinedButton(
+        onClick = {
+            captureReport { report ->
+                pendingReportExport = report
+                exportReport.launch("mora-identity-diagnostic.json")
+            }
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) { Text("Simpan laporan JSON ke file") }
     OutlinedButton(
         onClick = {
             captureReport { report ->
