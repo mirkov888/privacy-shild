@@ -136,7 +136,7 @@ fun IdentityFileTransferCard(onUpdated: () -> Unit) {
         ) {
             Text("Impor / Ekspor Berkas", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Simpan profil browser sebagai JSON atau pindahkan seluruh pengaturan Identity Studio melalui backup. File dipilih sendiri melalui pemilih dokumen Android.",
+                "Simpan profil browser sebagai JSON atau pindahkan seluruh pengaturan Identity Studio beserta baseline identitas asli yang baca-saja melalui backup. File dipilih sendiri melalui pemilih dokumen Android.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
