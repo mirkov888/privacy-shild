@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Read-only ADB preflight for manual Mora Shield acceptance on HyperOS / Android.
-# Does not read IMEI, serial, Android ID, MAC address or build fingerprint.
+# Does not query Android hardware identifiers/properties; the ADB selector is used internally and redacted.
 set -uo pipefail
 
 APP_ID="com.mora.shield"
@@ -23,7 +23,7 @@ if [[ -z "$SERIAL" ]]; then
 fi
 
 if ! adb -s "$SERIAL" get-state >/dev/null 2>&1; then
-  echo "Perangkat $SERIAL belum siap atau belum mengizinkan debugging USB." >&2
+  echo "Perangkat ADB belum siap atau belum mengizinkan debugging USB." >&2
   exit 2
 fi
 
@@ -89,7 +89,7 @@ if [[ "$APK_PATH" == package:* ]]; then
     tail -n 120 || true
 else
   echo "Mora Shield belum terpasang. Install APK terlebih dahulu:"
-  echo "  adb -s $SERIAL install -r MoraShield-debug.apk"
+  echo "  adb install -r MoraShield-debug.apk"
   echo "Preflight hanya mengambil informasi; tidak memasang atau mengubah aplikasi."
   exit 3
 fi
