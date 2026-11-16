@@ -111,7 +111,7 @@ fun IdentityPrivacyAuditCard() {
                 )
 
                 Text(
-                    "Aplikasi lain yang meminta izin sensitif: ${result.apps.size}",
+                    "Aplikasi terpasang yang meminta izin sensitif: ${result.apps.size}",
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(

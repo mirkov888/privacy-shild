@@ -14,7 +14,7 @@
 - The report reads package permission declarations and the system's granted-permission flags. It does not prove that an app accessed, transmitted, or retained data.
 - A granted READ_PHONE_STATE permission does not imply access to IMEI or serial on modern Android. Those identifiers remain restricted by platform and privileged-permission rules.
 - Permission controls are opened in Android Settings; Mora does not silently revoke permissions or alter another app.
-- The audit excludes Mora Shield itself from the third-party app list.
+- The audit includes Mora Shield itself, so its own declared permissions are visible and its Android permission settings can be opened.
 - Android ID availability is checked only for Mora's own application context. It is not a universal view of every app's Android ID.
 - No identifier randomization, IMEI/serial spoofing, hardware attestation change, or Play Integrity bypass is implemented.
 - Advertising ID management is not part of this phase; use the operating system / Google settings.

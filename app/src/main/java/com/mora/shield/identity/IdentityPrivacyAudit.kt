@@ -77,7 +77,6 @@ object IdentityPrivacyAudit {
             @Suppress("DEPRECATION")
             context.packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
                 .asSequence()
-                .filter { it.packageName != context.packageName }
                 .mapNotNull { packageInfo ->
                     val permissions = collectPermissionFindings(
                         packageInfo.requestedPermissions,
