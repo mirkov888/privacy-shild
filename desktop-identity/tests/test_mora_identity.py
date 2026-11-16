@@ -136,6 +136,8 @@ class DesktopIdentityTests(unittest.TestCase):
             self.assertTrue(metadata["protection"]["canvas"]["applied"])
             self.assertIn("page Canvas readback", metadata["protection"]["canvas"]["method"])
             self.assertEqual(manifest["manifest_version"], 3)
+            self.assertEqual(manifest["minimum_chrome_version"], "111")
+            self.assertEqual(manifest["content_scripts"][0]["world"], "MAIN")
             self.assertIn("document_start", manifest["content_scripts"][0]["run_at"])
             self.assertIn("getImageData", script)
             self.assertIn("toDataURL", script)
