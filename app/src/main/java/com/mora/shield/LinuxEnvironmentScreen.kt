@@ -4,7 +4,9 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import android.content.pm.PackageManager
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -101,7 +103,7 @@ fun LinuxEnvironmentScreen() {
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Pilih distro", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 moraLinuxDistros.forEach { item ->
                     FilterChip(
                         selected = selectedId == item.id,
@@ -171,6 +173,7 @@ private fun LinuxCommandCard(title: String, description: String, command: String
             Button(onClick = {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText(title, command))
+                Toast.makeText(context, "Perintah disalin", Toast.LENGTH_SHORT).show()
             }) { Text(action) }
         }
     }
