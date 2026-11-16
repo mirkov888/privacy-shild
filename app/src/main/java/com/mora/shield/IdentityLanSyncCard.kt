@@ -143,7 +143,7 @@ fun IdentityLanSyncCard(onSynced: () -> Unit = {}) {
                 )
             }
             Text(
-                "Di Linux: lihat IPv4 Wi-Fi dengan `ip -4 addr`, lalu jalankan `python3 mora_identity.py sync-serve --host 192.168.x.x --minutes 15` (ganti dengan IP komputer). Masukkan token dan certificate pin dari terminal. Token tidak disimpan aplikasi; hentikan server dengan Ctrl+C.",
+                "Di Linux, dari folder `desktop-identity`: lihat IPv4 Wi-Fi dengan `ip -4 addr`, lalu jalankan `python3 mora_identity.py sync-serve --host 192.168.x.x --minutes 15` (ganti dengan IP komputer). Masukkan token dan certificate pin dari terminal. Token tidak disimpan aplikasi; hentikan server dengan Ctrl+C.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
