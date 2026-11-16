@@ -80,7 +80,7 @@ object IdentityDiagnostics {
                 " (viewport " + it.optInt("innerWidth") + "×" + it.optInt("innerHeight") + ")"
         } ?: "tidak tersedia")
         output += "Catatan: laporan ini memeriksa API dan metadata lokal. Ini tidak menguji IP publik, DNS, atau rute jaringan, dan bukan jaminan anonimitas."
-        return output.joinToString("\\n")
+        return output.joinToString("\n")
     }
 
     fun isValidReport(raw: String): Boolean = runCatching {
