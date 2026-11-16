@@ -16,8 +16,7 @@ if [[ -z "$SERIAL" ]]; then
     echo "Tidak ada perangkat ADB yang terhubung dan diizinkan." >&2
     exit 2
   elif [[ "${#DEVICES[@]}" -gt 1 ]]; then
-    echo "Lebih dari satu perangkat terhubung. Set ANDROID_SERIAL terlebih dahulu." >&2
-    printf '  %s\n' "${DEVICES[@]}"
+    echo "Lebih dari satu perangkat terhubung. Set ANDROID_SERIAL terlebih dahulu (nilainya tidak akan dicetak)." >&2
     exit 2
   fi
   SERIAL="${DEVICES[0]}"
@@ -44,7 +43,7 @@ section() {
 }
 
 section "DEVICE / ROM"
-echo "ADB serial alias: $SERIAL"
+echo "ADB device: connected (device selector redacted)"
 property ro.product.manufacturer
 property ro.product.model
 property ro.build.version.release
