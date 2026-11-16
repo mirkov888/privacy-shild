@@ -277,7 +277,15 @@ class DesktopIdentityTests(unittest.TestCase):
                 self.assertEqual(second["unchanged"], 1)
 
                 conflicting = dict(payload)
-                conflicting["profiles"] = [dict(payload["profiles"][0], userAgent=m.PLATFORMS["windows"])]
+                conflicting["profiles"] = [
+                    {
+                        "id": "custom-must-not-be-partially-created",
+                        "platform": "ANDROID",
+                        "model": "Another Android profile",
+                        "userAgent": m.PLATFORMS["android"],
+                    },
+                    dict(payload["profiles"][0], userAgent=m.PLATFORMS["windows"]),
+                ]
                 request = urllib.request.Request(
                     url, data=json.dumps(conflicting).encode("utf-8"),
                     headers={**token, "Content-Type": "application/json"}, method="POST",
@@ -285,6 +293,7 @@ class DesktopIdentityTests(unittest.TestCase):
                 with self.assertRaises(urllib.error.HTTPError) as error:
                     urllib.request.urlopen(request, timeout=3)
                 self.assertEqual(error.exception.code, 400)
+                self.assertFalse((Path(root) / "custom-must-not-be-partially-created").exists())
             finally:
                 server.shutdown()
                 server.server_close()
