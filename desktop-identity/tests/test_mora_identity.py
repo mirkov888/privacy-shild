@@ -202,6 +202,13 @@ class DesktopIdentityTests(unittest.TestCase):
         self.assertEqual(result["kind"], "flatpak")
         self.assertEqual(result["app_id"], "app.zen_browser.zen")
 
+    def test_lan_sync_server_rejects_wildcard_and_non_private_bind_addresses(self):
+        with tempfile.TemporaryDirectory() as root, \
+             patch.object(m, "_local_private_ipv4_addresses", return_value=["192.168.1.40"]):
+            for host in ("0.0.0.0", "8.8.8.8", "127.0.0.1", "192.168.1.40/24"):
+                with self.subTest(host=host), self.assertRaises(ValueError):
+                    m.serve_lan_sync(Path(root), host=host, port=8765, minutes=15)
+
     def test_lan_sync_requires_bearer_token_and_exports_profiles(self):
         from http.server import ThreadingHTTPServer
         import threading
