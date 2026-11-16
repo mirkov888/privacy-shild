@@ -58,7 +58,8 @@ class IdentityProfileRecoveryManagerTest {
                 "intervalHours":24,
                 "seed":"reusable-seed",
                 "platform":"ANDROID",
-                "randomizeEnabledApps":false
+                "randomizeEnabledApps":false,
+                "runIndex":23
               },
               "perAppProfiles":[]
             }
@@ -88,6 +89,35 @@ class IdentityProfileRecoveryManagerTest {
                 "seed":"reusable-seed",
                 "platform":"ANDROID",
                 "randomizeEnabledApps":false
+              },
+              "perAppProfiles":[]
+            }
+        """.trimIndent()
+        assertNotNull(IdentityProfileRecoveryManager.validateBackupJson(raw))
+    }
+
+    @Test
+    fun rejectsNegativeRandomizationRunIndex() {
+        val raw = """
+            {
+              "format":"mora-identity-studio",
+              "schema":2,
+              "profileCatalog":{"schema":1,"profiles":[],"favorites":[]},
+              "selectedProfile":null,
+              "protection":{
+                "canvasProtection":true,
+                "webGlProtection":true,
+                "syncClientHints":true,
+                "randomizePerSession":true,
+                "webRtcProtection":true
+              },
+              "randomization":{
+                "enabled":true,
+                "intervalHours":24,
+                "seed":"reusable-seed",
+                "platform":"ANDROID",
+                "randomizeEnabledApps":false,
+                "runIndex":-1
               },
               "perAppProfiles":[]
             }
