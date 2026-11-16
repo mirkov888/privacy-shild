@@ -118,253 +118,166 @@ object TermuxBridge {
         val script = """
             set -e
             mkdir -p ~/.config/tigervnc ~/.vnc
-            for startup in ~/.config/tigervnc/xstartup ~/.vnc/xstartup; do
-                cat > "${'startup" <<'MORA_XSTARTUP'
+
+            cat > ~/.config/tigervnc/xstartup <<'MORA_XSTARTUP'
             #!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
             exec dbus-run-session startxfce4
             MORA_XSTARTUP
-                chmod 700 "$startup"
-            done
+            chmod 700 ~/.config/tigervnc/xstartup
+            cp ~/.config/tigervnc/xstartup ~/.vnc/xstartup
+            chmod 700 ~/.vnc/xstartup
 
-            pid="$(vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
+            pid="${' (vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "@pid" ] && kill -0 "@pid" 2>/dev/null; then
+                state="@ (ps -o stat= -p "@pid" 2>/dev/null | tr -d ' ')"
+                case "@state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
-            if [ "$live" != true ]; then
+            if [ "@live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}startup" <<'MORA_XSTARTUP'
-            #!/bin/sh
-            unset SESSION_MANAGER
-            unset DBUS_SESSION_BUS_ADDRESS
-            exec dbus-run-session startxfce4
-            MORA_XSTARTUP
-                chmod 700 "${'startup"
-            done
-
-            pid="$(vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }} (vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
             live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if [ -n "${'pid" ] && kill -0 "@pid" 2>/dev/null; then
+                state="@ (ps -o stat= -p "@pid" 2>/dev/null | tr -d ' ')"
+                case "@state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
-            if [ "$live" != true ]; then
+            if [ "@live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}startup"
-            done
-
-            pid="${'(vncserver -list 2>/dev/null | awk '$1 == "1" && $2 == "5901" { print $4; exit }')"
-            live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}pid" ] && kill -0 "${'pid" 2>/dev/null; then
+                state="@ (ps -o stat= -p "@pid" 2>/dev/null | tr -d ' ')"
+                case "@state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
-            if [ "$live" != true ]; then
+            if [ "@live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}(vncserver -list 2>/dev/null | awk '${'1 == "1" && $2 == "5901" { print $4; exit }')"
-            live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}pid" 2>/dev/null; then
+                state="${' (ps -o stat= -p "@pid" 2>/dev/null | tr -d ' ')"
+                case "@state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
-            if [ "$live" != true ]; then
+            if [ "@live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}1 == "1" && ${'2 == "5901" { print $4; exit }')"
-            live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }} (ps -o stat= -p "${'pid" 2>/dev/null | tr -d ' ')"
+                case "@state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
-            if [ "$live" != true ]; then
+            if [ "@live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}2 == "5901" { print ${'4; exit }')"
-            live=false
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
-            fi
-
-            if [ "$live" != true ]; then
-                if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
-                fi
-                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
-            fi
-}4; exit }')"
-            live=false
-            if [ -n "${'pid" ] && kill -0 "$pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
-            fi
-
-            if [ "$live" != true ]; then
-                if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
-                fi
-                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
-            fi
-}pid" ] && kill -0 "${'pid" 2>/dev/null; then
-                state="$(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
-            fi
-
-            if [ "$live" != true ]; then
-                if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
-                fi
-                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
-            fi
-}pid" 2>/dev/null; then
-                state="${'(ps -o stat= -p "$pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
-            fi
-
-            if [ "$live" != true ]; then
-                if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
-                fi
-                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
-            fi
-}(ps -o stat= -p "${'pid" 2>/dev/null | tr -d ' ')"
-                case "$state" in ""|Z*|z*) ;; *) live=true ;; esac
-            fi
-
-            if [ "$live" != true ]; then
-                if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
-                fi
-                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
-            fi
-}pid" 2>/dev/null | tr -d ' ')"
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}pid" 2>/dev/null | tr -d ' ')"
                 case "${'state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
-            if [ "$live" != true ]; then
+            if [ "@live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}state" in ""|Z*|z*) ;; *) live=true ;; esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}state" in ""|Z*|z*) ;; *) live=true ;; esac
             fi
 
             if [ "${'live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="$(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="@ (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}live" != true ]; then
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}live" != true ]; then
                 if [ -f /tmp/.X1-lock ]; then
-                    oldpid="${'(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="$(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+                    oldpid="${' (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="@ (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="${'(ps -o stat= -p "$oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }} (tr -dc '0-9' < /tmp/.X1-lock)"
+                    oldstate="${' (ps -o stat= -p "@oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}(ps -o stat= -p "${'oldpid" 2>/dev/null | tr -d ' ')"
-                    case "$oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }} (ps -o stat= -p "${'oldpid" 2>/dev/null | tr -d ' ')"
+                    case "@oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}oldpid" 2>/dev/null | tr -d ' ')"
-                    case "${'oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}oldpid" 2>/dev/null | tr -d ' ')"
+                    case "${'oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
-}oldstate" in
-                        ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;;
-                    esac
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
+            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+    }}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
                 fi
                 vncserver :1 -localhost yes -geometry 1280x720 -depth 24
             fi
@@ -372,7 +285,6 @@ object TermuxBridge {
         run(context, "start:$distro", "$PREFIX/bin/proot-distro",
             arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
     }
-
     fun stopDesktop(context: Context, distro: String) {
         requireDistro(distro)
         run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
