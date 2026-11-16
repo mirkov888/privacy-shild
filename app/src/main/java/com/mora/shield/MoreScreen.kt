@@ -35,7 +35,7 @@ fun MoreScreen(onSelect: (Int) -> Unit) {
         MoreEntry("Integrasi Modul v3.8", "Pengawas jaringan, audit izin, trafik, brankas, dan profil border/home", "◉", 11),
         MoreEntry("Kontrol aplikasi", "Bekukan dan aktifkan kembali aplikasi pihak ketiga secara individual", "◫", 12),
         MoreEntry("Per-App Location", "Profil lokasi statis, random, radius, dan interval untuk tiap aplikasi", "⌖", 13),
-        MoreEntry("Per-App Device Identity", "Profil manufacturer, model, build fingerprint dan versi Android per aplikasi", "◉", 14),
+        MoreEntry("Per-App Device Identity", "Profil kompatibilitas Manufacturer, Brand, Model, Device, dan Product per aplikasi", "◉", 14),
         MoreEntry("Mora Identity Studio", "Katalog profil Android, iOS, Windows, macOS, Linux dan pengujian User-Agent", "◎", 16),
         MoreEntry("Per-App Permission & Sensor Control", "Izin sensitif, clipboard, sensor, aktivitas latar, dan firewall per aplikasi", "⛨", 15),
         MoreEntry("Alat", "Diagnostik, pemantauan layar, Kernel Manager, dan utilitas", "⌘", 6)
