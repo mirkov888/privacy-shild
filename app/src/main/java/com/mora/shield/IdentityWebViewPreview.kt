@@ -1,6 +1,7 @@
 package com.mora.shield
 
 import android.webkit.WebChromeClient
+import android.webkit.PermissionRequest
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -61,6 +62,7 @@ fun IdentityWebViewPreview(
                         cacheMode = WebSettings.LOAD_NO_CACHE
                         setSupportMultipleWindows(false)
                         javaScriptCanOpenWindowsAutomatically = false
+                        mediaPlaybackRequiresUserGesture = true
                         userAgentString = profile.userAgent
                         if (android.os.Build.VERSION.SDK_INT >= 26) safeBrowsingEnabled = true
                     }
@@ -73,7 +75,12 @@ fun IdentityWebViewPreview(
                             }
                         }
                     }
-                    webChromeClient = WebChromeClient()
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onPermissionRequest(request: PermissionRequest) {
+                            // The preview never grants camera or microphone capture.
+                            request.deny()
+                        }
+                    }
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean = true
                     }

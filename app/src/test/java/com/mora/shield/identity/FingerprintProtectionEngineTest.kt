@@ -21,13 +21,14 @@ class FingerprintProtectionEngineTest {
     @Test
     fun webGlProtectionMasksRendererAndDebugExtension() {
         val script = FingerprintProtectionEngine.buildDocumentStartScript(
-            IdentityProtectionSettings(canvasProtection = false, webGlProtection = true),
+            IdentityProtectionSettings(canvasProtection = false, webGlProtection = true, webRtcProtection = false),
             "session-two"
         )
         assertTrue(script.contains("webgl_debug_renderer_info"))
         assertTrue(script.contains("WebGL Renderer"))
         assertTrue(script.contains("WebGL2RenderingContext"))
         assertFalse(script.contains("CanvasRenderingContext2D"))
+        assertFalse(script.contains("RTCPeerConnection"))
     }
 
     @Test
@@ -63,3 +64,4 @@ class FingerprintProtectionEngineTest {
         assertTrue(script.contains("const moraSeed='okalert1'"))
     }
 }
+

@@ -8,7 +8,8 @@ data class IdentityProtectionSettings(
     val canvasProtection: Boolean = true,
     val webGlProtection: Boolean = true,
     val syncClientHints: Boolean = true,
-    val randomizePerSession: Boolean = true
+    val randomizePerSession: Boolean = true,
+    val webRtcProtection: Boolean = true
 )
 
 class IdentityProtectionStore(context: Context) {
@@ -19,7 +20,8 @@ class IdentityProtectionStore(context: Context) {
         canvasProtection = preferences.getBoolean(KEY_CANVAS, true),
         webGlProtection = preferences.getBoolean(KEY_WEBGL, true),
         syncClientHints = preferences.getBoolean(KEY_CLIENT_HINTS, true),
-        randomizePerSession = preferences.getBoolean(KEY_SESSION_RANDOM, true)
+        randomizePerSession = preferences.getBoolean(KEY_SESSION_RANDOM, true),
+        webRtcProtection = preferences.getBoolean(KEY_WEBRTC, true)
     )
 
     fun save(settings: IdentityProtectionSettings) {
@@ -28,6 +30,7 @@ class IdentityProtectionStore(context: Context) {
             .putBoolean(KEY_WEBGL, settings.webGlProtection)
             .putBoolean(KEY_CLIENT_HINTS, settings.syncClientHints)
             .putBoolean(KEY_SESSION_RANDOM, settings.randomizePerSession)
+            .putBoolean(KEY_WEBRTC, settings.webRtcProtection)
             .apply()
     }
 
@@ -36,6 +39,7 @@ class IdentityProtectionStore(context: Context) {
         const val KEY_WEBGL = "webgl_protection"
         const val KEY_CLIENT_HINTS = "sync_client_hints"
         const val KEY_SESSION_RANDOM = "randomize_per_session"
+        const val KEY_WEBRTC = "webrtc_protection"
     }
 }
 
@@ -157,6 +161,34 @@ object FingerprintProtectionEngine {
                       protectWebGl(window.WebGL2RenderingContext);
                     } catch (error) {
                       console.warn('Mora WebGL protection unavailable', error);
+                    }
+                    """.trimIndent()
+                )
+            }
+            if (settings.webRtcProtection) {
+                append(
+                    """
+                    try {
+                      const denyMedia = () => Promise.reject(new DOMException('Blocked by Mora preview privacy settings', 'NotAllowedError'));
+                      for (const name of ['RTCPeerConnection', 'webkitRTCPeerConnection']) {
+                        try { Object.defineProperty(window, name, { value: undefined, configurable: false, writable: false }); }
+                        catch (_) { try { window[name] = undefined; } catch (_) {} }
+                      }
+                      const media = navigator.mediaDevices;
+                      if (media) {
+                        for (const name of ['getUserMedia', 'getDisplayMedia']) {
+                          try { Object.defineProperty(media, name, { value: denyMedia, configurable: false, writable: false }); }
+                          catch (_) {}
+                        }
+                        try { Object.defineProperty(media, 'enumerateDevices', { value: () => Promise.resolve([]), configurable: false, writable: false }); }
+                        catch (_) {}
+                      }
+                      for (const name of ['getUserMedia', 'webkitGetUserMedia']) {
+                        try { Object.defineProperty(navigator, name, { value: denyMedia, configurable: false, writable: false }); }
+                        catch (_) {}
+                      }
+                    } catch (error) {
+                      console.warn('Mora WebRTC privacy guard unavailable', error);
                     }
                     """.trimIndent()
                 )

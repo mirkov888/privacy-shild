@@ -123,8 +123,13 @@ private fun IdentityEditor(pkg: String, onBack: () -> Unit, onSaved: () -> Unit)
             }
         }, Modifier.fillMaxWidth()) { Text("Simpan profil") }
         OutlinedButton(onClick = {
-            PerAppIdentityStore.save(context, DeviceIdentityProfile(pkg, enabled = false))
-            Store.message = "Perubahan identitas dinonaktifkan untuk aplikasi ini"
+            val restored = PerAppIdentityStore.rollback(context, pkg)
+            if (restored) {
+                Store.message = "Profil sebelumnya berhasil dipulihkan"
+            } else {
+                PerAppIdentityStore.save(context, DeviceIdentityProfile(pkg, enabled = false))
+                Store.message = "Tidak ada snapshot lama; profil dinonaktifkan"
+            }
             onBack()
         }, Modifier.fillMaxWidth()) { Text("Emergency restore") }
         TextButton(onClick = onBack) { Text("Kembali") }

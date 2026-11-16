@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,6 +33,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.mora.shield.identity.DeviceSnapshot
 import com.mora.shield.identity.FingerprintProtectionEngine
 import com.mora.shield.identity.IdentityEngine
@@ -38,6 +43,9 @@ import com.mora.shield.identity.IdentityPlatform
 import com.mora.shield.identity.IdentityProfileValidator
 import com.mora.shield.identity.IdentityProtectionSettings
 import com.mora.shield.identity.IdentityProtectionStore
+import com.mora.shield.identity.IdentityProfileRecoveryManager
+import com.mora.shield.identity.IdentityAndroidIntegration
+import com.mora.shield.identity.IdentityAndroidIntegrationReport
 
 @Composable
 fun IdentityStudioScreen() {
@@ -71,6 +79,13 @@ fun IdentityStudioScreen() {
                 Text("Profil kompatibilitas browser dan perlindungan fingerprint untuk WebView milik Mora. Identitas Android asli tetap terpisah.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        item { IdentityAndroidIntegrationCard() }
+        item { IdentityRecoveryCard(onRestored = {
+            selected = engine.selectedProfile()
+            protection = protectionStore.load()
+            refreshKey++
+            sessionSeed = FingerprintProtectionEngine.newSessionSeed()
+        }) }
         item {
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -98,7 +113,10 @@ fun IdentityStudioScreen() {
                     ProtectionSwitch("Randomisasi per sesi", "Seed Canvas baru setiap sesi; hasil tetap konsisten selama sesi tersebut.", protection.randomizePerSession) {
                         updateProtection(protection.copy(randomizePerSession = it))
                     }
-                    Text("Profile isolation: aktif. Setiap pergantian profil/sesi membuat WebView baru; jaringan, cache, cookie persistence, dan DOM storage tidak dipakai.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    ProtectionSwitch("Proteksi WebRTC & media", "Nonaktifkan koneksi peer dan akses kamera/mikrofon hanya di preview Mora.", protection.webRtcProtection) {
+                        updateProtection(protection.copy(webRtcProtection = it))
+                    }
+                    Text("Profile isolation aktif untuk preview Mora. WebRTC dan permintaan kamera/mikrofon diblokir bila proteksinya aktif. Pengaturan ini tidak mengubah browser eksternal.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -233,5 +251,151 @@ private fun ProtectionSwitch(
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+
+@Composable
+private fun IdentityAndroidIntegrationCard() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var report by remember { mutableStateOf<IdentityAndroidIntegrationReport?>(null) }
+    var scanning by remember { mutableStateOf(false) }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Android Integration & Compatibility", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Pemeriksaan bersifat read-only. Scan root hanya berjalan setelah tombol ditekan; tidak ada modul yang dipasang atau diubah.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(
+                enabled = !scanning,
+                onClick = {
+                    scanning = true
+                    scope.launch {
+                        report = withContext(Dispatchers.IO) {
+                            IdentityAndroidIntegration.scan(context.applicationContext)
+                        }
+                        scanning = false
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (scanning) "Memeriksa…" else "Scan kompatibilitas Android")
+            }
+            OutlinedButton(
+                onClick = {
+                    Store.message = if (IdentityAndroidIntegration.openWebViewSettings(context)) {
+                        "Pengaturan WebView Android dibuka"
+                    } else {
+                        "Pengaturan WebView tidak tersedia pada ROM ini"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Buka pengaturan provider WebView") }
+
+            report?.let { r ->
+                Text("WebView: ${r.webViewProvider} · ${r.webViewVersion}", style = MaterialTheme.typography.bodyMedium)
+                Text("User-Agent Metadata: ${if (r.userAgentMetadataSupported) "didukung" else "tidak didukung"}")
+                Text("Document Start Script: ${if (r.documentStartScriptSupported) "didukung" else "tidak didukung"}")
+                Text("Root: ${r.rootManager}")
+                Text("LSPosed: ${r.lsPosedStatus}", style = MaterialTheme.typography.bodySmall)
+                Text("Browser terpasang yang dapat membuka HTTPS: ${r.browsers.size}")
+                r.browsers.forEach { browser ->
+                    Text("• ${browser.label} (${browser.packageName})", style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
+                    "Browser eksternal hanya dideteksi. Mora tidak menerapkan User-Agent, hook, atau fingerprint profile ke Chrome/Firefox/Brave dan browser lain.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } ?: Text("Belum dipindai.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun IdentityRecoveryCard(onRestored: () -> Unit) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val recovery = remember(context) { IdentityProfileRecoveryManager(context) }
+    var confirmRestore by remember { mutableStateOf(false) }
+    var confirmRollback by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("") }
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Backup, Validation & Rollback", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Backup mencakup profil browser kustom/favorit, profil aktif, pengaturan proteksi, dan label kompatibilitas per-app. Data keamanan perangkat tidak diekspor.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(
+                onClick = {
+                    val json = recovery.exportBackupJson()
+                    clipboard.setText(AnnotatedString(json))
+                    status = "Backup lengkap disalin ke clipboard"
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Ekspor backup JSON") }
+            OutlinedButton(
+                onClick = {
+                    val raw = clipboard.getText()?.text.orEmpty()
+                    val validation = IdentityProfileRecoveryManager.validateBackupJson(raw)
+                    if (validation == null) confirmRestore = true else status = validation
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Validasi & impor dari clipboard") }
+            OutlinedButton(
+                enabled = recovery.hasRollbackPoint(),
+                onClick = { confirmRollback = true },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Rollback ke backup sebelumnya") }
+            Text(
+                if (recovery.hasRollbackPoint()) "Rollback point tersedia." else "Rollback point akan dibuat otomatis sebelum impor backup.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (status.isNotBlank()) {
+                Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+
+    if (confirmRestore) {
+        AlertDialog(
+            onDismissRequest = { confirmRestore = false },
+            title = { Text("Pulihkan backup Mora?") },
+            text = { Text("Profil Identity Studio, pengaturan proteksi, dan profil kompatibilitas per-app akan diganti sesuai isi clipboard. Snapshot kondisi saat ini disimpan sebagai rollback.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRestore = false
+                    val result = recovery.restoreBackupJson(clipboard.getText()?.text.orEmpty())
+                    status = result.message + if (result.success) " · ${result.restoredAppProfiles} profil per-app" else ""
+                    if (result.success) onRestored()
+                }) { Text("Pulihkan") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRestore = false }) { Text("Batal") } }
+        )
+    }
+
+    if (confirmRollback) {
+        AlertDialog(
+            onDismissRequest = { confirmRollback = false },
+            title = { Text("Rollback perubahan terakhir?") },
+            text = { Text("Konfigurasi Identity Studio akan dikembalikan ke snapshot sebelumnya. Kondisi saat ini disimpan sehingga rollback dapat dibatalkan dengan operasi berikutnya.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRollback = false
+                    val result = recovery.rollbackLastChange()
+                    status = result.message
+                    if (result.success) onRestored()
+                }) { Text("Rollback") }
+            },
+            dismissButton = { TextButton(onClick = { confirmRollback = false }) { Text("Batal") } }
+        )
     }
 }
