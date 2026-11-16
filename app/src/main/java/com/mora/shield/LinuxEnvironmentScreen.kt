@@ -30,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -44,6 +46,7 @@ private val moraDistros = listOf(
 @Composable
 fun LinuxEnvironmentScreen() {
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val prefs = remember { context.getSharedPreferences("mora_linux", Context.MODE_PRIVATE) }
     var selected by rememberSaveable { mutableStateOf("debian") }
     var refresh by remember { mutableStateOf(0) }
@@ -197,10 +200,42 @@ fun LinuxEnvironmentScreen() {
         item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && desktopReady) { confirm = "stop" } }
         item { EmbeddedVncViewerCard() }
         item {
-            Text("Hasil perintah terakhir", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("$lastOperation · exit code $lastExit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (lastError.isNotBlank()) Text(lastError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            if (lastOutput.isNotBlank()) Text(lastOutput.takeLast(1800), style = MaterialTheme.typography.bodySmall)
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Diagnostik / hasil perintah", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text("$lastOperation · exit code $lastExit", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (lastError.isNotBlank()) {
+                        Text("Error", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+                        Text(lastError.takeLast(3000), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (lastOutput.isNotBlank()) {
+                        Text("Output", style = MaterialTheme.typography.labelMedium)
+                        Text(lastOutput.takeLast(4000), style = MaterialTheme.typography.bodySmall)
+                    }
+                    val diagnosticText = buildString {
+                        appendLine("Mora Shield / Termux diagnostic")
+                        appendLine("Operation: $lastOperation")
+                        appendLine("Exit code: $lastExit")
+                        appendLine("Error:")
+                        appendLine(lastError.ifBlank { "(none captured)" })
+                        appendLine("Output:")
+                        appendLine(lastOutput.ifBlank { "(empty)" })
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            enabled = lastOperation.isNotBlank() || lastError.isNotBlank() || lastOutput.isNotBlank(),
+                            onClick = { clipboard.setText(AnnotatedString(diagnosticText)) }
+                        ) { Text("Salin error & output") }
+                        OutlinedButton(
+                            enabled = lastError.isNotBlank(),
+                            onClick = { clipboard.setText(AnnotatedString(lastError)) }
+                        ) { Text("Salin error saja") }
+                    }
+                    if (lastOperation.isBlank() && lastError.isBlank() && lastOutput.isBlank()) {
+                        Text("Belum ada hasil perintah. Jalankan aksi lagi setelah Termux siap.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
         item {
             Text("PRoot berbagi kernel Android, bukan VM/kernel terpisah. systemd, Docker, modul kernel, dan akselerasi GPU penuh tidak dijamin. Izinkan Termux berjalan di latar belakang agar sesi tidak mudah dihentikan HyperOS.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
