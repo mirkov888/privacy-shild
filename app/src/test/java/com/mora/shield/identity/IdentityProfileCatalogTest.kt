@@ -32,7 +32,6 @@ class IdentityProfileCatalogTest {
             "android-pixel11-chrome",
             "android-pixel11-pro-chrome",
             "android-pixel11-pro-xl-chrome",
-            "android-pixel11-pro-fold-chrome",
             "android-samsung-s26-chrome",
             "android-samsung-s26-plus-chrome",
             "android-samsung-s26-ultra-chrome",
