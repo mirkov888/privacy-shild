@@ -59,11 +59,21 @@ fun IdentityStudioScreen() {
     var refreshKey by remember { mutableIntStateOf(0) }
     var customName by remember { mutableStateOf("") }
     var customUserAgent by remember { mutableStateOf("") }
+    var profileQuery by remember { mutableStateOf("") }
     var showWebPreview by remember { mutableStateOf(true) }
     var protection by remember { mutableStateOf(protectionStore.load()) }
     var sessionSeed by remember { mutableStateOf(FingerprintProtectionEngine.newSessionSeed()) }
     val device = remember { DeviceSnapshot.capture() }
     val profiles = engine.profilesForPlatform(platform)
+    val visibleProfiles = remember(profiles, profileQuery) {
+        val query = profileQuery.trim()
+        if (query.isEmpty()) profiles else profiles.filter { profile ->
+            profile.model.contains(query, ignoreCase = true) ||
+                profile.manufacturer.contains(query, ignoreCase = true) ||
+                profile.browser.contains(query, ignoreCase = true) ||
+                profile.purpose.contains(query, ignoreCase = true)
+        }
+    }
     val customProfiles = engine.customProfiles()
     @Suppress("UNUSED_VARIABLE") val refresh = refreshKey
 
@@ -132,7 +142,17 @@ fun IdentityStudioScreen() {
                 IdentityPlatform.values().drop(3).forEach { p -> FilterChip(selected = platform == p, onClick = { platform = p }, label = { Text(p.label) }) }
             }
         }
-        items(profiles, key = { it.id }) { profile ->
+        item {
+            OutlinedTextField(
+                value = profileQuery,
+                onValueChange = { profileQuery = it.take(80) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Cari merek, model, atau browser") },
+                singleLine = true
+            )
+            Text("${visibleProfiles.size} profil cocok dari ${profiles.size} profil ${platform.label}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        items(visibleProfiles, key = { it.id }) { profile ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 Card(
                     onClick = {
