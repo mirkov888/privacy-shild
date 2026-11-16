@@ -34,7 +34,8 @@ class IdentityProfileRecoveryManagerTest {
               "perAppProfiles":[]
             }
         """.trimIndent()
-        assertNull(IdentityProfileRecoveryManager.validateBackupJson(raw))
+        val validation = IdentityProfileRecoveryManager.validateBackupJson(raw)
+        assertNull("Unexpected validation error: $validation", validation)
     }
 
     @Test
