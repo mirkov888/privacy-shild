@@ -132,7 +132,7 @@ fun LinuxEnvironmentScreen() {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = {
                             if (termuxPresent) {
-                                context.packageManager.getLaunchIntentForPackage(TermuxBridge.TERMUX_PACKAGE)?.let(context::startActivity)
+                                context.packageManager.getLaunchIntentForPackage(TermuxBridge.TERMUX_PACKAGE)?.let { context.startActivity(it) }
                             } else {
                                 context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-app/releases")))
                             }
