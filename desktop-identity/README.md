@@ -1,12 +1,14 @@
 # Mora Shield Desktop Identity Bridge
 
-Companion utility for Linux browser compatibility testing. It creates isolated, disposable profiles and never edits an existing browser profile, browser binary, OS identity, hardware identifier, certificate or attestation.
+Linux companion utility for managing isolated browser compatibility profiles used by Mora Shield. It is a command-line bridge, not a second Android application or a full Linux GUI dashboard. It never edits the user's normal browser profile, OS identity, hardware identifier, certificate or attestation.
 
-Supported browsers: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium. Firefox-family profiles use a dedicated profile directory and user.js; Chromium-family profiles use a separate user-data directory and launcher.
+Supported Linux browser targets: Firefox, LibreWolf, Zen, Brave, Chrome and Chromium. Firefox-family profiles use dedicated profile directories and user.js; Chromium-family profiles use a separate user-data directory and launcher.
 
-Compatibility labels: Android, iPhone, iPad, Windows, macOS and Linux. Labels select a User-Agent test string only. They do not emulate operating systems, hardware, fonts, codecs, GPU, Client Hints or mobile touch behavior.
+Compatibility labels: Android, iPhone, iPad, Windows, macOS and Linux. Labels select a User-Agent test string only. They do not emulate operating systems, hardware, fonts, codecs, GPU, Client Hints, browser engines or mobile touch behavior. An iPhone/Safari User-Agent opened in Firefox remains Firefox.
 
-Usage:
+## Commands
+
+    python3 mora_identity.py doctor
     python3 mora_identity.py list
     python3 mora_identity.py create --id android-test --browser firefox --platform android
     python3 mora_identity.py create --id iphone-test --browser zen --platform iphone
@@ -14,9 +16,27 @@ Usage:
     python3 mora_identity.py launch --id android-test
     python3 mora_identity.py backup --id android-test --output ~/mora-android-test.zip
     python3 mora_identity.py rollback --id android-test
+    python3 mora_identity.py export --output ~/mora-identity-profiles.json
+    python3 mora_identity.py import --input ~/mora-identity-profiles.json
+    python3 mora_identity.py compare --before ~/before.json --after ~/after.json
 
-Default storage: ~/.config/mora-shield/identity-profiles. Supply --root PATH before a subcommand for portable storage or tests.
+Default storage: ~/.config/mora-shield/identity-profiles. Supply --root PATH before the subcommand for portable storage or tests.
 
-Every profile contains diagnostics.html. Open it locally to inspect User-Agent, Client Hints when available, platform, locale, timezone, screen, WebGL, Canvas availability and WebRTC API presence. It does not transmit reports. WebRTC restrictions are best-effort and enabled by default; use --allow-webrtc only when needed for compatibility testing.
+## Profile isolation and recovery
 
-Rollback removes only a Mora-created profile after checking its manifest. Backups restore only to a new ID; existing targets are never overwritten. A User-Agent override is not proof of device identity.
+- New profiles use dedicated directories. A matching existing ID is never overwritten.
+- backup creates an archive and stores a rollback snapshot under <root>/.rollback/.
+- rollback restores that last explicit backup. The current profile is first preserved as <id>.pre-rollback/ and <id>.pre-rollback.zip; nothing is silently discarded. Run backup before making changes you may need to undo.
+- restore validates archive paths, symbolic links, size and the profile manifest before restoring to a new ID. Existing destinations are refused.
+- export and import use the same schema-1 profile fields as Mora Android's custom-profile exchange: schema, profiles, favorites, id, platform, model and userAgent. Imports are validated and do not overwrite existing profile IDs.
+- compare compares two local diagnostic JSON files; reports are not uploaded.
+
+Every profile contains diagnostics.html. Open it locally to inspect User-Agent, Client Hints when available, platform, locale, timezone, screen, WebGL, Canvas output and WebRTC API availability. WebRTC restrictions are best-effort browser preferences, not a VPN or leak-proof guarantee.
+
+## Scope limits
+
+- Browser detection via doctor only checks whether supported executable names are on PATH.
+- A browser may use a different binary name or install path; specify the browser manually and check its launch behavior.
+- User-Agent overrides do not provide true device emulation or guarantee consistent Client Hints across browsers.
+- Android external browsers are not modified by this helper.
+- No IMEI, serial, Android ID, MAC, build fingerprint, security attestation or Play Integrity values are read or changed.
