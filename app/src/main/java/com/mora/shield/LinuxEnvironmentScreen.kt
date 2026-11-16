@@ -70,7 +70,7 @@ fun LinuxEnvironmentScreen() {
     }
     LaunchedEffect(selected) {
         while (true) {
-            delay(3000)
+            delay(12000)
             refresh = (refresh + 1) % 100000
             runPermission = TermuxBridge.hasRunPermission(context)
             termuxPresent = TermuxBridge.installed(context)
