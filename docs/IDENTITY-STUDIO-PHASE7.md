@@ -22,3 +22,21 @@
 ## Validation
 
 Unit tests cover tracked-permission filtering, granted-state handling, and missing permission metadata.
+
+## Linux dashboard and profile controls
+
+The desktop helper now includes a lightweight Tkinter dashboard:
+
+```bash
+python mora_identity.py gui
+```
+
+The dashboard can create, search via the profile list, launch, backup, rollback, import/export JSON profiles, inspect browser support, and audit a saved diagnostic report. It launches only Mora-created isolated profile directories. The GUI loads Tkinter lazily; CLI use does not require a graphical session.
+
+Optional controls:
+- Firefox Canvas reduction: `privacy.resistFingerprinting`.
+- Firefox WebGL reduction: disable WebGL.
+- Chromium WebGL reduction: `--disable-webgl`; Canvas protection is marked unsupported by this launcher.
+- WebRTC restriction remains browser-specific and best-effort, not a VPN.
+
+This dashboard is a Linux companion interface. Android remains the primary Mora Shield app; profiles are exchanged through explicit JSON import/export rather than live sync.
