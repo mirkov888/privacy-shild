@@ -122,6 +122,7 @@ fun IdentityStudioScreen() {
                 }
             }
         }
+        item { IdentityRandomizationCard(platform) }
         item {
             Text("Platform profil browser", style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
