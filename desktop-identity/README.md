@@ -25,6 +25,7 @@ The dashboard contains profile search/create, browser launch and local diagnosti
     python3 mora_identity.py export --output ~/mora-identity-profiles.json
     python3 mora_identity.py import --input ~/mora-identity-profiles.json
     python3 mora_identity.py compare --before ~/before.json --after ~/after.json
+    python3 mora_identity.py sync-serve --minutes 15
 
 Default storage: ~/.config/mora-shield/identity-profiles. Supply --root PATH before the subcommand for portable storage or tests.
 
@@ -44,7 +45,8 @@ Every profile contains diagnostics.html. Open it locally to inspect User-Agent, 
 - Browser detection via doctor checks known native executable names and common Flatpak app IDs. Unusual custom install paths or renamed Flatpak IDs may still require manual setup.
 - User-Agent overrides do not provide true device emulation or guarantee consistent Client Hints across browsers.
 - Android external browsers are not modified by this helper.
-- The Linux dashboard is an optional Tkinter front-end to this existing companion bridge; it is not a second Android app or a shared always-live Android/Linux profile database. Use explicit JSON import/export to move profiles between platforms.
+- LAN sync is user-initiated, profile-only and session-based, not an always-on shared database. It synchronizes user-created browser profiles; it does not sync Android built-in presets, randomizer schedules, app settings or browser data directories.
+- The Linux dashboard is an optional Tkinter front-end to this existing companion bridge; it is not a second Android app.
 - No IMEI, serial, Android ID, MAC, build fingerprint, security attestation or Play Integrity values are read or changed.
 
 ## Optional browser protection controls
@@ -59,6 +61,22 @@ python mora_identity.py audit --input mora-diagnostic.json
 ```
 
 - Firefox Canvas reduction uses `privacy.resistFingerprinting`; Firefox WebGL protection disables WebGL and can break 3D content.
-- Chromium WebGL protection also disables WebGL. Chromium Canvas protection is explicitly reported as unsupported by this launcher.
+- Chromium Canvas protection uses a Mora Manifest V3 extension loaded only in the isolated profile. It blocks common page-context Canvas readback methods (`getImageData`, `toDataURL`, `toBlob`, `OffscreenCanvas.convertToBlob`). Worker contexts and browser internals are not covered; websites using Canvas APIs may break. Chromium WebGL protection disables WebGL.
 - Firefox WebRTC protection disables peer-connection APIs. Chromium uses a non-proxied UDP restriction, which is best-effort and is not a VPN.
 - The audit reports visible browser APIs and User-Agent / Client Hints inconsistencies. It does not test public IP, DNS, or network routes.
+
+## Direct Android ↔ Linux LAN sync
+
+The desktop sync server requires Python 3 and OpenSSL (`sudo apt install openssl`). Run it from this directory:
+
+    python3 mora_identity.py sync-serve --minutes 15
+
+Keep Android and Linux on the same trusted private Wi-Fi/LAN. The terminal prints the Linux private IPv4 address, a temporary bearer token and a SHA-256 certificate pin. In Mora Shield → Identity Studio → Sinkronisasi langsung Android ↔ Linux, enter those values and press **Sinkronkan dua arah**.
+
+- The server uses a temporary self-signed TLS certificate; Android accepts it only when its SHA-256 pin matches the value shown in the Linux terminal.
+- The bearer token is generated per run, is not written to disk and expires with the server session (1–60 minutes; default 15).
+- The server binds only to private IPv4 interfaces, limits payloads to 256 KB / 100 profiles, and never logs authorization headers or profile contents.
+- Repeated sync is idempotent. Identical profile IDs are treated as unchanged; conflicting IDs are rejected and local profile data is never overwritten.
+- The sync endpoint is not exposed to the public internet by the tool. A host firewall may still need a temporary LAN-only allow rule for the selected TCP port.
+- This is manual, direct profile sync, not continuous background sync. Built-in device catalogue presets, favorites, schedules, app settings and browser history are not synced.
+- Stop it with Ctrl+C when finished. Do not share the token or certificate pin with anyone else.
