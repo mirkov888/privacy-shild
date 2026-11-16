@@ -53,7 +53,8 @@ class IdentityProfileRecoveryManager(context: Context) {
                 .put("intervalHours", randomization.intervalHours)
                 .put("seed", randomization.seed)
                 .put("platform", randomization.platform.name)
-                .put("randomizeEnabledApps", randomization.randomizeEnabledApps))
+                .put("randomizeEnabledApps", randomization.randomizeEnabledApps)
+                .put("runIndex", randomizationStore.runIndex()))
             .put("perAppProfiles", PerAppIdentityStore.exportCompatibilityProfilesJson(appContext))
         return root.toString(2)
     }
@@ -121,6 +122,7 @@ class IdentityProfileRecoveryManager(context: Context) {
             )
         )
         val random = root.optJSONObject("randomization")
+        val previousRunIndex = randomizationStore.runIndex()
         val restoredRandomization = if (random == null) {
             IdentityRandomizationSettings(enabled = false, seed = randomizationStore.load().seed)
         } else {
@@ -133,6 +135,7 @@ class IdentityProfileRecoveryManager(context: Context) {
             )
         }
         randomizationStore.save(restoredRandomization)
+        randomizationStore.restoreRunIndex(random?.optInt("runIndex", 0) ?: previousRunIndex)
         IdentityRandomizationScheduler.sync(appContext, restoredRandomization)
         val restored = PerAppIdentityStore.replaceCompatibilityProfilesJson(
             appContext, root.getJSONArray("perAppProfiles")
@@ -202,6 +205,11 @@ class IdentityProfileRecoveryManager(context: Context) {
                 }
                 runCatching { IdentityPlatform.valueOf(randomization.optString("platform")) }
                     .getOrNull() ?: return "Platform randomisasi tidak valid"
+                if (randomization.has("runIndex") && randomization.opt("runIndex") !is Number) {
+                    return "Nomor run randomizer tidak valid"
+                }
+                val runIndex = randomization.optLong("runIndex", 0L)
+                if (runIndex !in 0L..Int.MAX_VALUE.toLong()) return "Nomor run randomizer di luar batas"
             }
 
             val appProfiles = root.optJSONArray("perAppProfiles") ?: return "Profil per-app tidak ditemukan"
