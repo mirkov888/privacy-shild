@@ -2,8 +2,6 @@ package com.mora.shield
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import android.net.Uri
-import java.io.OutputStreamWriter
 import android.webkit.WebChromeClient
 import android.webkit.PermissionRequest
 import android.webkit.WebResourceRequest
