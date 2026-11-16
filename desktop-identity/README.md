@@ -40,3 +40,19 @@ Every profile contains diagnostics.html. Open it locally to inspect User-Agent, 
 - User-Agent overrides do not provide true device emulation or guarantee consistent Client Hints across browsers.
 - Android external browsers are not modified by this helper.
 - No IMEI, serial, Android ID, MAC, build fingerprint, security attestation or Play Integrity values are read or changed.
+
+## Optional browser protection controls
+
+Protection switches are opt-in because disabling browser APIs can break websites.
+
+```bash
+python mora_identity.py create --id firefox-private --browser firefox --platform linux --protect-canvas --protect-webgl
+python mora_identity.py create --id chrome-private --browser chrome --platform windows --protect-webgl
+python mora_identity.py launch --id firefox-private --diagnostics
+python mora_identity.py audit --input mora-diagnostic.json
+```
+
+- Firefox Canvas reduction uses `privacy.resistFingerprinting`; Firefox WebGL protection disables WebGL and can break 3D content.
+- Chromium WebGL protection also disables WebGL. Chromium Canvas protection is explicitly reported as unsupported by this launcher.
+- Firefox WebRTC protection disables peer-connection APIs. Chromium uses a non-proxied UDP restriction, which is best-effort and is not a VPN.
+- The audit reports visible browser APIs and User-Agent / Client Hints inconsistencies. It does not test public IP, DNS, or network routes.
