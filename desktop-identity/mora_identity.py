@@ -80,7 +80,7 @@ if(typeof RTCPeerConnection!=="undefined"){
     const address=(value.match(/candidate:\S+\s+\d+\s+\S+\s+\d+\s+([^\s]+)\s+\d+/)||[])[1]||"";
     if(address){
      if(address.toLowerCase().endsWith(".local"))r.webRtc.ice.mdnsCandidates++;
-     else if(/^(?:\d{1,3}\\.){3}\d{1,3}$/.test(address)||address.includes(":"))r.webRtc.ice.addressCandidates++;
+     else if(/^(?:\d{1,3}\.){3}\d{1,3}$/.test(address)||address.includes(":"))r.webRtc.ice.addressCandidates++;
     }
    });
    pc.createDataChannel("mora-diagnostic");
