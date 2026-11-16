@@ -52,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -62,11 +63,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Meminta refresh rate tinggi; sistem memilih mode tertinggi yang didukung perangkat.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.attributes = window.attributes.apply { preferredRefreshRate = 120f }
-        }
-
+        // Biarkan Android/ROM memilih refresh rate adaptif agar UI tetap halus tanpa
+        // memaksa panel 120 Hz dan mengorbankan baterai pada perangkat yang mendukungnya.
         // Meminta izin notifikasi Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissions(
@@ -142,6 +140,8 @@ fun MoraApp() {
     val snackbarHostState = remember {
         SnackbarHostState()
     }
+    // Keep each destination's rememberSaveable state while switching bottom navigation.
+    val screenStateHolder = rememberSaveableStateHolder()
 
     val message = Store.message
 
@@ -273,24 +273,26 @@ fun MoraApp() {
                 animationSpec = tween(durationMillis = 220),
                 label = "mora-screen-transition"
             ) { tab ->
-                when (tab) {
-                    0 -> HomeScreen()
-                    1 -> ActivityMonitorScreen()
-                    2 -> AppsScreen()
-                    3 -> MoreScreen(onSelect = { selectedTab = it })
-                    4 -> SettingsScreen()
-                    5 -> MoraCoreScreen()
-                    6 -> ToolsScreen()
-                    7 -> AppUsageScreen()
-                    8 -> TerminalScreen()
-                    11 -> ModuleV36Screen()
-                    12 -> AppControlScreen()
-                    13 -> PerAppLocationScreen()
-                    14 -> PerAppIdentityScreen()
-                    15 -> PerAppPrivacyScreen()
-                    16 -> IdentityStudioScreen()
-                    9 -> ActivityMonitorScreen(initialSection = "SECURITY")
-                    10 -> ActivityMonitorScreen(initialSection = "NETWORK")
+                screenStateHolder.SaveableStateProvider(key = tab) {
+                    when (tab) {
+                        0 -> HomeScreen()
+                        1 -> ActivityMonitorScreen()
+                        2 -> AppsScreen()
+                        3 -> MoreScreen(onSelect = { selectedTab = it })
+                        4 -> SettingsScreen()
+                        5 -> MoraCoreScreen()
+                        6 -> ToolsScreen()
+                        7 -> AppUsageScreen()
+                        8 -> TerminalScreen()
+                        11 -> ModuleV36Screen()
+                        12 -> AppControlScreen()
+                        13 -> PerAppLocationScreen()
+                        14 -> PerAppIdentityScreen()
+                        15 -> PerAppPrivacyScreen()
+                        16 -> IdentityStudioScreen()
+                        9 -> ActivityMonitorScreen(initialSection = "SECURITY")
+                        10 -> ActivityMonitorScreen(initialSection = "NETWORK")
+                    }
                 }
             }
         }
