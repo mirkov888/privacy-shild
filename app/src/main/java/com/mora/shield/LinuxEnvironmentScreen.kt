@@ -181,7 +181,13 @@ fun LinuxEnvironmentScreen() {
             }
         }
         item {
-            LinuxActionCard("Siapkan proot-distro", "Perbarui daftar paket Termux dan pasang pengelola distro Linux.", "Install proot-distro", termuxPresent && runPermission && !managerReady) { confirm = "bootstrap" }
+            LinuxActionCard(
+                "Siapkan proot-distro",
+                if (managerReady) "proot-distro sudah ditandai siap. Jalankan ulang pemeriksaan/perbaikan jika instalasi sebelumnya bermasalah."
+                else "Perbarui daftar paket Termux dan pasang pengelola distro Linux.",
+                if (managerReady) "Periksa / perbaiki proot-distro" else "Install proot-distro",
+                termuxPresent && runPermission
+            ) { confirm = "bootstrap" }
         }
         item { Text("Kontrol distro & desktop", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
         item { LinuxActionCard("Install distro", "Unduh root filesystem ${distro.name}.", "Install ${distro.name}", termuxPresent && runPermission && managerReady && !installed) { confirm = "install" } }
