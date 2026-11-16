@@ -70,7 +70,9 @@ python mora_identity.py audit --input mora-diagnostic.json
 
 The desktop sync server requires Python 3 and OpenSSL (`sudo apt install openssl`). Identify the Wi-Fi/LAN IPv4 with `ip -4 addr`, then bind only to that one private interface (replace the example address):
 
-    python3 mora_identity.py sync-serve --minutes 15
+    python3 mora_identity.py sync-serve --host 192.168.1.20 --minutes 15
+
+When exactly one private IPv4 address is detected, `--host` can be omitted; otherwise the helper requires an explicit interface to avoid binding to the wrong network.
 
 Keep Android and Linux on the same trusted private Wi-Fi/LAN. The terminal prints the Linux private IPv4 address, a temporary bearer token and a SHA-256 certificate pin. In Mora Shield → Identity Studio → Sinkronisasi langsung Android ↔ Linux, enter those values and press **Sinkronkan dua arah**.
 
