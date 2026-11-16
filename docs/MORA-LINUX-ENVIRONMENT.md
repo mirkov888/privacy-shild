@@ -63,3 +63,10 @@ XFCE dan dependensinya dapat menggunakan beberapa GB. Mulailah dengan resolusi V
 - Android/HyperOS dapat menghentikan Termux di latar belakang. Izinkan aktivitas latar dan sesuaikan optimasi baterai jika diperlukan.
 - Start/stop mengelola VNC display `:1`; bukan menghidupkan/mematikan seluruh distro.
 - Distro lain dapat ditambahkan jika didukung proot-distro, tetapi belum tersedia sebagai preset UI.
+
+
+## Embedded VNC Viewer
+
+Mora Shield includes an internal RFB/VNC client connected only to `127.0.0.1:5901`; no separate VNC Viewer app is required. Start XFCE display `:1` from the Mora Linux Environment screen, then connect using the built-in Desktop Viewer. The viewer uses VNC password authentication and requests Raw framebuffer encoding plus DesktopSize. The password is used for the connection and is not persisted by the viewer.
+
+Current scope: VNC password security type, Raw encoding, touch click/drag, and basic ASCII text input. Other security types and framebuffer encodings are not supported yet. Keep VNC bound to loopback; do not expose it to LAN or the internet. Use a modest desktop resolution on phones to limit memory and bandwidth. CI builds do not replace physical-device testing.
