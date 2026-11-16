@@ -306,37 +306,41 @@ def merge_exchange_payload(root, payload, browser_override=None):
             raise ValueError("Browser tidak didukung: " + str(browser))
         prepared.append((profile_id, browser, platform, ua, model))
 
-    created = []
+    # Preflight every target before creating anything: conflicts never leave a partial sync.
+    to_create = []
     unchanged = 0
     for profile_id, browser, platform, ua, model in prepared:
         destination = profile_dir(root, profile_id)
         if destination.is_symlink():
             raise ValueError("Target profil berupa symbolic link: " + profile_id)
-        if destination.exists():
-            metadata_path = destination / "profile.json"
-            try:
-                existing = json.loads(metadata_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError, json.JSONDecodeError) as error:
-                raise FileExistsError("Profil lokal tidak dapat diverifikasi: " + profile_id) from error
-            matches = (
-                existing.get("user_agent") == ua
-                and existing.get("platform_test_label") == platform
-                and existing.get("model") == model
-                and existing.get("browser") == browser
-            )
-            if matches:
-                unchanged += 1
-                continue
-            raise FileExistsError("Konflik ID profil; data lokal tidak ditimpa: " + profile_id)
-
+        if not destination.exists():
+            to_create.append((profile_id, browser, platform, ua, model))
+            continue
+        metadata_path = destination / "profile.json"
         try:
+            existing = json.loads(metadata_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            raise FileExistsError("Profil lokal tidak dapat diverifikasi: " + profile_id) from error
+        matches = (
+            existing.get("user_agent") == ua
+            and existing.get("platform_test_label") == platform
+            and existing.get("model") == model
+            and existing.get("browser") == browser
+        )
+        if matches:
+            unchanged += 1
+            continue
+        raise FileExistsError("Konflik ID profil; data lokal tidak ditimpa: " + profile_id)
+
+    created = []
+    try:
+        for profile_id, browser, platform, ua, model in to_create:
             create_profile(root, profile_id, browser, platform, ua, model=model)
             created.append(profile_id)
-        except Exception:
-            shutil.rmtree(destination, ignore_errors=True)
-            for rollback_id in created:
-                shutil.rmtree(profile_dir(root, rollback_id), ignore_errors=True)
-            raise
+    except Exception:
+        for rollback_id in created:
+            shutil.rmtree(profile_dir(root, rollback_id), ignore_errors=True)
+        raise
     return {"created": created, "unchanged": unchanged}
 
 
