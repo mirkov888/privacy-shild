@@ -41,6 +41,16 @@ Every profile contains diagnostics.html. Open it locally to inspect User-Agent, 
 - Android external browsers are not modified by this helper.
 - No IMEI, serial, Android ID, MAC, build fingerprint, security attestation or Play Integrity values are read or changed.
 
+## Desktop dashboard
+
+Launch the GUI dashboard on Linux:
+
+```bash
+python mora_identity.py gui
+```
+
+The dashboard uses Tkinter from the Python standard library. It manages Mora-owned isolated profiles, browser launch, backup/rollback, JSON import/export, browser capability checks and local diagnostic audits. If Tkinter is missing on Debian/Ubuntu, install the system package `python3-tk`. No heavy Python runtime dependency is added.
+
 ## Optional browser protection controls
 
 Protection switches are opt-in because disabling browser APIs can break websites.
