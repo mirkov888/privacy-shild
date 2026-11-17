@@ -1,0 +1,127 @@
+package com.mora.shield.core
+
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.mora.rustandroid.NativeCore
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class MoraRustNativeIntegrationTest {
+    @Test
+    fun nativeLibraryLoadsAndNegotiatesExpectedContract() {
+        assertEquals(9, NativeCore.nativeCoreApiVersion())
+        assertEquals(0x7ff, NativeCore.nativeCoreCapabilities())
+
+        val descriptor = JSONObject(NativeCore.nativeCoreDescriptor())
+        assertEquals(9, descriptor.getInt("api_version"))
+        assertEquals(1, descriptor.getInt("schema_version"))
+        assertEquals(0x7ff, descriptor.getJSONObject("capabilities").getInt("mask"))
+        assertEquals(6, descriptor.getJSONArray("modules").length())
+    }
+
+    @Test
+    fun allSixRustModulesDispatchThroughJni() {
+        val profile = dispatch(
+            "profile_store",
+            "create",
+            params = JSONObject().put("id", "jni_test").put("label", "JNI Test")
+        )
+        assertTrue(profile.toString(), profile.optBoolean("ok"))
+        assertEquals(
+            1,
+            profile.getJSONObject("data").getJSONObject("store")
+                .getJSONArray("profiles").length()
+        )
+
+        val config = dispatch("system_config", "get")
+        assertTrue(config.toString(), config.optBoolean("ok"))
+        assertTrue(config.getJSONObject("data").has("config"))
+
+        val runtime = dispatch("runtime_manager", "list")
+        assertTrue(runtime.toString(), runtime.optBoolean("ok"))
+        assertEquals(
+            3,
+            runtime.getJSONObject("data").getJSONObject("runtime")
+                .getJSONArray("services").length()
+        )
+
+        val event = dispatch(
+            "event_logger",
+            "record",
+            params = JSONObject()
+                .put("category", "system")
+                .put("action", "jni_instrumentation_test")
+                .put("detail", "Android instrumentation")
+        )
+        assertTrue(event.toString(), event.optBoolean("ok"))
+        assertEquals(
+            1,
+            event.getJSONObject("data").getJSONObject("log")
+                .getJSONArray("events").length()
+        )
+
+        val snapshot = JSONObject()
+            .put("uid", 1000)
+            .put("rx_bytes", 10L)
+            .put("tx_bytes", 20L)
+            .put("transport", "none")
+            .put("connected", false)
+            .put("validated", false)
+            .put("metered", false)
+        val network = dispatch(
+            "network_monitor",
+            "record",
+            params = JSONObject().put("snapshot_json", snapshot.toString())
+        )
+        assertTrue(network.toString(), network.optBoolean("ok"))
+        assertEquals(
+            1,
+            network.getJSONObject("data").getJSONObject("monitor")
+                .getJSONArray("snapshots").length()
+        )
+
+        val auditInput = JSONObject()
+            .put("package_name", "com.mora.shield")
+            .put("target_sdk", 35)
+            .put("debuggable", false)
+            .put("allow_backup", false)
+            .put("uses_cleartext_traffic", false)
+            .put("security_patch", "")
+            .put("permissions", JSONArray())
+        val audit = dispatch(
+            "security_auditor",
+            "audit",
+            params = JSONObject().put("input_json", auditInput.toString())
+        )
+        assertTrue(audit.toString(), audit.optBoolean("ok"))
+        assertTrue(audit.getJSONObject("data").has("report"))
+    }
+
+    @Test
+    fun productionAdapterSelfCheckPassesAgainstLoadedNativeLibrary() {
+        val result = MoraRustEngine.runSelfCheck()
+        assertEquals(result.details.joinToString("\n"), 6, result.passed)
+        assertTrue(result.details.joinToString("\n"), result.allPassed)
+    }
+
+    private fun dispatch(
+        module: String,
+        operation: String,
+        stateJson: String = "",
+        params: JSONObject = JSONObject()
+    ): JSONObject {
+        val request = JSONObject()
+            .put("schema_version", 1)
+            .put("request_id", "android-jni-test")
+            .put("module", module)
+            .put("operation", operation)
+            .put("timestamp_ms", 1L)
+            .put("state_json", stateJson)
+            .put("params", params)
+        return JSONObject(NativeCore.nativeCoreDispatch(request.toString()))
+    }
+}
