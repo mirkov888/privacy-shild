@@ -188,47 +188,47 @@ object TermuxBridge {
                 rm -f /tmp/.X11-unix/X99
 
                 cat > /tmp/mora-x11-proxy.py <<PY
-            import os
-            import socket
-            import threading
-            import select
+        import os
+        import socket
+        import threading
+        import select
 
-            TARGET = chr(0) + "$PREFIX/tmp/.X11-unix/X0"
-            LOCAL = "/tmp/.X11-unix/X99"
+        TARGET = chr(0) + "$PREFIX/tmp/.X11-unix/X0"
+        LOCAL = "/tmp/.X11-unix/X99"
 
-            def relay(client, upstream):
-                try:
-                    while True:
-                        ready, _, _ = select.select([client, upstream], [], [])
-                        for source in ready:
-                            data = source.recv(65536)
-                            if not data:
-                                return
-                            destination = upstream if source is client else client
-                            destination.sendall(data)
-                except (OSError, ValueError):
-                    pass
-                finally:
-                    client.close()
-                    upstream.close()
+        def relay(client, upstream):
+            try:
+                while True:
+                    ready, _, _ = select.select([client, upstream], [], [])
+                    for source in ready:
+                        data = source.recv(65536)
+                        if not data:
+                            return
+                        destination = upstream if source is client else client
+                        destination.sendall(data)
+            except (OSError, ValueError):
+                pass
+            finally:
+                client.close()
+                upstream.close()
 
-            def handle(client):
-                upstream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                try:
-                    upstream.connect(TARGET)
-                    relay(client, upstream)
-                except OSError:
-                    client.close()
-                    upstream.close()
+        def handle(client):
+            upstream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                upstream.connect(TARGET)
+                relay(client, upstream)
+            except OSError:
+                client.close()
+                upstream.close()
 
-            server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            server.bind(LOCAL)
-            server.listen(16)
-            print("PROXY_READY", flush=True)
-            while True:
-                client, _ = server.accept()
-                threading.Thread(target=handle, args=(client,), daemon=True).start()
-            PY
+        server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        server.bind(LOCAL)
+        server.listen(16)
+        print("PROXY_READY", flush=True)
+        while True:
+            client, _ = server.accept()
+            threading.Thread(target=handle, args=(client,), daemon=True).start()
+        PY
 
                 nohup python3 -u /tmp/mora-x11-proxy.py >/tmp/mora-x11-proxy.log 2>&1 </dev/null &
                 PROXY_PID=$!
