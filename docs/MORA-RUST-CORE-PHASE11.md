@@ -37,6 +37,6 @@ Both debug CI and the signed release workflow:
 3. Run Tes Integrasi 6 Modul Rust; expected result is 7/7 checks passed.
 4. Run the app security audit and confirm the report is limited to Mora Shield's own package.
 5. Capture at least two app network snapshots with app network activity between them; verify deltas where Android exposes counters.
-6. Confirm existing app registry, connector, policy, timeline, Linux Environment and other screens still open and function.
+6. Confirm existing app registry, connector, policy, timeline and other screens still open and function.
 
 A successful CI job is not a substitute for installation and device acceptance testing.
