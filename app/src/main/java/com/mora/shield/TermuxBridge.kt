@@ -36,7 +36,7 @@ object TermuxBridge {
 
     fun installX11Package(context: Context) {
         run(context, "x11_install", "$PREFIX/bin/bash",
-            arrayOf("-lc", "pkg update -y && pkg install -y x11-repo termux-x11-nightly"), true)
+            arrayOf("-lc", "pkg update -y && pkg install -y x11-repo && pkg update -y && pkg install -y termux-x11-nightly"), true)
     }
 
     fun hasRunPermission(context: Context): Boolean =
