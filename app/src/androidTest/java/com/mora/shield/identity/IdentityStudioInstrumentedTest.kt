@@ -74,9 +74,31 @@ class IdentityStudioInstrumentedTest {
     @Test
     fun backupAndDiagnosticsValidationWorkOnAndroidRuntime() {
         val manager = IdentityProfileRecoveryManager(context)
+        val protectionStore = IdentityProtectionStore(context)
+        val randomizationStore = IdentityRandomizationStore(context)
+        val originalProtection = protectionStore.load()
+        val originalRandomization = randomizationStore.load()
         val backup = manager.exportBackupJson()
         assertNull(IdentityProfileRecoveryManager.validateBackupJson(backup))
         assertNotNull(IdentityProfileRecoveryManager.validateBackupJson("{invalid"))
+
+        protectionStore.save(originalProtection.copy(canvasProtection = !originalProtection.canvasProtection))
+        randomizationStore.save(
+            originalRandomization.copy(
+                intervalHours = 48,
+                seed = "mora-instrumented-mutated-seed",
+                platform = IdentityPlatform.LINUX
+            )
+        )
+        val restored = manager.restoreBackupJson(backup)
+        assertTrue(restored.message, restored.success)
+        assertEquals(originalProtection, protectionStore.load())
+        assertEquals(originalRandomization.seed, randomizationStore.load().seed)
+
+        val rolledBack = manager.rollbackLastChange()
+        assertTrue(rolledBack.message, rolledBack.success)
+        assertEquals(!originalProtection.canvasProtection, protectionStore.load().canvasProtection)
+        assertEquals("mora-instrumented-mutated-seed", randomizationStore.load().seed)
 
         val before = JSONObject()
             .put("userAgent", "Mozilla/5.0 Android")
