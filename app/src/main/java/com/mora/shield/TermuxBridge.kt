@@ -12,6 +12,7 @@ import android.os.Build
  */
 object TermuxBridge {
     const val TERMUX_PACKAGE = "com.termux"
+    const val X11_PACKAGE = "com.termux.x11"
     const val RUN_PERMISSION = "com.termux.permission.RUN_COMMAND"
     private const val ACTION = "com.termux.RUN_COMMAND"
     private const val SERVICE = "com.termux.app.RunCommandService"
@@ -22,6 +23,21 @@ object TermuxBridge {
         context.packageManager.getPackageInfo(TERMUX_PACKAGE, 0)
         true
     } catch (_: PackageManager.NameNotFoundException) { false }
+
+    fun x11AppInstalled(context: Context): Boolean = try {
+        context.packageManager.getPackageInfo(X11_PACKAGE, 0)
+        true
+    } catch (_: PackageManager.NameNotFoundException) { false }
+
+    fun openX11(context: Context) {
+        val launch = context.packageManager.getLaunchIntentForPackage(X11_PACKAGE)
+        if (launch != null) context.startActivity(launch)
+    }
+
+    fun installX11Package(context: Context) {
+        run(context, "x11_install", "$PREFIX/bin/bash",
+            arrayOf("-lc", "pkg update -y && pkg install -y x11-repo termux-x11-nightly"), true)
+    }
 
     fun hasRunPermission(context: Context): Boolean =
         Build.VERSION.SDK_INT < 23 ||
@@ -53,17 +69,22 @@ object TermuxBridge {
             fi
             echo MORA_ROOTFS_OK
             "$PREFIX/bin/proot-distro" login "$distro" -- bash -lc '
-                if command -v startxfce4 >/dev/null 2>&1 && command -v vncserver >/dev/null 2>&1 && command -v dbus-run-session >/dev/null 2>&1; then
+                if command -v xfce4-session >/dev/null 2>&1 && command -v dbus-run-session >/dev/null 2>&1; then
                     echo MORA_DESKTOP_READY
                 else
                     echo MORA_DESKTOP_MISSING
                 fi
-                if vncserver -list 2>/dev/null | grep -q "5901"; then
+                if pgrep -x xfce4-session >/dev/null 2>&1; then
                     echo MORA_XFCE_RUNNING
                 else
                     echo MORA_XFCE_STOPPED
                 fi
             '
+            if command -v termux-x11 >/dev/null 2>&1; then
+                echo MORA_X11_PACKAGE_READY
+            else
+                echo MORA_X11_PACKAGE_MISSING
+            fi
         """.trimIndent()
         run(context, "status:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
@@ -102,57 +123,51 @@ object TermuxBridge {
     fun installDesktop(context: Context, distro: String) {
         requireDistro(distro)
         val script = if (distro == "archlinux") {
-            "pacman -Syu --noconfirm xfce4 xfce4-goodies tigervnc dbus"
+            "pacman -Syu --noconfirm xfce4 xfce4-goodies dbus"
         } else {
-            "apt-get update && apt-get install -y xfce4 xfce4-goodies dbus-x11 tigervnc-standalone-server"
+            "apt-get update && apt-get install -y xfce4 xfce4-goodies dbus-x11"
         }
         run(context, "desktop:$distro", "$PREFIX/bin/proot-distro",
             arrayOf("login", distro, "--", "bash", "-lc", script), true)
-    }
-
-    fun setupVncPassword(context: Context, distro: String) {
-        requireDistro(distro)
-        run(context, "password:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("login", distro, "--", "vncpasswd"), false)
     }
 
     fun startDesktop(context: Context, distro: String) {
         requireDistro(distro)
         val script = """
             set -e
-            mkdir -p ~/.config/tigervnc ~/.vnc
-            cat > ~/.config/tigervnc/xstartup <<'MORA_XSTARTUP'
-            #!/bin/sh
-            unset SESSION_MANAGER
-            unset DBUS_SESSION_BUS_ADDRESS
-            exec dbus-run-session startxfce4
-            MORA_XSTARTUP
-            chmod 700 ~/.config/tigervnc/xstartup
-            cp ~/.config/tigervnc/xstartup ~/.vnc/xstartup
-            chmod 700 ~/.vnc/xstartup
-            pid="${'$'}(vncserver -list 2>/dev/null | awk '\''${'$'}1 == "1" && ${'$'}2 == "5901" { print ${'$'}4; exit }'\'')"
-            live=false
-            if [ "${'$'}pid" ] && kill -0 "${'$'}pid" 2>/dev/null; then
-                state="${'$'}(ps -o stat= -p "${'$'}pid" 2>/dev/null | tr -d ' ')"
-                case "${'$'}state" in ""|Z*|z*) ;; *) live=true ;; esac
+            if ! command -v termux-x11 >/dev/null 2>&1; then
+                echo "Komponen termux-x11 belum terpasang di Termux."
+                exit 20
             fi
-            if [ "${'$'}live" != true ]; then
-                if [ -f /tmp/.X1-lock ]; then
-                    oldpid="${'$'}(tr -dc '0-9' < /tmp/.X1-lock)"
-                    oldstate="${'$'}(ps -o stat= -p "${'$'}oldpid" 2>/dev/null | tr -d ' ')"
-                    case "${'$'}oldstate" in ""|Z*|z*) rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 ;; esac
+            termux-x11 :0 >/dev/null 2>&1 &
+            sleep 2
+            /system/bin/am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
+            sleep 1
+            "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
+                export DISPLAY=:0
+                export XDG_RUNTIME_DIR=/tmp
+                if pgrep -x xfce4-session >/dev/null 2>&1; then
+                    echo MORA_XFCE_ALREADY_RUNNING
+                    exit 0
                 fi
-                vncserver :1 -localhost yes -geometry 1280x720 -depth 24
-            fi
+                exec dbus-run-session -- xfce4-session
+            '
         """.trimIndent()
-        run(context, "start:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("login", "--no-kill-on-exit", distro, "--", "bash", "-lc", script), true)
+        run(context, "start:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", script), true)
     }
 
     fun stopDesktop(context: Context, distro: String) {
         requireDistro(distro)
-        run(context, "stop:$distro", "$PREFIX/bin/proot-distro",
-            arrayOf("login", distro, "--", "bash", "-lc", "vncserver -kill :1 || true"), true)
+        val script = """
+            "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
+                pkill -TERM -x xfce4-session 2>/dev/null || true
+                pkill -TERM -x xfwm4 2>/dev/null || true
+                pkill -TERM -x xfce4-panel 2>/dev/null || true
+                echo MORA_XFCE_STOPPED
+            '
+        """.trimIndent()
+        run(context, "stop:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
 
     private fun requireDistro(distro: String) {
