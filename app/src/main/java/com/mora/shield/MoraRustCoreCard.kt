@@ -88,6 +88,29 @@ fun MoraRustCoreCard() {
                     scope.launch {
                         busy = true
                         val result = withContext(Dispatchers.IO) {
+                            runCatching { MoraRustEngine.runPersistentSelfCheck(context) }
+                        }
+                        message = result.fold(
+                            onSuccess = { check ->
+                                check.details.joinToString("\n") +
+                                    "\nHasil penyimpanan: ${check.passed}/${check.total}" +
+                                    if (check.allPassed) " · SEMUA MODUL TERSIMPAN" else " · ADA MODUL GAGAL"
+                            },
+                            onFailure = { "Tes persistensi Rust gagal: ${it.message ?: it.javaClass.simpleName}" }
+                        )
+                        busy = false
+                    }
+                },
+                enabled = status?.compatible == true && !busy,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Tes Persistensi 6 Modul Rust")
+            }
+            Button(
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        val result = withContext(Dispatchers.IO) {
                             runCatching { MoraRustEngine.auditOwnApp(context) }
                         }
                         message = result.fold(
