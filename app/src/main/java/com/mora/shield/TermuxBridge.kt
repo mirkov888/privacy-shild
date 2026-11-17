@@ -140,15 +140,12 @@ object TermuxBridge {
                 exit 20
             fi
 
-            # Termux:X11 creates its Unix socket under Termux TMPDIR.
-            # Keep the server and PRoot guest on the exact same shared /tmp.
             export TMPDIR="$PREFIX/tmp"
             export XDG_RUNTIME_DIR="${'$'}TMPDIR"
             mkdir -p "${'$'}XDG_RUNTIME_DIR"
             X11_SOCKET="${'$'}TMPDIR/.X11-unix/X0"
 
             if [ ! -S "${'$'}X11_SOCKET" ]; then
-                # A stale server process without its socket cannot serve clients.
                 pkill -x termux-x11 2>/dev/null || true
                 for attempt in 1 2 3 4 5; do
                     pgrep -x termux-x11 >/dev/null 2>&1 || break
@@ -162,33 +159,106 @@ object TermuxBridge {
             fi
 
             if [ ! -S "${'$'}X11_SOCKET" ]; then
-                echo "MORA_X11_SOCKET_MISSING"
-                echo "Socket X11 tidak terbentuk di ${'$'}X11_SOCKET. Buka Termux:X11 dan periksa instalasi termux-x11-nightly."
+                echo MORA_X11_SOCKET_MISSING
+                echo "Socket X11 tidak terbentuk. Periksa aplikasi Termux:X11."
                 exit 21
             fi
 
             /system/bin/am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
             sleep 1
+
             "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
-                export DISPLAY=:0
+                set -e
                 export XDG_RUNTIME_DIR=/tmp
+
                 if [ ! -S /tmp/.X11-unix/X0 ]; then
                     echo MORA_X11_SOCKET_NOT_SHARED
-                    echo "Socket X11 host tidak terlihat di Debian. Shared /tmp gagal."
+                    echo "Socket X11 host tidak terlihat melalui shared /tmp."
                     exit 22
                 fi
+
+                if ! command -v python3 >/dev/null 2>&1; then
+                    echo MORA_X11_PROXY_PYTHON_MISSING
+                    echo "Python 3 diperlukan untuk menjalankan proxy X11."
+                    exit 24
+                fi
+
+                mkdir -p /tmp/.X11-unix
+                pkill -TERM -f "[m]ora-x11-proxy.py" 2>/dev/null || true
+                rm -f /tmp/.X11-unix/X99
+
+                cat > /tmp/mora-x11-proxy.py <<PY
+                import os
+                import socket
+                import threading
+                import select
+
+                TARGET = chr(0) + "$PREFIX/tmp/.X11-unix/X0"
+                LOCAL = "/tmp/.X11-unix/X99"
+
+                def relay(client, upstream):
+                    try:
+                        while True:
+                            ready, _, _ = select.select([client, upstream], [], [])
+                            for source in ready:
+                                data = source.recv(65536)
+                                if not data:
+                                    return
+                                destination = upstream if source is client else client
+                                destination.sendall(data)
+                    except (OSError, ValueError):
+                        pass
+                    finally:
+                        client.close()
+                        upstream.close()
+
+                def handle(client):
+                    upstream = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                    try:
+                        upstream.connect(TARGET)
+                        relay(client, upstream)
+                    except OSError:
+                        client.close()
+                        upstream.close()
+
+                server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                server.bind(LOCAL)
+                server.listen(16)
+                print("PROXY_READY", flush=True)
+                while True:
+                    client, _ = server.accept()
+                    threading.Thread(target=handle, args=(client,), daemon=True).start()
+                PY
+
+                nohup python3 -u /tmp/mora-x11-proxy.py >/tmp/mora-x11-proxy.log 2>&1 </dev/null &
+                PROXY_PID=$!
+
+                for attempt in 1 2 3 4 5; do
+                    [ -S /tmp/.X11-unix/X99 ] && break
+                    sleep 1
+                done
+
+                if [ ! -S /tmp/.X11-unix/X99 ]; then
+                    echo MORA_X11_PROXY_FAILED
+                    cat /tmp/mora-x11-proxy.log 2>/dev/null || true
+                    exit 25
+                fi
+
+                export DISPLAY=:99
                 if command -v xdpyinfo >/dev/null 2>&1; then
-                    if ! xdpyinfo -display "${'$'}DISPLAY" >/dev/null 2>&1; then
+                    if ! timeout 8 xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
                         echo MORA_X11_CONNECTION_FAILED
-                        echo "Socket terlihat, tetapi Debian tidak dapat terhubung ke display :0."
+                        cat /tmp/mora-x11-proxy.log 2>/dev/null || true
                         exit 23
                     fi
                 fi
+
                 if pgrep -x xfce4-session >/dev/null 2>&1; then
                     echo MORA_XFCE_ALREADY_RUNNING
                     exit 0
                 fi
-                exec dbus-run-session -- xfce4-session
+
+                exec dbus-run-session -- startxfce4
             '
         """.trimIndent()
         run(context, "start:$distro", "$PREFIX/bin/bash",
@@ -202,7 +272,11 @@ object TermuxBridge {
                 pkill -TERM -x xfce4-session 2>/dev/null || true
                 pkill -TERM -x xfwm4 2>/dev/null || true
                 pkill -TERM -x xfce4-panel 2>/dev/null || true
+                pkill -TERM -x xfdesktop 2>/dev/null || true
+                pkill -TERM -f "[m]ora-x11-proxy.py" 2>/dev/null || true
+                rm -f /tmp/.X11-unix/X99 /tmp/mora-x11-proxy.py
                 echo MORA_XFCE_STOPPED
+                echo MORA_X11_PROXY_STOPPED
             '
         """.trimIndent()
         run(context, "stop:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
