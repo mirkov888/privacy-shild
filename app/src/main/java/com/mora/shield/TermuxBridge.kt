@@ -139,13 +139,51 @@ object TermuxBridge {
                 echo "Komponen termux-x11 belum terpasang di Termux."
                 exit 20
             fi
-            termux-x11 :0 >/dev/null 2>&1 &
-            sleep 2
+
+            # Termux:X11 creates its Unix socket under Termux TMPDIR.
+            # Keep the server and PRoot guest on the exact same shared /tmp.
+            export TMPDIR="$PREFIX/tmp"
+            export XDG_RUNTIME_DIR="$TMPDIR"
+            mkdir -p "$XDG_RUNTIME_DIR"
+            X11_SOCKET="$TMPDIR/.X11-unix/X0"
+
+            if [ ! -S "$X11_SOCKET" ]; then
+                # A stale server process without its socket cannot serve clients.
+                pkill -x termux-x11 2>/dev/null || true
+                for attempt in 1 2 3 4 5; do
+                    pgrep -x termux-x11 >/dev/null 2>&1 || break
+                    sleep 1
+                done
+                termux-x11 :0 >/dev/null 2>&1 &
+                for attempt in 1 2 3 4 5 6 7 8 9 10; do
+                    [ -S "$X11_SOCKET" ] && break
+                    sleep 1
+                done
+            fi
+
+            if [ ! -S "$X11_SOCKET" ]; then
+                echo "MORA_X11_SOCKET_MISSING"
+                echo "Socket X11 tidak terbentuk di $X11_SOCKET. Buka Termux:X11 dan periksa instalasi termux-x11-nightly."
+                exit 21
+            fi
+
             /system/bin/am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
             sleep 1
             "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
                 export DISPLAY=:0
                 export XDG_RUNTIME_DIR=/tmp
+                if [ ! -S /tmp/.X11-unix/X0 ]; then
+                    echo MORA_X11_SOCKET_NOT_SHARED
+                    echo "Socket X11 host tidak terlihat di Debian. Shared /tmp gagal."
+                    exit 22
+                fi
+                if command -v xdpyinfo >/dev/null 2>&1; then
+                    if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
+                        echo MORA_X11_CONNECTION_FAILED
+                        echo "Socket terlihat, tetapi Debian tidak dapat terhubung ke display :0."
+                        exit 23
+                    fi
+                fi
                 if pgrep -x xfce4-session >/dev/null 2>&1; then
                     echo MORA_XFCE_ALREADY_RUNNING
                     exit 0
