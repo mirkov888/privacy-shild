@@ -31,7 +31,10 @@ object TermuxBridge {
 
     fun openX11(context: Context) {
         val launch = context.packageManager.getLaunchIntentForPackage(X11_PACKAGE)
-        if (launch != null) context.startActivity(launch)
+        if (launch != null) {
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(launch)
+        }
     }
 
     fun installX11Package(context: Context) {
@@ -51,6 +54,18 @@ object TermuxBridge {
     fun installManager(context: Context) {
         run(context, "bootstrap", "$PREFIX/bin/bash",
             arrayOf("-lc", "pkg update -y && pkg install -y proot-distro"), true)
+    }
+
+    fun requestInstalledDistros(context: Context) {
+        val script = """
+            for distro in debian ubuntu archlinux; do
+                rootfs="$PREFIX/var/lib/proot-distro/containers/\$distro/rootfs"
+                if [ -x "\$rootfs/bin/sh" ] && [ -f "\$rootfs/etc/os-release" ]; then
+                    echo "MORA_INSTALLED_DISTRO:\$distro"
+                fi
+            done
+        """.trimIndent()
+        run(context, "distros", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
 
     fun requestStatus(context: Context, distro: String) {
@@ -131,6 +146,10 @@ object TermuxBridge {
             arrayOf("login", distro, "--", "bash", "-lc", script), true)
     }
 
+    /**
+     * Start the X11 server first. The result receiver opens the Android
+     * companion activity only after the server reports ready, then starts XFCE.
+     */
     fun startDesktop(context: Context, distro: String) {
         requireDistro(distro)
         val script = """
@@ -139,10 +158,19 @@ object TermuxBridge {
                 echo "Komponen termux-x11 belum terpasang di Termux."
                 exit 20
             fi
-            termux-x11 :0 >/dev/null 2>&1 &
-            sleep 2
-            /system/bin/am start --user 0 -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
-            sleep 1
+            if ! pgrep -f "termux-x11 :0" >/dev/null 2>&1; then
+                termux-x11 :0 >/dev/null 2>&1 &
+                sleep 2
+            fi
+            echo MORA_X11_SERVER_READY
+        """.trimIndent()
+        run(context, "x11_server:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", script), true)
+    }
+
+    fun startDesktopSession(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = """
             "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
                 export DISPLAY=:0
                 export XDG_RUNTIME_DIR=/tmp
