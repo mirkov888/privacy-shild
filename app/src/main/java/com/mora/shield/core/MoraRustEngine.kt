@@ -7,10 +7,12 @@ import android.net.NetworkCapabilities
 import android.net.TrafficStats
 import android.os.Build
 import android.os.Process
+import android.util.AtomicFile
 import com.mora.rustandroid.NativeCore
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
 /** App-side adapter. Existing Room MoraCore and authenticated Connector remain the control plane. */
@@ -57,6 +59,57 @@ object MoraRustEngine {
                 nativeMask == EXPECTED_CAPABILITY_MASK &&
                 modules.size == 6
         )
+    }
+
+    private data class PersistentModuleStore(
+        val fileName: String,
+        val responseKey: String
+    )
+
+    private fun persistentStore(module: String): PersistentModuleStore = when (module) {
+        "profile_store" -> PersistentModuleStore("mora_rust_profiles.json", "store")
+        "system_config" -> PersistentModuleStore("mora_rust_system_config.json", "config")
+        "runtime_manager" -> PersistentModuleStore("mora_rust_runtime_services.json", "runtime")
+        "event_logger" -> PersistentModuleStore("mora_rust_activity_events.json", "log")
+        "network_monitor" -> PersistentModuleStore("mora_rust_network_snapshots.json", "monitor")
+        else -> error("Modul tidak memiliki penyimpanan persisten: $module")
+    }
+
+    private fun readAtomic(file: File): String {
+        val backup = File(file.path + ".bak")
+        if (!file.exists() && !backup.exists()) return ""
+        return AtomicFile(file).openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
+    }
+
+    private fun writeAtomic(file: File, value: String) {
+        val atomic = AtomicFile(file)
+        var stream: FileOutputStream? = null
+        try {
+            stream = atomic.startWrite()
+            stream.write(value.toByteArray(Charsets.UTF_8))
+            atomic.finishWrite(stream)
+        } catch (failure: Throwable) {
+            stream?.let { atomic.failWrite(it) }
+            throw failure
+        }
+    }
+
+    /**
+     * Runs a Rust operation using an app-private durable state document.
+     * Each module's state is committed atomically only after Rust returns a valid success response.
+     */
+    fun dispatchPersistent(
+        context: Context,
+        module: String,
+        operation: String,
+        params: JSONObject = JSONObject()
+    ): JSONObject {
+        val store = persistentStore(module)
+        val file = File(context.applicationContext.filesDir, store.fileName)
+        val response = dispatch(module, operation, readAtomic(file), params = params)
+        val state = response.getJSONObject("data").getJSONObject(store.responseKey)
+        writeAtomic(file, state.toString())
+        return response
     }
 
     /** Dispatch one module operation through the common versioned JSON contract. */
@@ -181,8 +234,10 @@ object MoraRustEngine {
             params = JSONObject().put("input_json", input.toString())
         ).getJSONObject("data").getJSONObject("report")
 
-        File(appContext.filesDir, "mora_rust_security_audit.json")
-            .writeText(report.toString(2), Charsets.UTF_8)
+        writeAtomic(
+            File(appContext.filesDir, "mora_rust_security_audit.json"),
+            report.toString(2)
+        )
         return report
     }
 
@@ -215,13 +270,12 @@ object MoraRustEngine {
             .put("validated", validated)
             .put("metered", metered)
 
-        val storeFile = File(appContext.filesDir, "mora_rust_network_snapshots.json")
-        val state = if (storeFile.isFile) storeFile.readText(Charsets.UTF_8) else ""
-        val data = dispatch(
-            "network_monitor", "record", state,
+        val data = dispatchPersistent(
+            appContext,
+            "network_monitor",
+            "record",
             JSONObject().put("snapshot_json", snapshot.toString())
         ).getJSONObject("data")
-        storeFile.writeText(data.getJSONObject("monitor").toString(), Charsets.UTF_8)
         return data.getJSONObject("summary")
     }
 }
