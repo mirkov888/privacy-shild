@@ -69,8 +69,6 @@ object TermuxBridge {
         """.trimIndent()
         run(context, "distros", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
-        run(context, "distros", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
-    }
 
     fun requestStatus(context: Context, distro: String) {
         requireDistro(distro)
