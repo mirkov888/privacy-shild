@@ -15,6 +15,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.mora.shield.core.MoraRustEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
