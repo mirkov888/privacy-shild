@@ -57,13 +57,18 @@ object TermuxBridge {
 
     fun requestInstalledDistros(context: Context) {
         val script = """
-            for distro in debian ubuntu archlinux; do
-                rootfs="$PREFIX/var/lib/proot-distro/containers/${'distro/rootfs"}distro/rootfs"
-                if [ -x "${'rootfs/bin/sh" ] && [ -f "${'$' }rootfs/etc/os-release" ]; then}rootfs/bin/sh" ] && [ -f "${'rootfs/etc/os-release" ]; then}rootfs/etc/os-release" ]; then
-                    echo "MORA_INSTALLED_DISTRO:${'distro"}distro"
-                fi
-            done
+            if [ -x "$PREFIX/var/lib/proot-distro/containers/debian/rootfs/bin/sh" ] && [ -f "$PREFIX/var/lib/proot-distro/containers/debian/rootfs/etc/os-release" ]; then
+                echo MORA_INSTALLED_DISTRO:debian
+            fi
+            if [ -x "$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/bin/sh" ] && [ -f "$PREFIX/var/lib/proot-distro/containers/ubuntu/rootfs/etc/os-release" ]; then
+                echo MORA_INSTALLED_DISTRO:ubuntu
+            fi
+            if [ -x "$PREFIX/var/lib/proot-distro/containers/archlinux/rootfs/bin/sh" ] && [ -f "$PREFIX/var/lib/proot-distro/containers/archlinux/rootfs/etc/os-release" ]; then
+                echo MORA_INSTALLED_DISTRO:archlinux
+            fi
         """.trimIndent()
+        run(context, "distros", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
         run(context, "distros", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
     }
 
