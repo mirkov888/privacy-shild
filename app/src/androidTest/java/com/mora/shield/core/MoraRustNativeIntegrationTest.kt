@@ -1,6 +1,7 @@
 package com.mora.shield.core
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.mora.rustandroid.NativeCore
 import org.json.JSONArray
 import org.json.JSONObject
@@ -8,6 +9,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class MoraRustNativeIntegrationTest {
@@ -156,6 +158,87 @@ class MoraRustNativeIntegrationTest {
             .put("permissions", JSONArray())
         val audit = JSONObject(NativeCore.nativeSecurityAudit(auditInput.toString(), 1L))
         assertTrue(audit.toString(), audit.optBoolean("ok"))
+    }
+
+    @Test
+    fun appAdapterPersistsAllStatefulRustModulesBetweenCalls() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        listOf(
+            "mora_rust_profiles.json",
+            "mora_rust_system_config.json",
+            "mora_rust_runtime_services.json",
+            "mora_rust_activity_events.json",
+            "mora_rust_network_snapshots.json"
+        ).forEach { File(context.filesDir, it).delete() }
+
+        val profile = MoraRustEngine.dispatchPersistent(
+            context,
+            "profile_store",
+            "create",
+            JSONObject().put("id", "persist_test").put("label", "Persist Test")
+        )
+        assertTrue(profile.toString(), profile.optBoolean("ok"))
+        val listedProfiles = MoraRustEngine.dispatchPersistent(context, "profile_store", "list")
+            .getJSONObject("data").getJSONObject("store").getJSONArray("profiles")
+        assertEquals(1, listedProfiles.length())
+
+        val changedConfig = MoraRustEngine.dispatchPersistent(
+            context,
+            "system_config",
+            "set",
+            JSONObject().put("key", "log_level").put("value", "debug")
+        )
+        assertTrue(changedConfig.toString(), changedConfig.optBoolean("ok"))
+        val loadedConfig = MoraRustEngine.dispatchPersistent(context, "system_config", "get")
+            .getJSONObject("data").getJSONObject("config")
+        assertEquals("debug", loadedConfig.getString("log_level"))
+
+        val started = MoraRustEngine.dispatchPersistent(
+            context,
+            "runtime_manager",
+            "start",
+            JSONObject().put("service_id", "diagnostics")
+        )
+        assertTrue(started.toString(), started.optBoolean("ok"))
+        val runtime = MoraRustEngine.dispatchPersistent(context, "runtime_manager", "list")
+            .getJSONObject("data").getJSONObject("runtime").getJSONArray("services")
+        assertTrue((0 until runtime.length()).any {
+            val service = runtime.getJSONObject(it)
+            service.getString("id") == "diagnostics" && service.getBoolean("running")
+        })
+
+        val recorded = MoraRustEngine.dispatchPersistent(
+            context,
+            "event_logger",
+            "record",
+            JSONObject()
+                .put("category", "system")
+                .put("action", "persistence_test")
+                .put("detail", "Persisted through app-private storage")
+        )
+        assertTrue(recorded.toString(), recorded.optBoolean("ok"))
+        val events = MoraRustEngine.dispatchPersistent(context, "event_logger", "list")
+            .getJSONObject("data").getJSONObject("log").getJSONArray("events")
+        assertEquals(1, events.length())
+
+        val snapshot = JSONObject()
+            .put("uid", 1000)
+            .put("rx_bytes", 100L)
+            .put("tx_bytes", 200L)
+            .put("transport", "none")
+            .put("connected", false)
+            .put("validated", false)
+            .put("metered", false)
+        val recordedNetwork = MoraRustEngine.dispatchPersistent(
+            context,
+            "network_monitor",
+            "record",
+            JSONObject().put("snapshot_json", snapshot.toString())
+        )
+        assertTrue(recordedNetwork.toString(), recordedNetwork.optBoolean("ok"))
+        val network = MoraRustEngine.dispatchPersistent(context, "network_monitor", "list")
+            .getJSONObject("data").getJSONObject("monitor").getJSONArray("snapshots")
+        assertEquals(1, network.length())
     }
 
     @Test
