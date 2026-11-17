@@ -31,10 +31,9 @@ object TermuxBridge {
 
     fun openX11(context: Context) {
         val launch = context.packageManager.getLaunchIntentForPackage(X11_PACKAGE)
-        if (launch != null) {
-            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(launch)
-        }
+            ?: Intent().setClassName(X11_PACKAGE, "com.termux.x11.MainActivity")
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(launch)
     }
 
     fun installX11Package(context: Context) {
@@ -158,7 +157,7 @@ object TermuxBridge {
                 echo "Komponen termux-x11 belum terpasang di Termux."
                 exit 20
             fi
-            if ! pgrep -f "termux-x11 :0" >/dev/null 2>&1; then
+            if ! pgrep -x termux-x11 >/dev/null 2>&1; then
                 termux-x11 :0 >/dev/null 2>&1 &
                 sleep 2
             fi
