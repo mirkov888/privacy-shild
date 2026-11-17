@@ -102,6 +102,63 @@ class MoraRustNativeIntegrationTest {
     }
 
     @Test
+    fun everyLegacyJniExportRemainsCallable() {
+        assertEquals(42, NativeCore.nativeAdd(20, 22))
+        assertEquals("Mora Core", NativeCore.nativeNormalizeProfileLabel("  Mora Core  "))
+        assertTrue(NativeCore.nativeIsValidProfileId("mora_core"))
+        assertTrue(NativeCore.nativeIsSafeText("safe text", 64))
+        assertFalse(NativeCore.nativeIsSafeText("unsafe\\ntext", 64))
+
+        val profile = JSONObject(
+            NativeCore.nativeProfileOperation(
+                """{"profiles":[]}""", "create", "native_profile", "Native Profile", 1L
+            )
+        )
+        assertTrue(profile.toString(), profile.optBoolean("ok"))
+
+        val config = JSONObject(
+            NativeCore.nativeSystemConfigOperation("", "get", "", "", 1L)
+        )
+        assertTrue(config.toString(), config.optBoolean("ok"))
+
+        val runtime = JSONObject(
+            NativeCore.nativeRuntimeOperation("", "list", "", 1L)
+        )
+        assertTrue(runtime.toString(), runtime.optBoolean("ok"))
+
+        val event = JSONObject(
+            NativeCore.nativeEventLogOperation(
+                "", "record", "system", "jni_legacy_test", "Legacy JNI test", 1L
+            )
+        )
+        assertTrue(event.toString(), event.optBoolean("ok"))
+
+        val snapshot = JSONObject()
+            .put("uid", 1000)
+            .put("rx_bytes", 10L)
+            .put("tx_bytes", 20L)
+            .put("transport", "none")
+            .put("connected", false)
+            .put("validated", false)
+            .put("metered", false)
+        val network = JSONObject(
+            NativeCore.nativeNetworkMonitorOperation("", "record", snapshot.toString(), 1L)
+        )
+        assertTrue(network.toString(), network.optBoolean("ok"))
+
+        val auditInput = JSONObject()
+            .put("package_name", "com.mora.shield")
+            .put("target_sdk", 35)
+            .put("debuggable", false)
+            .put("allow_backup", false)
+            .put("uses_cleartext_traffic", false)
+            .put("security_patch", "")
+            .put("permissions", JSONArray())
+        val audit = JSONObject(NativeCore.nativeSecurityAudit(auditInput.toString(), 1L))
+        assertTrue(audit.toString(), audit.optBoolean("ok"))
+    }
+
+    @Test
     fun productionAdapterSelfCheckPassesAgainstLoadedNativeLibrary() {
         val result = MoraRustEngine.runSelfCheck()
         assertEquals(result.details.joinToString("\n"), 6, result.passed)
