@@ -138,6 +138,8 @@ fun LinuxEnvironmentScreen() {
                 Text("Kontrol distro Linux Android melalui Termux + proot-distro memakai API RUN_COMMAND resmi Termux.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        // Show the embedded viewer at the top so it is immediately discoverable.
+        item { EmbeddedVncViewerCard() }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = if (termuxPresent && runPermission) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -217,7 +219,6 @@ fun LinuxEnvironmentScreen() {
         item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && desktopReady) { confirm = "password" } }
         item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && desktopReady) { confirm = "start" } }
         item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && desktopReady) { confirm = "stop" } }
-        item { EmbeddedVncViewerCard() }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
