@@ -13,8 +13,8 @@ android {
         applicationId = "com.mora.shield"
         minSdk = 26
         targetSdk = 35
-        versionCode = 25
-        versionName = "3.9.5"
+        versionCode = 26
+        versionName = "3.9.6"
     }
 
     buildFeatures {
