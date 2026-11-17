@@ -107,7 +107,7 @@ class MoraRustNativeIntegrationTest {
         assertEquals("Mora Core", NativeCore.nativeNormalizeProfileLabel("  Mora Core  "))
         assertTrue(NativeCore.nativeIsValidProfileId("mora_core"))
         assertTrue(NativeCore.nativeIsSafeText("safe text", 64))
-        assertFalse(NativeCore.nativeIsSafeText("unsafe\\ntext", 64))
+        assertFalse(NativeCore.nativeIsSafeText("unsafe\ntext", 64))
 
         val profile = JSONObject(
             NativeCore.nativeProfileOperation(
