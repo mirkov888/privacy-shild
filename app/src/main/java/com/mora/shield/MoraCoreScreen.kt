@@ -30,6 +30,7 @@ fun MoraCoreScreen() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
         PageIntro("Mora Core", "Pusat integrasi aplikasi, konektor, kebijakan, dan audit.")
         MoraCoreCard()
+        MoraRustCoreCard()
         MoraCoreRegistryCard()
         MoraDownloaderControlCard()
         MoraSystemManagerPolicyCard()
