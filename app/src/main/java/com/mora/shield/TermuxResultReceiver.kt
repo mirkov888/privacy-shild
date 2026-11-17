@@ -21,26 +21,7 @@ class TermuxResultReceiver : BroadcastReceiver() {
             .putString("last_error", (internalError.ifBlank { error }).take(3000))
             .putInt("last_exit_code", exitCode)
             .putLong("last_updated", System.currentTimeMillis())
-        if (operation == "distros") {
-            val found = Regex("MORA_INSTALLED_DISTRO:([a-z0-9_-]+)")
-                .findAll(output).map { it.groupValues[1] }.toSet()
-            editor.putStringSet("detected_distros", found)
-            found.forEach { name ->
-                editor.putBoolean("installed_$name", true)
-                    .putBoolean("rootfs_broken_$name", false)
-            }
-        } else if (operation.startsWith("x11_server:")) {
-            if (ok && output.contains("MORA_X11_SERVER_READY")) {
-                try {
-                    TermuxBridge.openX11(context)
-                    TermuxBridge.startDesktopSession(context, distro)
-                } catch (e: Exception) {
-                    editor.putString("last_error", e.message ?: "Gagal membuka Termux:X11")
-                }
-            } else {
-                editor.putString("last_error", "Server Termux:X11 gagal dijalankan. Periksa paket termux-x11-nightly.")
-            }
-        } else if (operation == "bootstrap") {
+        if (operation == "bootstrap") {
             editor.putBoolean("manager_ready", ok)
             if (!ok && internalError.isBlank() && error.isBlank()) {
                 editor.putString("last_error", "Instalasi proot-distro gagal (exit code $exitCode). Periksa output Termux.")
