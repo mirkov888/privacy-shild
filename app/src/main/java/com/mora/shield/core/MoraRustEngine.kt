@@ -198,6 +198,76 @@ object MoraRustEngine {
         return SelfCheckResult(checks.count { it.second }, checks.size, details)
     }
 
+    /** Exercises the production, app-private persistence path for all six Rust modules. */
+    fun runPersistentSelfCheck(context: Context): SelfCheckResult {
+        val appContext = context.applicationContext
+        val checks = mutableListOf<Pair<String, Boolean>>()
+
+        fun check(name: String, operation: () -> Boolean) {
+            checks += name to runCatching(operation).getOrDefault(false)
+        }
+
+        check("Profile Store persistence") {
+            val listed = dispatchPersistent(appContext, "profile_store", "list")
+                .getJSONObject("data").getJSONObject("store").getJSONArray("profiles")
+            val exists = (0 until listed.length()).any {
+                listed.getJSONObject(it).optString("id") == "mora_shield_core"
+            }
+            if (!exists) {
+                dispatchPersistent(
+                    appContext,
+                    "profile_store",
+                    "create",
+                    JSONObject().put("id", "mora_shield_core").put("label", "Mora Shield Core")
+                )
+            }
+            true
+        }
+
+        check("System Config persistence") {
+            val config = dispatchPersistent(appContext, "system_config", "get")
+                .getJSONObject("data").getJSONObject("config")
+            config.optInt("schema_version") == 1
+        }
+
+        check("Runtime Manager persistence") {
+            val runtime = dispatchPersistent(appContext, "runtime_manager", "list")
+                .getJSONObject("data").getJSONObject("runtime")
+            runtime.getJSONArray("services").length() == 3
+        }
+
+        check("Event Logger persistence") {
+            dispatchPersistent(
+                appContext,
+                "event_logger",
+                "record",
+                JSONObject()
+                    .put("category", "system")
+                    .put("action", "rust_core_health_check")
+                    .put("detail", "Persistent Rust Core health check")
+            )
+            val events = dispatchPersistent(appContext, "event_logger", "list")
+                .getJSONObject("data").getJSONObject("log").getJSONArray("events")
+            events.length() > 0
+        }
+
+        check("Network Monitor persistence") {
+            val summary = captureOwnNetworkSnapshot(appContext)
+            summary.optInt("samples", 0) > 0
+        }
+
+        check("Security Auditor app-scoped report") {
+            val report = auditOwnApp(appContext)
+            report.optString("package_name") == appContext.packageName &&
+                report.has("risk_level")
+        }
+
+        val details = checks.map { (name, passed) ->
+            "${if (passed) "PASS" else "FAIL"} · $name"
+        }
+        return SelfCheckResult(checks.count { it.second }, checks.size, details)
+    }
+
     /** Audit only this installed app's package metadata and requested permissions. */
     @Suppress("DEPRECATION")
     fun auditOwnApp(context: Context): JSONObject {
