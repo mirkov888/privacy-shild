@@ -12,7 +12,6 @@ import com.mora.rustandroid.NativeCore
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.io.FileOutputStream
 import java.util.UUID
 
 /** App-side adapter. Existing Room MoraCore and authenticated Connector remain the control plane. */
@@ -83,13 +82,12 @@ object MoraRustEngine {
 
     private fun writeAtomic(file: File, value: String) {
         val atomic = AtomicFile(file)
-        var stream: FileOutputStream? = null
+        val stream = atomic.startWrite()
         try {
-            stream = atomic.startWrite()
             stream.write(value.toByteArray(Charsets.UTF_8))
             atomic.finishWrite(stream)
         } catch (failure: Throwable) {
-            stream?.let { atomic.failWrite(it) }
+            atomic.failWrite(stream)
             throw failure
         }
     }
