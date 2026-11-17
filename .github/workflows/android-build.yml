@@ -105,6 +105,15 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --stacktrace --info clean testDebugUnitTest assembleDebug 2>&1 | tee build.log
 
+      - name: Run Rust JNI integration tests on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: ./gradlew --no-daemon connectedDebugAndroidTest
+
       - name: Verify APK
         if: success()
         run: |
