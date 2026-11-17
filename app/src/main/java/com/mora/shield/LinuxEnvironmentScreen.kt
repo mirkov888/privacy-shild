@@ -74,10 +74,7 @@ fun LinuxEnvironmentScreen() {
         x11AppPresent = TermuxBridge.x11AppInstalled(context)
         runPermission = TermuxBridge.hasRunPermission(context)
         if (termuxPresent && runPermission && managerReady) {
-            try {
-                TermuxBridge.requestInstalledDistros(context)
-                TermuxBridge.requestStatus(context, selected)
-            } catch (_: Exception) { }
+            try { TermuxBridge.requestStatus(context, selected) } catch (_: Exception) { }
         }
     }
     LaunchedEffect(selected) {
@@ -182,15 +179,6 @@ fun LinuxEnvironmentScreen() {
                 }
             }
             Text(distro.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            val detectedDistros = prefs.getStringSet("detected_distros", emptySet()) ?: emptySet()
-            Text(
-                if (detectedDistros.isEmpty()) "Distro terdeteksi: belum ada / belum diperiksa"
-                else "Distro terpasang: " + detectedDistros.joinToString(", ") { name ->
-                    moraDistros.firstOrNull { it.id == name }?.name ?: name
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))) {
@@ -255,7 +243,7 @@ fun LinuxEnvironmentScreen() {
             }
         }
         item { LinuxActionCard("Install XFCE", "Pasang XFCE dan D-Bus di dalam Debian. TigerVNC tidak diperlukan.", "Install desktop", termuxPresent && runPermission && managerReady && installed && !desktopReady) { confirm = "desktop" } }
-        item { LinuxActionCard("Start Desktop", "Nyalakan server Termux:X11, Mora Shield otomatis membuka aplikasi X11, lalu menjalankan XFCE dari distro yang dipilih.", "Start desktop", termuxPresent && runPermission && installed && desktopReady && x11AppPresent && x11PackageReady) { confirm = "start" } }
+        item { LinuxActionCard("Start Desktop", "Nyalakan server Termux:X11, buka aplikasinya, lalu jalankan sesi XFCE dari Debian melalui DISPLAY=:0.", "Start desktop", termuxPresent && runPermission && installed && desktopReady && x11AppPresent && x11PackageReady) { confirm = "start" } }
         item { LinuxActionCard("Stop Desktop", "Hentikan sesi XFCE di Debian. Server Termux:X11 tidak dipaksa ditutup agar aman untuk aplikasi X11 lain.", "Stop desktop", termuxPresent && runPermission && installed && desktopReady) { confirm = "stop" } }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
