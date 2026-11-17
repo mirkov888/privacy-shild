@@ -96,6 +96,7 @@ object MoraRustEngine {
      * Runs a Rust operation using an app-private durable state document.
      * Each module's state is committed atomically only after Rust returns a valid success response.
      */
+    @Synchronized
     fun dispatchPersistent(
         context: Context,
         module: String,
