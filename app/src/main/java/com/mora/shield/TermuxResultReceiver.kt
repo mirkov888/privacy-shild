@@ -41,11 +41,14 @@ class TermuxResultReceiver : BroadcastReceiver() {
                     output.contains("MORA_XFCE_STOPPED") -> "stopped"
                     else -> "unknown"
                 })
+                .putBoolean("x11_package_ready", output.contains("MORA_X11_PACKAGE_READY"))
             if (output.contains("MORA_DESKTOP_READY")) {
                 editor.putBoolean("desktop_ready_$distro", true)
             } else if (output.contains("MORA_DESKTOP_MISSING")) {
                 editor.putBoolean("desktop_ready_$distro", false)
             }
+        } else if (operation == "x11_install" && ok) {
+            editor.putBoolean("x11_package_ready", true)
         } else if (operation.startsWith("session:")) {
             editor.putString("session_$distro", when {
                 output.contains("MORA_XFCE_RUNNING") -> "running"
