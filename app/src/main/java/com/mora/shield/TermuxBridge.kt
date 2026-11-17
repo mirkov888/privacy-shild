@@ -262,7 +262,7 @@ object TermuxBridge {
             '
         """.trimIndent()
         run(context, "start:$distro", "$PREFIX/bin/bash",
-            arrayOf("-lc", script), true)
+            arrayOf("-lc", script), true, receiveResult = false)
     }
 
     fun stopDesktop(context: Context, distro: String) {
@@ -286,24 +286,44 @@ object TermuxBridge {
         require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
     }
 
-    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+    private fun run(
+        context: Context,
+        operation: String,
+        path: String,
+        args: Array<String>,
+        background: Boolean,
+        receiveResult: Boolean = true
+    ) {
         check(installed(context)) { "Termux belum terpasang" }
         check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
         val callback = Intent(context, TermuxResultReceiver::class.java).apply {
             action = "com.mora.shield.TERMUX_RESULT"
             putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
         }
-        val flags = PendingIntent.FLAG_ONE_SHOT or
-            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
-        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val pending = if (receiveResult) {
+            val flags = PendingIntent.FLAG_ONE_SHOT or
+                (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+            PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        } else null
         val intent = Intent(ACTION).apply {
             setClassName(TERMUX_PACKAGE, SERVICE)
             putExtra("com.termux.RUN_COMMAND_PATH", path)
             putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
             putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
             putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
-            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+            if (pending != null) putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
         }
         context.startService(intent)
+        if (!receiveResult && operation.startsWith("start:")) {
+            val distro = operation.substringAfter(':')
+            context.getSharedPreferences("mora_linux", Context.MODE_PRIVATE).edit()
+                .putString("last_operation", operation)
+                .putString("last_output", "Perintah desktop dikirim sebagai tugas latar belakang persisten. Status akan diperiksa berkala.")
+                .putString("last_error", "")
+                .putInt("last_exit_code", -1)
+                .putString("session_$distro", "start_requested")
+                .putLong("last_updated", System.currentTimeMillis())
+                .apply()
+        }
     }
 }
