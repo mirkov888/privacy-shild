@@ -39,6 +39,13 @@ jobs:
           git clone --quiet https://github.com/mirkov888/mora-rust-android.git "$RUNNER_TEMP/mora-rust-android"
           git -C "$RUNNER_TEMP/mora-rust-android" checkout --detach 4613c0bdb3b992e05e62b38287101c07ce8ad512
 
+      - name: Validate Mora Rust Core
+        working-directory: ${{ runner.temp }}/mora-rust-android
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test --all-targets
+
       - name: Set up Android NDK for Rust
         uses: nttld/setup-ndk@v1
         with:
