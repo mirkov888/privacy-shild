@@ -246,7 +246,7 @@ object TermuxBridge {
 
                 export DISPLAY=:99
                 if command -v xdpyinfo >/dev/null 2>&1; then
-                    if ! timeout 8 xdpyinfo -display "${'DISPLAY" >/dev/null 2>&1; then}DISPLAY" >/dev/null 2>&1; then
+                    if ! timeout 8 xdpyinfo -display "${'$'}DISPLAY" >/dev/null 2>&1; then
                         echo MORA_X11_CONNECTION_FAILED
                         cat /tmp/mora-x11-proxy.log 2>/dev/null || true
                         exit 23
