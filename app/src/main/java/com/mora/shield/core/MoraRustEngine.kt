@@ -77,7 +77,7 @@ object MoraRustEngine {
         }
         val response = JSONObject(NativeCore.nativeCoreDispatch(request.toString()))
         if (!response.optBoolean("ok")) {
-            error("@{response.optString("module", module)}: @{response.optString("error", "native_operation_failed")}")
+            error("${response.optString("module", module)}: ${response.optString("error", "native_operation_failed")}")
         }
         return response
     }
@@ -140,7 +140,7 @@ object MoraRustEngine {
         checks += "Security Auditor" to (audit.optString("risk_level") == "good")
 
         val details = checks.map { (name, passed) ->
-            "@{if (passed) "PASS" else "FAIL"} · $name"
+            "${if (passed) "PASS" else "FAIL"} · $name"
         }
         return SelfCheckResult(checks.count { it.second }, checks.size, details)
     }
