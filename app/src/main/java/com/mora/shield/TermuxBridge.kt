@@ -246,7 +246,129 @@ object TermuxBridge {
 
                 export DISPLAY=:99
                 if command -v xdpyinfo >/dev/null 2>&1; then
-                    if ! timeout 8 xdpyinfo -display "${' >/dev/null 2>&1; then
+                    if ! timeout 8 xdpyinfo -display "${'
+                        echo MORA_X11_CONNECTION_FAILED
+                        cat /tmp/mora-x11-proxy.log 2>/dev/null || true
+                        exit 23
+                    fi
+                fi
+
+                if pgrep -x xfce4-session >/dev/null 2>&1; then
+                    echo MORA_XFCE_ALREADY_RUNNING
+                    exit 0
+                fi
+
+                exec dbus-run-session -- startxfce4
+            '
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = """
+            "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
+                pkill -TERM -x xfce4-session 2>/dev/null || true
+                pkill -TERM -x xfwm4 2>/dev/null || true
+                pkill -TERM -x xfce4-panel 2>/dev/null || true
+                pkill -TERM -x xfdesktop 2>/dev/null || true
+                pkill -TERM -f "[m]ora-x11-proxy.py" 2>/dev/null || true
+                rm -f /tmp/.X11-unix/X99 /tmp/mora-x11-proxy.py
+                echo MORA_XFCE_STOPPED
+                echo MORA_X11_PROXY_STOPPED
+            '
+        """.trimIndent()
+        run(context, "stop:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+}DISPLAY" >/dev/null 2>&1; then
+                        echo MORA_X11_CONNECTION_FAILED
+                        cat /tmp/mora-x11-proxy.log 2>/dev/null || true
+                        exit 23
+                    fi
+                fi
+
+                if pgrep -x xfce4-session >/dev/null 2>&1; then
+                    echo MORA_XFCE_ALREADY_RUNNING
+                    exit 0
+                fi
+
+                exec dbus-run-session -- startxfce4
+            '
+        """.trimIndent()
+        run(context, "start:$distro", "$PREFIX/bin/bash",
+            arrayOf("-lc", script), true)
+    }
+
+    fun stopDesktop(context: Context, distro: String) {
+        requireDistro(distro)
+        val script = """
+            "$PREFIX/bin/proot-distro" login --shared-tmp "$distro" -- bash -lc '
+                pkill -TERM -x xfce4-session 2>/dev/null || true
+                pkill -TERM -x xfwm4 2>/dev/null || true
+                pkill -TERM -x xfce4-panel 2>/dev/null || true
+                pkill -TERM -x xfdesktop 2>/dev/null || true
+                pkill -TERM -f "[m]ora-x11-proxy.py" 2>/dev/null || true
+                rm -f /tmp/.X11-unix/X99 /tmp/mora-x11-proxy.py
+                echo MORA_XFCE_STOPPED
+                echo MORA_X11_PROXY_STOPPED
+            '
+        """.trimIndent()
+        run(context, "stop:$distro", "$PREFIX/bin/bash", arrayOf("-lc", script), true)
+    }
+
+    private fun requireDistro(distro: String) {
+        require(distro in setOf("debian", "ubuntu", "archlinux")) { "Unsupported distro" }
+    }
+
+    private fun run(context: Context, operation: String, path: String, args: Array<String>, background: Boolean) {
+        check(installed(context)) { "Termux belum terpasang" }
+        check(hasRunPermission(context)) { "Izin Run commands in Termux belum diberikan" }
+        val callback = Intent(context, TermuxResultReceiver::class.java).apply {
+            action = "com.mora.shield.TERMUX_RESULT"
+            putExtra(TermuxResultReceiver.EXTRA_OPERATION, operation)
+        }
+        val flags = PendingIntent.FLAG_ONE_SHOT or
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
+        val pending = PendingIntent.getBroadcast(context, operation.hashCode(), callback, flags)
+        val intent = Intent(ACTION).apply {
+            setClassName(TERMUX_PACKAGE, SERVICE)
+            putExtra("com.termux.RUN_COMMAND_PATH", path)
+            putExtra("com.termux.RUN_COMMAND_ARGUMENTS", args)
+            putExtra("com.termux.RUN_COMMAND_WORKDIR", HOME)
+            putExtra("com.termux.RUN_COMMAND_BACKGROUND", background)
+            putExtra("com.termux.RUN_COMMAND_PENDING_INTENT", pending)
+        }
+        context.startService(intent)
+    }
+}
+DISPLAY}" >/dev/null 2>&1; then
                         echo MORA_X11_CONNECTION_FAILED
                         cat /tmp/mora-x11-proxy.log 2>/dev/null || true
                         exit 23
