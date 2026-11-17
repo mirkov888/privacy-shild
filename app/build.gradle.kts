@@ -15,6 +15,7 @@ android {
         targetSdk = 35
         versionCode = 26
         versionName = "3.9.6"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
@@ -88,4 +89,6 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Use the real JSON-java implementation in JVM tests instead of Android SDK JSON stubs.
     testImplementation("org.json:json:20260814")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
