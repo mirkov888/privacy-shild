@@ -41,7 +41,7 @@ fun MoraRustCoreCard() {
                 "Native engine terdeteksi, tetapi versi atau capability tidak cocok."
             }
         }.onFailure {
-            statusText = "Native engine belum tersedia: @{it.message ?: it.javaClass.simpleName}"
+            statusText = "Native engine belum tersedia: ${it.message ?: it.javaClass.simpleName}"
         }
     }
 
@@ -52,11 +52,11 @@ fun MoraRustCoreCard() {
         Text(statusText, style = MaterialTheme.typography.bodyMedium)
         status?.let {
             Text(
-                "API @{it.apiVersion} · Schema @{it.schemaVersion} · Capability 0x@{it.capabilityMask.toString(16)}",
+                "API ${it.apiVersion} · Schema ${it.schemaVersion} · Capability 0x${it.capabilityMask.toString(16)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text("Modul: @{it.modules.joinToString()}", style = MaterialTheme.typography.bodySmall)
+            Text("Modul: ${it.modules.joinToString()}", style = MaterialTheme.typography.bodySmall)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
@@ -69,10 +69,10 @@ fun MoraRustCoreCard() {
                         message = result.fold(
                             onSuccess = { check ->
                                 check.details.joinToString("\n") +
-                                    "\nHasil: @{check.passed}/@{check.total}" +
+                                    "\nHasil: ${check.passed}/${check.total}" +
                                     if (check.allPassed) " · SEMUA MODUL LOLOS" else " · ADA TES GAGAL"
                             },
-                            onFailure = { "Tes integrasi gagal: @{it.message ?: it.javaClass.simpleName}" }
+                            onFailure = { "Tes integrasi gagal: ${it.message ?: it.javaClass.simpleName}" }
                         )
                         busy = false
                     }
@@ -91,12 +91,12 @@ fun MoraRustCoreCard() {
                         }
                         message = result.fold(
                             onSuccess = { report ->
-                                "Audit Mora Shield selesai: @{report.optString("risk_level").uppercase()} " +
-                                    "(@{report.optInt("risk_score")}/100), " +
-                                    "@{report.optJSONArray("findings")?.length() ?: 0} temuan.\n" +
+                                "Audit Mora Shield selesai: ${report.optString("risk_level").uppercase()} " +
+                                    "(${report.optInt("risk_score")}/100), " +
+                                    "${report.optJSONArray("findings")?.length() ?: 0} temuan.\n" +
                                     "Laporan disimpan di penyimpanan privat aplikasi."
                             },
-                            onFailure = { "Audit gagal: @{it.message ?: it.javaClass.simpleName}" }
+                            onFailure = { "Audit gagal: ${it.message ?: it.javaClass.simpleName}" }
                         )
                         busy = false
                     }
@@ -116,11 +116,11 @@ fun MoraRustCoreCard() {
                         message = result.fold(
                             onSuccess = { summary ->
                                 "Snapshot UID Mora Shield tersimpan.\n" +
-                                    "Sampel: @{summary.optInt("samples")} · " +
-                                    "RX terukur: @{summary.optLong("total_rx_delta_bytes")} bytes · " +
-                                    "TX terukur: @{summary.optLong("total_tx_delta_bytes")} bytes."
+                                    "Sampel: ${summary.optInt("samples")} · " +
+                                    "RX terukur: ${summary.optLong("total_rx_delta_bytes")} bytes · " +
+                                    "TX terukur: ${summary.optLong("total_tx_delta_bytes")} bytes."
                             },
-                            onFailure = { "Snapshot jaringan gagal: @{it.message ?: it.javaClass.simpleName}" }
+                            onFailure = { "Snapshot jaringan gagal: ${it.message ?: it.javaClass.simpleName}" }
                         )
                         busy = false
                     }
