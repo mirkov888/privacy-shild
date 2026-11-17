@@ -76,3 +76,19 @@ Mora Shield integrates with Termux through its documented RUN_COMMAND API for co
 ## Mora Identity Studio — Phase 1 & 2
 
 The additive Identity Studio introduces a local profile engine and a starter browser compatibility catalogue for Android, iOS/iPadOS, Windows, macOS, and Linux. It preserves the existing Per-App Device Identity feature. See [docs/IDENTITY-STUDIO-PHASE1-2.md](docs/IDENTITY-STUDIO-PHASE1-2.md) for scope and limitations. The selected User-Agent is exposed for opt-in use by Mora-owned WebViews; external browsers and Android system identity are not modified.
+
+
+## Phase 11 — Rust Native Core Integration
+
+- Mora Shield remains the only main application. The Rust Core is compiled as libmora_rust_android.so and loaded from the existing app process through JNI.
+- The JNI-compatible Kotlin object remains in package com.mora.rustandroid, matching the exported JNI symbols from the pinned Rust Core revision.
+- The native engine is exposed in the existing Mora Core tab with API/capability negotiation, a six-module smoke test, an app-scoped security audit, and an app-UID network snapshot.
+- Existing Room-backed Mora Core, Connector authentication, policies, command approval, and event timeline remain intact; the Rust module is an additional native engine, not a replacement for that control plane.
+- CI checks out the pinned Rust Core commit 4613c0bdb3b992e05e62b38287101c07ce8ad512, builds arm64-v8a, armeabi-v7a, and x86_64 with NDK r27c, and packages the resulting native libraries into Mora Shield APKs.
+- The security auditor receives only this app's package metadata and requested/granted permission state. Network counters use Android TrafficStats for the Mora Shield UID only. No other app is scanned, no packet payloads are captured, and no permissions are changed automatically.
+- Local builds must generate app/src/main/jniLibs from the same pinned Rust Core source before running Gradle. CI performs this step automatically.
+
+### Phase 11 validation
+- GitHub Actions must pass Rust native builds, Android unit tests, and APK packaging before the integration is considered CI-verified.
+- Install the generated Mora Shield APK and open Mora Core → Rust Native Engine. Confirm API v9 / capability 0x7ff, run all six module checks, then exercise the app-only audit and UID network snapshot buttons.
+- Keep on-device verification separate from CI/build verification.
