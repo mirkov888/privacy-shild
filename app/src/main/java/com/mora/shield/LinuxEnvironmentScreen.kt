@@ -117,7 +117,7 @@ fun LinuxEnvironmentScreen() {
                             "install" -> TermuxBridge.installDistro(context, selected)
                             "repair" -> TermuxBridge.repairDistro(context, selected)
                             "desktop" -> TermuxBridge.installDesktop(context, selected)
-                            "password" -> TermuxBridge.setupVncPassword(context, selected)
+                            "x11_package" -> TermuxBridge.installX11Package(context)
                             "start" -> TermuxBridge.startDesktop(context, selected)
                             "stop" -> TermuxBridge.stopDesktop(context, selected)
                         }
