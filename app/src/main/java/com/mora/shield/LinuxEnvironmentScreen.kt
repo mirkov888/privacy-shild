@@ -52,12 +52,14 @@ fun LinuxEnvironmentScreen() {
     var refresh by remember { mutableStateOf(0) }
     var confirm by remember { mutableStateOf<String?>(null) }
     var termuxPresent by remember { mutableStateOf(TermuxBridge.installed(context)) }
+    var x11AppPresent by remember { mutableStateOf(TermuxBridge.x11AppInstalled(context)) }
     var runPermission by remember { mutableStateOf(TermuxBridge.hasRunPermission(context)) }
     val distro = moraDistros.first { it.id == selected }
     val managerReady = prefs.getBoolean("manager_ready", false)
     val installed = prefs.getBoolean("installed_$selected", false)
     val rootfsBroken = prefs.getBoolean("rootfs_broken_$selected", false)
     val desktopReady = prefs.getBoolean("desktop_ready_$selected", false)
+    val x11PackageReady = prefs.getBoolean("x11_package_ready", false)
     val session = prefs.getString("session_$selected", "unknown") ?: "unknown"
     val lastOutput = prefs.getString("last_output", "").orEmpty()
     val lastOperation = prefs.getString("last_operation", "").orEmpty()
@@ -69,6 +71,7 @@ fun LinuxEnvironmentScreen() {
 
     LaunchedEffect(selected, refresh) {
         termuxPresent = TermuxBridge.installed(context)
+        x11AppPresent = TermuxBridge.x11AppInstalled(context)
         runPermission = TermuxBridge.hasRunPermission(context)
         if (termuxPresent && runPermission && managerReady) {
             try { TermuxBridge.requestStatus(context, selected) } catch (_: Exception) { }
@@ -80,6 +83,7 @@ fun LinuxEnvironmentScreen() {
             refresh = (refresh + 1) % 100000
             runPermission = TermuxBridge.hasRunPermission(context)
             termuxPresent = TermuxBridge.installed(context)
+            x11AppPresent = TermuxBridge.x11AppInstalled(context)
         }
     }
 
@@ -90,9 +94,9 @@ fun LinuxEnvironmentScreen() {
             "install" -> "Instal distro ${distro.name}?"
             "repair" -> "Perbaiki instalasi ${distro.name}?"
             "desktop" -> "Instal XFCE di ${distro.name}?"
-            "password" -> "Atur password VNC?"
-            "start" -> "Mulai sesi XFCE?"
-            else -> "Hentikan sesi XFCE?"
+            "x11_package" -> "Pasang komponen Termux:X11?"
+            "start" -> "Mulai desktop XFCE lewat Termux:X11?"
+            else -> "Hentikan desktop XFCE?"
         }
         AlertDialog(
             onDismissRequest = { confirm = null },
@@ -138,8 +142,6 @@ fun LinuxEnvironmentScreen() {
                 Text("Kontrol distro Linux Android melalui Termux + proot-distro memakai API RUN_COMMAND resmi Termux.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        // Show the embedded viewer at the top so it is immediately discoverable.
-        item { EmbeddedVncViewerCard() }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = if (termuxPresent && runPermission) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -188,7 +190,7 @@ fun LinuxEnvironmentScreen() {
                         installed -> "Rootfs valid · shell dan os-release ditemukan"
                         else -> "Rootfs belum tersedia"
                     }, color = if (rootfsBroken) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(if (desktopReady) "Paket XFCE/VNC: siap" else "Paket XFCE/VNC: belum dipasang")
+                    Text(if (desktopReady) "XFCE: siap" else "XFCE: belum dipasang")
                     Text("Sesi XFCE: " + when (session) {
                         "running" -> "Berjalan"
                         "stopped" -> "Berhenti"
@@ -215,10 +217,34 @@ fun LinuxEnvironmentScreen() {
                 LinuxActionCard("Pulihkan rootfs", "Rootfs terdaftar tetapi file sistem penting tidak ditemukan. Instalasi ulang otomatis akan memperbaikinya.", "Perbaiki ${distro.name}", termuxPresent && runPermission && managerReady) { confirm = "repair" }
             }
         }
-        item { LinuxActionCard("Install XFCE + VNC", "Pasang XFCE, D-Bus, dan TigerVNC di dalam distro.", "Install desktop", termuxPresent && runPermission && managerReady && installed && !desktopReady) { confirm = "desktop" } }
-        item { LinuxActionCard("Set VNC password", "Buka sesi Termux interaktif untuk membuat password VNC sebelum desktop dijalankan.", "Atur password", termuxPresent && runPermission && desktopReady) { confirm = "password" } }
-        item { LinuxActionCard("Start XFCE", "Mulai VNC display :1 pada localhost (127.0.0.1:5901).", "Start desktop", termuxPresent && runPermission && desktopReady) { confirm = "start" } }
-        item { LinuxActionCard("Stop XFCE", "Hentikan VNC display :1.", "Stop desktop", termuxPresent && runPermission && desktopReady) { confirm = "stop" } }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Tampilan desktop · Termux:X11", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        when {
+                            !x11AppPresent -> "Aplikasi pendamping Termux:X11 belum terdeteksi di Android."
+                            !x11PackageReady -> "Aplikasi terpasang · komponen perintah Termux:X11 belum terdeteksi."
+                            else -> "Termux:X11 siap digunakan untuk menampilkan XFCE dari Debian."
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            if (x11AppPresent) TermuxBridge.openX11(context)
+                            else context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-x11/releases/tag/nightly")))
+                        }) { Text(if (x11AppPresent) "Buka Termux:X11" else "Install aplikasi X11") }
+                        if (x11AppPresent && termuxPresent && runPermission && !x11PackageReady) {
+                            Button(onClick = { confirm = "x11_package" }) { Text("Install komponen") }
+                        }
+                    }
+                    Text("Keduanya diperlukan: aplikasi Termux:X11 di Android dan paket termux-x11-nightly di Termux. Setelah pemasangan paket, tekan Periksa status.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        item { LinuxActionCard("Install XFCE", "Pasang XFCE dan D-Bus di dalam Debian. TigerVNC tidak diperlukan.", "Install desktop", termuxPresent && runPermission && managerReady && installed && !desktopReady) { confirm = "desktop" } }
+        item { LinuxActionCard("Start Desktop", "Nyalakan server Termux:X11, buka aplikasinya, lalu jalankan sesi XFCE dari Debian melalui DISPLAY=:0.", "Start desktop", termuxPresent && runPermission && installed && desktopReady && x11AppPresent && x11PackageReady) { confirm = "start" } }
+        item { LinuxActionCard("Stop Desktop", "Hentikan sesi XFCE di Debian. Server Termux:X11 tidak dipaksa ditutup agar aman untuk aplikasi X11 lain.", "Stop desktop", termuxPresent && runPermission && installed && desktopReady) { confirm = "stop" } }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
