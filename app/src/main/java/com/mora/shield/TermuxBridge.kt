@@ -143,11 +143,11 @@ object TermuxBridge {
             # Termux:X11 creates its Unix socket under Termux TMPDIR.
             # Keep the server and PRoot guest on the exact same shared /tmp.
             export TMPDIR="$PREFIX/tmp"
-            export XDG_RUNTIME_DIR="$TMPDIR"
-            mkdir -p "$XDG_RUNTIME_DIR"
-            X11_SOCKET="$TMPDIR/.X11-unix/X0"
+            export XDG_RUNTIME_DIR="${'$'}TMPDIR"
+            mkdir -p "${'$'}XDG_RUNTIME_DIR"
+            X11_SOCKET="${'$'}TMPDIR/.X11-unix/X0"
 
-            if [ ! -S "$X11_SOCKET" ]; then
+            if [ ! -S "${'$'}X11_SOCKET" ]; then
                 # A stale server process without its socket cannot serve clients.
                 pkill -x termux-x11 2>/dev/null || true
                 for attempt in 1 2 3 4 5; do
@@ -156,14 +156,14 @@ object TermuxBridge {
                 done
                 termux-x11 :0 >/dev/null 2>&1 &
                 for attempt in 1 2 3 4 5 6 7 8 9 10; do
-                    [ -S "$X11_SOCKET" ] && break
+                    [ -S "${'$'}X11_SOCKET" ] && break
                     sleep 1
                 done
             fi
 
-            if [ ! -S "$X11_SOCKET" ]; then
+            if [ ! -S "${'$'}X11_SOCKET" ]; then
                 echo "MORA_X11_SOCKET_MISSING"
-                echo "Socket X11 tidak terbentuk di $X11_SOCKET. Buka Termux:X11 dan periksa instalasi termux-x11-nightly."
+                echo "Socket X11 tidak terbentuk di ${'$'}X11_SOCKET. Buka Termux:X11 dan periksa instalasi termux-x11-nightly."
                 exit 21
             fi
 
@@ -178,7 +178,7 @@ object TermuxBridge {
                     exit 22
                 fi
                 if command -v xdpyinfo >/dev/null 2>&1; then
-                    if ! xdpyinfo -display "$DISPLAY" >/dev/null 2>&1; then
+                    if ! xdpyinfo -display "${'$'}DISPLAY" >/dev/null 2>&1; then
                         echo MORA_X11_CONNECTION_FAILED
                         echo "Socket terlihat, tetapi Debian tidak dapat terhubung ke display :0."
                         exit 23
