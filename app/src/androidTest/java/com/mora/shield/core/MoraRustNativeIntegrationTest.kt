@@ -239,6 +239,10 @@ class MoraRustNativeIntegrationTest {
         val network = MoraRustEngine.dispatchPersistent(context, "network_monitor", "list")
             .getJSONObject("data").getJSONObject("monitor").getJSONArray("snapshots")
         assertEquals(1, network.length())
+
+        val health = MoraRustEngine.runPersistentSelfCheck(context)
+        assertEquals(health.details.joinToString("\n"), 6, health.passed)
+        assertTrue(health.details.joinToString("\n"), health.allPassed)
     }
 
     @Test
