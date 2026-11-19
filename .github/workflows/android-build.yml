@@ -113,17 +113,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           script: |
-            set +e
-            adb logcat -c
-            ./gradlew --no-daemon --stacktrace connectedDebugAndroidTest > instrumented-tests.log 2>&1
-            test_status=$?
-            adb logcat -d -v threadtime > emulator-logcat.txt
-            echo "connectedDebugAndroidTest exit code: $test_status"
-            echo "=== Instrumentation output ==="
-            tail -n 160 instrumented-tests.log
-            echo "=== Emulator crash diagnostics ==="
-            grep -n -E "FATAL EXCEPTION|Fatal signal|SIGSEGV|SIGABRT|DEBUG|AndroidRuntime|UnsatisfiedLinkError|dlopen failed|tombstoned|crash_dump" emulator-logcat.txt | tail -n 160 || true
-            exit "$test_status"
+            bash scripts/run-android-jni-tests.sh
 
       - name: Verify APK
         if: success()
