@@ -26,7 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-
       - name: Install Rust Android targets
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -105,12 +104,26 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --stacktrace --info clean testDebugUnitTest assembleDebug 2>&1 | tee build.log
 
+      - name: Enable KVM for Android emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          if [ ! -e /dev/kvm ]; then
+            echo "::error::KVM device is not available on this GitHub runner"
+            exit 1
+          fi
+          ls -l /dev/kvm
+
       - name: Run Rust JNI integration tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
+          disable-linux-hw-accel: false
           disable-animations: true
           script: |
             bash scripts/run-android-jni-tests.sh
