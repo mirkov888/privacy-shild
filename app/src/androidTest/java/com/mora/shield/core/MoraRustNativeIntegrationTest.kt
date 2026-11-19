@@ -249,7 +249,9 @@ class MoraRustNativeIntegrationTest {
     @Test
     fun productionAdapterSelfCheckPassesAgainstLoadedNativeLibrary() {
         val result = MoraRustEngine.runSelfCheck()
-        assertEquals(result.details.joinToString("\n"), 6, result.passed)
+        // This self-check covers API compatibility plus all six Rust modules.
+        assertEquals(result.details.joinToString("\n"), 7, result.passed)
+        assertEquals(7, result.total)
         assertTrue(result.details.joinToString("\n"), result.allPassed)
     }
 
